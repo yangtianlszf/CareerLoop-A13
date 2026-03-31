@@ -1,0 +1,511 @@
+[
+  {
+    "role_title": "实施工程师",
+    "role_family": "交付",
+    "score": 75,
+    "breakdown": {
+      "basic_requirements": 100,
+      "professional_skills": 75,
+      "professional_literacy": 25,
+      "growth_potential": 100
+    },
+    "strengths": [
+      "技能重合较好：Linux、MySQL、SQL",
+      "有项目经历，可以支撑面试中的能力举证",
+      "有实习经历，具备一定岗位适应基础"
+    ],
+    "gaps": [
+      "缺少关键技能：项目管理",
+      "职业素养还可加强：分析能力、团队协作、执行力、抗压、沟通、表达能力"
+    ],
+    "suggestions": [
+      "优先补齐岗位核心技能：项目管理"
+    ],
+    "transition_paths": [
+      "技术支持工程师",
+      "项目经理",
+      "产品专员/助理"
+    ],
+    "growth_path": [
+      "实施工程师",
+      "高级实施工程师",
+      "实施顾问",
+      "交付负责人"
+    ],
+    "summary": "负责软件系统部署、上线实施、培训和交付支持，强调沟通能力、项目协同与现场问题处理能力。",
+    "core_skills": [
+      "Linux",
+      "SQL",
+      "MySQL",
+      "项目管理"
+    ],
+    "preferred_skills": [
+      "Python",
+      "Java",
+      "数据分析",
+      "需求分析",
+      "Postman",
+      "Oracle",
+      "HTTP"
+    ]
+  },
+  {
+    "role_title": "技术支持工程师",
+    "role_family": "服务",
+    "score": 71,
+    "breakdown": {
+      "basic_requirements": 100,
+      "professional_skills": 66,
+      "professional_literacy": 25,
+      "growth_potential": 100
+    },
+    "strengths": [
+      "技能重合较好：Linux、SQL",
+      "有项目经历，可以支撑面试中的能力举证",
+      "有实习经历，具备一定岗位适应基础"
+    ],
+    "gaps": [
+      "缺少关键技能：需求分析",
+      "职业素养还可加强：分析能力、团队协作、执行力、抗压、沟通、表达能力"
+    ],
+    "suggestions": [
+      "优先补齐岗位核心技能：需求分析"
+    ],
+    "transition_paths": [
+      "实施工程师",
+      "售前工程师",
+      "测试工程师"
+    ],
+    "growth_path": [
+      "技术支持工程师",
+      "高级技术支持工程师",
+      "解决方案工程师",
+      "服务负责人"
+    ],
+    "summary": "负责客户现场或远程技术支持、问题定位和解决方案跟进，适合作为服务与技术结合型岗位画像。",
+    "core_skills": [
+      "Linux",
+      "SQL",
+      "需求分析"
+    ],
+    "preferred_skills": [
+      "Python",
+      "Java",
+      "数据分析",
+      "MySQL",
+      "项目管理",
+      "HTTP",
+      "PLC",
+      "Oracle"
+    ]
+  },
+  {
+    "role_title": "Java开发工程师",
+    "role_family": "开发",
+    "score": 67,
+    "breakdown": {
+      "basic_requirements": 100,
+      "professional_skills": 57,
+      "professional_literacy": 25,
+      "growth_potential": 100
+    },
+    "strengths": [
+      "技能重合较好：Git、Linux、MySQL、SQL",
+      "有项目经历，可以支撑面试中的能力举证",
+      "有实习经历，具备一定岗位适应基础"
+    ],
+    "gaps": [
+      "缺少关键技能：Java、Spring、Spring Boot",
+      "职业素养还可加强：分析能力、团队协作、执行力、抗压、沟通、表达能力"
+    ],
+    "suggestions": [
+      "优先补齐岗位核心技能：Java、Spring、Spring Boot"
+    ],
+    "transition_paths": [
+      "测试开发工程师",
+      "实施工程师",
+      "技术支持工程师"
+    ],
+    "growth_path": [
+      "初级Java开发工程师",
+      "中级Java开发工程师",
+      "高级Java开发工程师",
+      "技术负责人"
+    ],
+    "summary": "负责业务系统后端开发、接口设计、数据库建模与服务稳定性优化，适合作为后端方向的核心岗位画像。",
+    "core_skills": [
+      "Java",
+      "Spring",
+      "Spring Boot",
+      "SQL",
+      "MySQL",
+      "Linux",
+      "Git"
+    ],
+    "preferred_skills": [
+      "Redis",
+      "Docker",
+      "Postman",
+      "需求分析",
+      "Python",
+      "C++",
+      "HTML"
+    ]
+  },
+  {
+    "role_title": "C/C++开发工程师",
+    "role_family": "开发",
+    "score": 65,
+    "breakdown": {
+      "basic_requirements": 100,
+      "professional_skills": 50,
+      "professional_literacy": 25,
+      "growth_potential": 100
+    },
+    "strengths": [
+      "技能重合较好：Git、Linux",
+      "有项目经历，可以支撑面试中的能力举证",
+      "有实习经历，具备一定岗位适应基础"
+    ],
+    "gaps": [
+      "缺少关键技能：C、C++",
+      "职业素养还可加强：分析能力、团队协作、执行力、抗压、沟通、表达能力"
+    ],
+    "suggestions": [
+      "优先补齐岗位核心技能：C、C++"
+    ],
+    "transition_paths": [
+      "硬件测试工程师",
+      "测试工程师",
+      "技术支持工程师"
+    ],
+    "growth_path": [
+      "初级C/C++开发工程师",
+      "中级C/C++开发工程师",
+      "高级系统工程师",
+      "架构师"
+    ],
+    "summary": "负责底层模块、系统组件、嵌入式或高性能程序开发，是偏底层和系统方向的重要岗位画像。",
+    "core_skills": [
+      "C",
+      "C++",
+      "Linux",
+      "Git"
+    ],
+    "preferred_skills": [
+      "Python",
+      "SQL",
+      "单片机",
+      "嵌入式",
+      "硬件调试",
+      "Java",
+      "需求分析",
+      "TCP/IP"
+    ]
+  },
+  {
+    "role_title": "测试工程师",
+    "role_family": "测试",
+    "score": 65,
+    "breakdown": {
+      "basic_requirements": 100,
+      "professional_skills": 50,
+      "professional_literacy": 25,
+      "growth_potential": 100
+    },
+    "strengths": [
+      "技能重合较好：Linux、SQL",
+      "有项目经历，可以支撑面试中的能力举证",
+      "有实习经历，具备一定岗位适应基础"
+    ],
+    "gaps": [
+      "缺少关键技能：功能测试、测试用例",
+      "职业素养还可加强：分析能力、团队协作、执行力、抗压、沟通、表达能力",
+      "证书储备不足：软件测试相关认证"
+    ],
+    "suggestions": [
+      "优先补齐岗位核心技能：功能测试、测试用例"
+    ],
+    "transition_paths": [
+      "软件测试工程师",
+      "质量管理/测试",
+      "Java开发工程师"
+    ],
+    "growth_path": [
+      "测试工程师",
+      "高级测试工程师",
+      "测试开发工程师",
+      "测试经理"
+    ],
+    "summary": "负责测试设计、缺陷跟踪、回归验证和质量保障，是系统稳定性和交付质量的重要岗位。",
+    "core_skills": [
+      "测试用例",
+      "功能测试",
+      "SQL",
+      "Linux"
+    ],
+    "preferred_skills": [
+      "Python",
+      "Java",
+      "自动化测试",
+      "Postman",
+      "JMeter",
+      "缺陷管理",
+      "性能测试",
+      "嵌入式"
+    ]
+  },
+  {
+    "role_title": "软件测试工程师",
+    "role_family": "测试",
+    "score": 61,
+    "breakdown": {
+      "basic_requirements": 100,
+      "professional_skills": 40,
+      "professional_literacy": 25,
+      "growth_potential": 100
+    },
+    "strengths": [
+      "技能重合较好：Linux、SQL",
+      "有项目经历，可以支撑面试中的能力举证",
+      "有实习经历，具备一定岗位适应基础"
+    ],
+    "gaps": [
+      "缺少关键技能：功能测试、接口测试、测试用例",
+      "职业素养还可加强：分析能力、团队协作、执行力、抗压、沟通、表达能力",
+      "证书储备不足：软件测试相关认证"
+    ],
+    "suggestions": [
+      "优先补齐岗位核心技能：功能测试、接口测试、测试用例"
+    ],
+    "transition_paths": [
+      "测试工程师",
+      "质量管理/测试",
+      "技术支持工程师"
+    ],
+    "growth_path": [
+      "软件测试工程师",
+      "自动化测试工程师",
+      "测试开发工程师",
+      "质量平台主管"
+    ],
+    "summary": "聚焦软件功能、接口与自动化测试，是比赛中最容易落地的质量保障岗位之一。",
+    "core_skills": [
+      "测试用例",
+      "功能测试",
+      "接口测试",
+      "SQL",
+      "Linux"
+    ],
+    "preferred_skills": [
+      "Python",
+      "Java",
+      "自动化测试",
+      "Selenium",
+      "Postman",
+      "Jenkins",
+      "需求分析",
+      "C++"
+    ]
+  },
+  {
+    "role_title": "硬件测试工程师",
+    "role_family": "测试",
+    "score": 55,
+    "breakdown": {
+      "basic_requirements": 100,
+      "professional_skills": 25,
+      "professional_literacy": 25,
+      "growth_potential": 100
+    },
+    "strengths": [
+      "技能重合较好：Linux",
+      "有项目经历，可以支撑面试中的能力举证",
+      "有实习经历，具备一定岗位适应基础"
+    ],
+    "gaps": [
+      "缺少关键技能：C++、单片机、硬件调试",
+      "职业素养还可加强：分析能力、团队协作、执行力、抗压、沟通、表达能力",
+      "证书储备不足：电子类相关证书"
+    ],
+    "suggestions": [
+      "优先补齐岗位核心技能：C++、单片机、硬件调试"
+    ],
+    "transition_paths": [
+      "C/C++开发工程师",
+      "质量管理/测试",
+      "测试工程师"
+    ],
+    "growth_path": [
+      "硬件测试工程师",
+      "可靠性测试工程师",
+      "高级测试工程师",
+      "硬件质量经理"
+    ],
+    "summary": "负责硬件设备测试、稳定性验证和故障定位，适合体现电气与计算机交叉方向的岗位画像。",
+    "core_skills": [
+      "硬件调试",
+      "Linux",
+      "C++",
+      "单片机"
+    ],
+    "preferred_skills": [
+      "Python",
+      "嵌入式",
+      "电路设计",
+      "数据分析",
+      "测试用例",
+      "功能测试",
+      "性能测试",
+      "HTTP"
+    ]
+  },
+  {
+    "role_title": "前端开发工程师",
+    "role_family": "开发",
+    "score": 53,
+    "breakdown": {
+      "basic_requirements": 100,
+      "professional_skills": 20,
+      "professional_literacy": 25,
+      "growth_potential": 100
+    },
+    "strengths": [
+      "技能重合较好：Git",
+      "有项目经历，可以支撑面试中的能力举证",
+      "有实习经历，具备一定岗位适应基础"
+    ],
+    "gaps": [
+      "缺少关键技能：CSS、HTML、JavaScript、Vue",
+      "职业素养还可加强：分析能力、团队协作、执行力、抗压、沟通、表达能力"
+    ],
+    "suggestions": [
+      "优先补齐岗位核心技能：CSS、HTML、JavaScript"
+    ],
+    "transition_paths": [
+      "产品专员/助理",
+      "测试工程师",
+      "Java开发工程师"
+    ],
+    "growth_path": [
+      "前端开发工程师",
+      "资深前端开发工程师",
+      "前端架构师",
+      "技术负责人"
+    ],
+    "summary": "负责 Web 前端页面开发、交互实现和体验优化，是职业规划系统展示层的代表岗位。",
+    "core_skills": [
+      "HTML",
+      "CSS",
+      "JavaScript",
+      "Vue",
+      "Git"
+    ],
+    "preferred_skills": [
+      "TypeScript",
+      "React",
+      "Node.js",
+      "需求分析",
+      "原型设计",
+      "Java"
+    ]
+  },
+  {
+    "role_title": "产品助理",
+    "role_family": "产品",
+    "score": 45,
+    "breakdown": {
+      "basic_requirements": 100,
+      "professional_skills": 0,
+      "professional_literacy": 25,
+      "growth_potential": 100
+    },
+    "strengths": [
+      "有项目经历，可以支撑面试中的能力举证",
+      "有实习经历，具备一定岗位适应基础"
+    ],
+    "gaps": [
+      "缺少关键技能：Axure、PRD、原型设计、需求分析",
+      "职业素养还可加强：分析能力、团队协作、执行力、抗压、沟通、表达能力"
+    ],
+    "suggestions": [
+      "优先补齐岗位核心技能：Axure、PRD、原型设计"
+    ],
+    "transition_paths": [
+      "前端开发工程师",
+      "实施工程师",
+      "项目经理"
+    ],
+    "growth_path": [
+      "产品助理",
+      "产品专员",
+      "产品经理",
+      "高级产品经理"
+    ],
+    "summary": "负责需求收集、原型整理、文档撰写与跨团队沟通，适合作为职业规划系统业务分析方向岗位画像。",
+    "core_skills": [
+      "需求分析",
+      "原型设计",
+      "Axure",
+      "PRD"
+    ],
+    "preferred_skills": [
+      "用户研究",
+      "数据分析",
+      "项目管理",
+      "沟通表达",
+      "Vue",
+      "自动化测试",
+      "测试用例",
+      "嵌入式"
+    ]
+  },
+  {
+    "role_title": "质量工程师",
+    "role_family": "质量",
+    "score": 41,
+    "breakdown": {
+      "basic_requirements": 80,
+      "professional_skills": 0,
+      "professional_literacy": 25,
+      "growth_potential": 100
+    },
+    "strengths": [
+      "有项目经历，可以支撑面试中的能力举证",
+      "有实习经历，具备一定岗位适应基础"
+    ],
+    "gaps": [
+      "缺少关键技能：测试用例、缺陷管理、项目管理",
+      "职业素养还可加强：分析能力、团队协作、执行力、抗压、沟通、表达能力",
+      "证书储备不足：质量管理相关证书"
+    ],
+    "suggestions": [
+      "优先补齐岗位核心技能：测试用例、缺陷管理、项目管理"
+    ],
+    "transition_paths": [
+      "测试工程师",
+      "软件测试工程师",
+      "项目经理"
+    ],
+    "growth_path": [
+      "质量工程师",
+      "高级质量工程师",
+      "QA负责人",
+      "质量经理"
+    ],
+    "summary": "负责质量标准制定、测试流程管理和质量改进，偏向质量保障和流程化管理能力。",
+    "core_skills": [
+      "测试用例",
+      "缺陷管理",
+      "项目管理"
+    ],
+    "preferred_skills": [
+      "数据分析",
+      "功能测试",
+      "自动化测试",
+      "需求分析",
+      "HTTP",
+      "性能测试"
+    ]
+  }
+]
