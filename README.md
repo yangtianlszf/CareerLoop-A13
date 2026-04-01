@@ -1,0 +1,130 @@
+# CareerLoop-A13
+
+基于官方 JD 数据与大模型解析的大学生职业规划智能体项目。
+
+本仓库对应 2026 年中国大学生服务外包创新创业大赛 A13 赛题：`基于 AI 的大学生职业规划智能体`。  
+项目目标不是做一个简单的聊天机器人，而是构建一套面向高校就业场景的完整系统，帮助学生完成：
+
+- 简历解析与学生画像生成
+- 基于官方 JD 的岗位画像与岗位模板匹配
+- 主推荐岗位、备选岗位与转岗路径规划
+- 职业规划报告生成与导出
+- 智能体追问、岗位自测、资源映射与复测闭环
+- 历史分析留存与学校运营视角数据汇总
+
+## 项目特点
+
+- `官方数据驱动`
+  使用 A13 官方提供的 JD 样本数据构建岗位模板库，支持原始 JD 检索和模板证据回看。
+
+- `可解释推荐`
+  不只给岗位分数，还展示共享技能、关键差距、行动建议和推荐原因。
+
+- `成长闭环`
+  支持智能体补充问答、岗位自测、资源映射、二次分析和成长对比。
+
+- `多角色视角`
+  除学生端外，还支持辅导员端和就业中心端的运营观察视图。
+
+- `完整交付`
+  支持历史记录、Markdown/HTML/Word/PDF 导出，适合演示、评审和归档。
+
+## 仓库结构
+
+```text
+.
+├─ A13_官方资料/              # 官方赛题资料与 JD 数据
+├─ a13_starter/              # 项目主体
+│  ├─ src/                   # 后端核心逻辑
+│  ├─ web/                   # 前端页面
+│  ├─ generated/             # 生成数据与缓存
+│  ├─ samples/               # 演示样例简历
+│  ├─ tools/                 # 数据处理脚本
+│  ├─ README.md              # 详细运行说明
+│  └─ DEPLOY.md              # 部署说明
+└─ README.md                 # 当前仓库首页说明
+```
+
+## 快速启动
+
+在仓库根目录执行：
+
+```bash
+pip install -r a13_starter/requirements.txt
+python -m a13_starter.api_server
+```
+
+如果你的环境里 `python` 不可用，可以改用：
+
+```bash
+python3 -m a13_starter.api_server
+```
+
+启动后打开浏览器：
+
+```text
+http://127.0.0.1:8000/
+```
+
+如果你需要启用大模型解析，可以配置 DashScope：
+
+### Windows PowerShell
+
+```powershell
+$env:DASHSCOPE_API_KEY="你的key"
+$env:LLM_PROVIDER="dashscope"
+$env:DASHSCOPE_MODEL="qwen3.5-flash"
+$env:A13_API_PORT="8001"
+py -m a13_starter.api_server
+```
+
+### macOS / Linux / Git Bash
+
+```bash
+export DASHSCOPE_API_KEY="你的key"
+export LLM_PROVIDER="dashscope"
+export DASHSCOPE_MODEL="qwen3.5-flash"
+export A13_API_PORT="8001"
+python3 -m a13_starter.api_server
+```
+
+## 推荐演示流程
+
+推荐先使用内置样例完成演示：
+
+- `a13_starter/samples/demo_resume_backend.txt`
+- `a13_starter/samples/demo_resume_implementation.txt`
+- `a13_starter/samples/demo_resume_frontend.txt`
+
+页面中可以直接演示：
+
+1. 简历导入或粘贴
+2. 学生画像与岗位匹配
+3. 职业路径与行动计划
+4. 模板证据与官方 JD 检索
+5. 智能体追问与岗位自测
+6. 资源映射与成长对比
+7. 历史记录与报告导出
+
+## 详细说明
+
+更详细的本地运行、导出、解析模式和常见问题说明，请看：
+
+- [a13_starter/README.md](/mnt/d/Code/server2026/a13_starter/README.md)
+- [a13_starter/DEPLOY.md](/mnt/d/Code/server2026/a13_starter/DEPLOY.md)
+
+## 当前状态
+
+当前仓库已经完成：
+
+- 本地 Git 仓库初始化
+- GitHub 远端仓库关联
+- `main` 分支首次推送
+
+后续开发可直接使用：
+
+```bash
+git add .
+git commit -m "你的提交说明"
+git push
+```
