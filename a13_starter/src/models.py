@@ -119,6 +119,8 @@ class CareerPlan:
     resource_map: list[dict[str, Any]] = field(default_factory=list)
     agent_questions: list[dict[str, str]] = field(default_factory=list)
     innovation_highlights: list[dict[str, str]] = field(default_factory=list)
+    technical_keywords: list[str] = field(default_factory=list)
+    technical_modules: list[dict[str, str]] = field(default_factory=list)
     service_scenarios: list[str] = field(default_factory=list)
     product_signature: str = ""
 

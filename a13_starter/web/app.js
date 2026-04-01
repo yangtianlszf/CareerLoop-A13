@@ -63,6 +63,7 @@ const evaluationMetrics = document.getElementById("evaluation-metrics");
 const benchmarkSummaryCards = document.getElementById("benchmark-summary-cards");
 const benchmarkVerdict = document.getElementById("benchmark-verdict");
 const benchmarkCases = document.getElementById("benchmark-cases");
+const technicalModules = document.getElementById("technical-modules");
 const careerStrengths = document.getElementById("career-strengths");
 const careerRisks = document.getElementById("career-risks");
 const recommendedProjects = document.getElementById("recommended-projects");
@@ -627,6 +628,36 @@ function renderBenchmark(data) {
   });
 }
 
+function renderTechnicalModules(items, keywords) {
+  technicalModules.innerHTML = "";
+  if (!items || items.length === 0) {
+    technicalModules.innerHTML = `<div class="empty-inline compact">当前还没有技术表达模块。</div>`;
+    return;
+  }
+
+  if (keywords && keywords.length) {
+    const keywordCard = document.createElement("article");
+    keywordCard.className = "innovation-card panel";
+    keywordCard.innerHTML = `
+      <span class="metric-label">Keyword System</span>
+      <h4>技术关键词体系</h4>
+      <div class="tag-list">${keywords.map((item) => `<span class="tag">${escapeHtml(item)}</span>`).join("")}</div>
+    `;
+    technicalModules.appendChild(keywordCard);
+  }
+
+  items.forEach((item) => {
+    const card = document.createElement("article");
+    card.className = "innovation-card panel";
+    card.innerHTML = `
+      <span class="metric-label">${item.tag || "技术模块"}</span>
+      <h4>${item.name || item.title || "技术能力"}</h4>
+      <p>${item.detail || ""}</p>
+    `;
+    technicalModules.appendChild(card);
+  });
+}
+
 function renderCompetencyDimensions(items) {
   competencyDimensions.innerHTML = "";
   if (!items || items.length === 0) {
@@ -1078,6 +1109,7 @@ function renderResults(data) {
   renderStakeholderViews(data.career_plan?.stakeholder_views || []);
   renderEvaluationMetrics(data.career_plan?.evaluation_metrics || []);
   renderBenchmark(state.benchmark);
+  renderTechnicalModules(data.career_plan?.technical_modules || [], data.career_plan?.technical_keywords || []);
   renderInnovationHighlights(data.career_plan?.innovation_highlights || []);
   renderAgentQuestions(data.career_plan?.agent_questions || [], data.student_profile?.agent_answers || {});
   renderSchoolDashboard(state.schoolDashboard);

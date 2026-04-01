@@ -112,6 +112,10 @@ def build_career_report_markdown(
         career_plan.innovation_highlights,
         lambda item: f"{item.get('title', '')}（{item.get('tag', '')}）：{item.get('detail', '')}",
     )
+    technical_module_lines = _render_dict_items(
+        career_plan.technical_modules,
+        lambda item: f"{item.get('name', '')}（{item.get('tag', '')}）：{item.get('detail', '')}",
+    )
     competency_lines = _render_dict_items(
         career_plan.competency_dimensions,
         lambda item: f"{item.get('name', '')}：{item.get('score', 0)} 分（权重 {item.get('weight', '')}），{item.get('note', '')}",
@@ -213,13 +217,23 @@ def build_career_report_markdown(
 ## 10. 多角色服务视角
 {stakeholder_lines}
 
-## 11. 评测快照
+## 11. 技术方案概述
+- 技术定位：证据驱动生成 + 可解释匹配 + 人机协同闭环
+- 方案概述：系统先把学生简历解析为结构化画像，再将官方 JD 与岗位模板转为可计算的岗位能力维度；匹配阶段输出总分与分维度解释，并对每条结论保留证据回看入口；规划阶段将能力差距映射为补强动作，通过智能体追问、岗位自测与复测形成成长闭环；学校侧再用运营看板承接个体结果与群体趋势，实现从推荐到运营的一体化服务。
+
+### 技术关键词
+{_render_list(career_plan.technical_keywords)}
+
+### 核心技术模块
+{technical_module_lines}
+
+## 12. 评测快照
 {metric_lines}
 
-## 12. 胜任力模型
+## 13. 胜任力模型
 {competency_lines}
 
-## 13. 服务闭环
+## 14. 服务闭环
 {loop_lines}
 
 ### 岗位自测任务
@@ -231,13 +245,13 @@ def build_career_report_markdown(
 - 自测结论：{career_plan.self_assessment.get('summary', '暂无')}
 {_render_list([f"{item.get('focus', '')}：{item.get('level', '')}" for item in career_plan.self_assessment.get('items', [])])}
 
-## 14. 资源映射
+## 15. 资源映射
 {resource_lines}
 
-## 15. 智能体追问
+## 16. 智能体追问
 {question_lines}
 
-## 16. 创新锚点
+## 17. 创新锚点
 - 产品标签：{career_plan.product_signature or "未设置"}
 {innovation_lines}
 """

@@ -674,19 +674,65 @@ def _build_agent_questions(
 def _build_innovation_highlights(student: StudentProfile) -> list[dict[str, str]]:
     return [
         {
-            "title": "官方 JD 驱动的双画像决策",
-            "tag": "Evidence-First",
-            "detail": "用官方 JD 样本构建岗位模板，再和学生画像做可解释匹配，避免空泛推荐。",
+            "title": "证据驱动生成",
+            "tag": "Evidence-bound",
+            "detail": "建议生成前先绑定官方 JD 与岗位模板证据，无法回看证据时会降级为规则化提示。",
         },
         {
-            "title": "追问后复测的职业规划闭环",
-            "tag": "Agent Loop",
-            "detail": "智能体会主动追问目标岗位、城市偏好和补强重点，再用第二次分析形成成长对比。",
+            "title": "可解释匹配引擎",
+            "tag": "Explainable Matching",
+            "detail": "总分拆解为基础要求、专业技能、职业素养与发展潜力四个维度，并给出共享技能与差距项。",
         },
         {
-            "title": "一份报告服务三类角色",
-            "tag": "Campus Service",
-            "detail": "同一底层结果同时服务学生自助决策、辅导员重点帮扶和就业中心岗位推送。",
+            "title": "多阶段工作流编排",
+            "tag": "Agentic Workflow",
+            "detail": "系统把解析、匹配、规划、追问、自测、复测与学校看板串成可校验、可降级的任务链。",
+        },
+        {
+            "title": "人机协同闭环",
+            "tag": "Human-in-the-loop",
+            "detail": "老师可抽检模板与建议结果，学生可补充偏好与证据，系统负责批量执行、留痕与复盘。",
+        },
+    ]
+
+
+def _build_technical_keywords() -> list[str]:
+    return [
+        "Evidence-bound Generation",
+        "Explainable Matching",
+        "Competency Taxonomy",
+        "Agentic Workflow",
+        "Human-in-the-loop Review",
+        "Sample Verification Center",
+    ]
+
+
+def _build_technical_modules() -> list[dict[str, str]]:
+    return [
+        {
+            "name": "证据驱动生成",
+            "tag": "Grounded Generation",
+            "detail": "把官方 JD、岗位模板与学生画像作为知识底座，所有建议都优先绑定证据片段后再输出。",
+        },
+        {
+            "name": "可解释匹配引擎",
+            "tag": "Explainable Recommendation",
+            "detail": "使用分维度评分和差距映射，而不是黑箱端到端推荐，便于评委追问时直接回看依据。",
+        },
+        {
+            "name": "胜任力维度模型",
+            "tag": "Competency Taxonomy",
+            "detail": "用可维护的能力维度词表与别名归一机制统一描述岗位要求和学生能力，不宣称图学习训练。",
+        },
+        {
+            "name": "多阶段工作流智能体",
+            "tag": "Workflow Orchestration",
+            "detail": "把解析、追问、自测、复测和运营看板编排成可校验节点，任何一步置信不足都可以触发追问或规则降级。",
+        },
+        {
+            "name": "人机协同治理",
+            "tag": "Human-in-the-loop",
+            "detail": "将老师抽检、样例验证和学生补证据纳入闭环，确保系统可控、可复盘、可持续优化。",
         },
     ]
 
@@ -767,6 +813,8 @@ def build_career_plan(
         resource_map=resource_map,
         agent_questions=_build_agent_questions(student, primary, self_assessment),
         innovation_highlights=_build_innovation_highlights(student),
+        technical_keywords=_build_technical_keywords(),
+        technical_modules=_build_technical_modules(),
         service_scenarios=["学生自助诊断", "辅导员一生一策", "就业中心精准推岗"],
-        product_signature="官方 JD 驱动的可解释双画像闭环",
+        product_signature="证据驱动生成 + 可解释匹配 + 人机协同闭环",
     )
