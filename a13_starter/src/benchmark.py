@@ -59,11 +59,16 @@ def _score_loop_readiness(career_plan: Any) -> int:
     return round((passed / len(checks)) * 100)
 
 
+def _score_evidence_hit_rate(career_plan: Any) -> int:
+    return int(career_plan.evidence_bundle.get("evidence_hit_rate", 0))
+
+
 def _build_case_observations(
     *,
     top1_hit: bool,
     top3_hit: bool,
     explanation_coverage: int,
+    evidence_hit_rate: int,
     report_readiness: int,
     loop_readiness: int,
     primary_role: str,
@@ -80,6 +85,11 @@ def _build_case_observations(
         observations.append("匹配解释链完整，能够同时说清共享技能、差距与补强建议。")
     else:
         observations.append("解释链仍偏弱，建议继续补充命中理由和能力缺口说明。")
+
+    if evidence_hit_rate >= 70:
+        observations.append("证据检索命中较稳，主岗位关键术语能在模板与官方 JD 片段中被回看。")
+    else:
+        observations.append("证据命中率仍有提升空间，建议继续优化检索词和证据重排策略。")
 
     if report_readiness >= 80:
         observations.append("报告结构完整，适合直接进入答辩展示或导出交付。")
@@ -98,6 +108,7 @@ def _build_summary_cards(
     case_count: int,
     top1_rate: int,
     top3_rate: int,
+    evidence_avg: int,
     explanation_avg: int,
     report_avg: int,
     loop_avg: int,
@@ -117,6 +128,11 @@ def _build_summary_cards(
             "label": "Top3 命中率",
             "value": f"{top3_rate}%",
             "detail": "预期岗位是否至少进入前三推荐，反映可接受度。",
+        },
+        {
+            "label": "证据命中均分",
+            "value": evidence_avg,
+            "detail": "衡量检索证据是否覆盖主岗位关键术语与能力点。",
         },
         {
             "label": "解释覆盖均分",
@@ -143,6 +159,7 @@ def run_benchmark(parser_mode: str = "rule") -> dict[str, Any]:
     case_results: list[dict[str, Any]] = []
     top1_hits = 0
     top3_hits = 0
+    evidence_scores: list[int] = []
     explanation_scores: list[int] = []
     report_scores: list[int] = []
     loop_scores: list[int] = []
@@ -161,12 +178,14 @@ def run_benchmark(parser_mode: str = "rule") -> dict[str, Any]:
         expected_top3_roles = list(case.get("expected_top3_roles", expected_primary_roles))
         top1_hit = primary_role in expected_primary_roles
         top3_hit = any(role in expected_top3_roles for role in top_roles)
+        evidence_hit_rate = _score_evidence_hit_rate(career_plan)
         explanation_coverage = _score_explanation_coverage(matches[0])
         report_readiness = _score_report_readiness(career_plan, report_markdown)
         loop_readiness = _score_loop_readiness(career_plan)
 
         top1_hits += int(top1_hit)
         top3_hits += int(top3_hit)
+        evidence_scores.append(evidence_hit_rate)
         explanation_scores.append(explanation_coverage)
         report_scores.append(report_readiness)
         loop_scores.append(loop_readiness)
@@ -185,6 +204,7 @@ def run_benchmark(parser_mode: str = "rule") -> dict[str, Any]:
                 "top1_hit": top1_hit,
                 "top3_hit": top3_hit,
                 "parser_used_mode": parser_metadata.used_mode,
+                "evidence_hit_rate": evidence_hit_rate,
                 "explanation_coverage": explanation_coverage,
                 "report_readiness": report_readiness,
                 "loop_readiness": loop_readiness,
@@ -192,6 +212,7 @@ def run_benchmark(parser_mode: str = "rule") -> dict[str, Any]:
                     top1_hit=top1_hit,
                     top3_hit=top3_hit,
                     explanation_coverage=explanation_coverage,
+                    evidence_hit_rate=evidence_hit_rate,
                     report_readiness=report_readiness,
                     loop_readiness=loop_readiness,
                     primary_role=primary_role,
@@ -202,11 +223,12 @@ def run_benchmark(parser_mode: str = "rule") -> dict[str, Any]:
     case_count = len(case_results)
     top1_rate = round((top1_hits / case_count) * 100) if case_count else 0
     top3_rate = round((top3_hits / case_count) * 100) if case_count else 0
+    evidence_avg = round(mean(evidence_scores)) if evidence_scores else 0
     explanation_avg = round(mean(explanation_scores)) if explanation_scores else 0
     report_avg = round(mean(report_scores)) if report_scores else 0
     loop_avg = round(mean(loop_scores)) if loop_scores else 0
 
-    if top1_rate >= 75 and explanation_avg >= 80 and report_avg >= 80:
+    if top1_rate >= 75 and evidence_avg >= 70 and explanation_avg >= 80 and report_avg >= 80:
         verdict_label = "冲奖级"
         verdict_detail = "样例命中与交付结构都比较稳定，已经具备强队作品的可信度与完整度。"
     elif top3_rate >= 75 and report_avg >= 70:
@@ -223,6 +245,7 @@ def run_benchmark(parser_mode: str = "rule") -> dict[str, Any]:
             case_count=case_count,
             top1_rate=top1_rate,
             top3_rate=top3_rate,
+            evidence_avg=evidence_avg,
             explanation_avg=explanation_avg,
             report_avg=report_avg,
             loop_avg=loop_avg,

@@ -317,6 +317,7 @@ def _build_evaluation_metrics(
     shared_count = len(primary_match.get("shared_skills", []))
     required_count = max(1, len(primary_match.get("core_skills", [])))
     retrieved_count = len(evidence_bundle.get("items", []))
+    evidence_hit_rate = int(evidence_bundle.get("evidence_hit_rate", 0))
     evidence_coverage = min(100, int(shared_count / required_count * 100) + min(retrieved_count * 6, 18))
     explanation_coverage = 100
     if not primary_match.get("gaps"):
@@ -347,6 +348,11 @@ def _build_evaluation_metrics(
             "name": "匹配证据覆盖",
             "score": evidence_coverage,
             "detail": f"Top1 岗位命中了 {shared_count}/{required_count} 个核心技能证据，并自动检索到 {retrieved_count} 条官方证据片段。",
+        },
+        {
+            "name": "证据命中率",
+            "score": evidence_hit_rate,
+            "detail": f"检索证据覆盖了 {len(evidence_bundle.get('hit_terms', []))}/{max(1, len(evidence_bundle.get('target_terms', [])))} 个目标术语。",
         },
         {
             "name": "解释完整度",

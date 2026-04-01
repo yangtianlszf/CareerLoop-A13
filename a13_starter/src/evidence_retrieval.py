@@ -226,6 +226,16 @@ def build_grounded_evidence_bundle(
     unique_terms = _dedupe_keep_order(
         [term for item in evidence_items for term in item.get("matched_terms", [])]
     )
+    target_terms = _dedupe_keep_order(
+        [
+            role_title,
+            source_title,
+            *[str(item) for item in primary_match.get("core_skills", [])[:5]],
+            *[str(item) for item in primary_match.get("shared_skills", [])[:4]],
+        ]
+    )
+    hit_terms = [term for term in target_terms if term in unique_terms]
+    evidence_hit_rate = int(len(hit_terms) / max(1, len(target_terms)) * 100)
     source_count = len({item.get("job_code") or item.get("source_title") for item in evidence_items})
     retrieval_mode = "template+jd" if template and matching_rows else "global-jd"
     summary = (
@@ -239,5 +249,8 @@ def build_grounded_evidence_bundle(
         "query_terms": query_terms,
         "summary": summary,
         "source_title": source_title,
+        "target_terms": target_terms,
+        "hit_terms": hit_terms,
+        "evidence_hit_rate": evidence_hit_rate,
         "items": evidence_items,
     }

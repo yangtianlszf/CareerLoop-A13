@@ -183,6 +183,7 @@ def build_career_report_markdown(
 ### 证据驱动检索链
 - 检索模式：{career_plan.evidence_bundle.get('retrieval_mode', '未生成')}
 - 检索关键词：{'、'.join(career_plan.evidence_bundle.get('query_terms', [])) or '未生成'}
+- 证据命中率：{career_plan.evidence_bundle.get('evidence_hit_rate', 0)}%（命中 {'、'.join(career_plan.evidence_bundle.get('hit_terms', [])) or '无'}）
 - 检索摘要：{career_plan.evidence_bundle.get('summary', '暂无')}
 {evidence_lines}
 

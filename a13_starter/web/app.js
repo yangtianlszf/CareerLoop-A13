@@ -88,6 +88,22 @@ function escapeHtml(value) {
     .replaceAll("'", "&#39;");
 }
 
+function escapeRegex(value) {
+  return String(value ?? "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function highlightTerms(text, terms = []) {
+  let html = escapeHtml(text ?? "");
+  const uniqueTerms = [...new Set((terms || []).map((item) => String(item || "").trim()).filter(Boolean))]
+    .sort((a, b) => b.length - a.length);
+
+  uniqueTerms.forEach((term) => {
+    const pattern = new RegExp(escapeRegex(term), "gi");
+    html = html.replace(pattern, (match) => `<mark class="evidence-highlight">${match}</mark>`);
+  });
+  return html;
+}
+
 function renderMarkdownPreview(markdownText) {
   if (!markdownText || !markdownText.trim()) {
     return '<div class="empty-inline">当前还没有生成报告内容。</div>';
@@ -617,6 +633,7 @@ function renderBenchmark(data) {
       <div class="tag-list">
         <span class="tag ${item.top1_hit ? "tag-hit" : "tag-warn"}">Top1 ${item.top1_hit ? "命中" : "未命中"}</span>
         <span class="tag ${item.top3_hit ? "tag-hit" : "tag-warn"}">Top3 ${item.top3_hit ? "命中" : "未命中"}</span>
+        <span class="tag">证据 ${item.evidence_hit_rate ?? 0}</span>
         <span class="tag">解释 ${item.explanation_coverage ?? 0}</span>
         <span class="tag">报告 ${item.report_readiness ?? 0}</span>
         <span class="tag">闭环 ${item.loop_readiness ?? 0}</span>
@@ -642,19 +659,34 @@ function renderGroundedEvidence(bundle) {
     return;
   }
 
+  const summaryCard = document.createElement("article");
+  summaryCard.className = "jd-card compact";
+  summaryCard.innerHTML = `
+    <div class="jd-card-top">
+      <div>
+        <span class="mini-label">Evidence Hit Rate</span>
+        <h4>${bundle?.evidence_hit_rate ?? 0}% · ${escapeHtml(bundle?.retrieval_mode || "未生成")}</h4>
+      </div>
+      <div class="score-badge">${(bundle?.hit_terms || []).length}/${(bundle?.target_terms || []).length || 1}</div>
+    </div>
+    <p class="jd-meta">命中术语：${escapeHtml((bundle?.hit_terms || []).join("、") || "无")}</p>
+    <p class="jd-summary">目标术语：${escapeHtml((bundle?.target_terms || []).join("、") || "无")}</p>
+  `;
+  groundedEvidenceList.appendChild(summaryCard);
+
   items.forEach((item) => {
     const card = document.createElement("article");
     card.className = "jd-card compact";
     card.innerHTML = `
       <div class="jd-card-top">
         <div>
-          <span class="mini-label">${escapeHtml(item.citation_id || "[E]")} · ${escapeHtml(item.source_type || "evidence")}</span>
+          <span class="mini-label citation-badge">${escapeHtml(item.citation_id || "[E]")} · ${escapeHtml(item.source_type || "evidence")}</span>
           <h4>${escapeHtml(item.job_title || item.source_title || "证据片段")}</h4>
         </div>
         <div class="score-badge">${item.score ?? 0}</div>
       </div>
-      <p class="jd-meta">${escapeHtml(item.company_name || "岗位模板")}｜${escapeHtml(item.city || "位置未知")}｜命中词：${escapeHtml((item.matched_terms || []).join("、") || "无")}</p>
-      <p class="jd-summary">${escapeHtml(item.snippet || "暂无片段")}</p>
+      <p class="jd-meta">${escapeHtml(item.company_name || "岗位模板")}｜${escapeHtml(item.city || "位置未知")}｜命中词：${highlightTerms((item.matched_terms || []).join("、") || "无", item.matched_terms || [])}</p>
+      <p class="jd-summary">${highlightTerms(item.snippet || "暂无片段", item.matched_terms || [])}</p>
     `;
     groundedEvidenceList.appendChild(card);
   });
