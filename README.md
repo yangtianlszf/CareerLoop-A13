@@ -45,21 +45,19 @@ flowchart LR
     H --> K[学校运营看板]
 ```
 
-## 运行截图占位
-
-这些占位图是为了让仓库首页结构完整，后续可以直接替换成真实截图。
+## 运行截图
 
 ### 首页总览
 
-![首页总览占位](docs/screenshots/dashboard-overview.svg)
+![首页总览](docs/screenshots/dashboard-overview.png)
 
 ### 证据中心与模板回看
 
-![证据中心占位](docs/screenshots/evidence-center.svg)
+![证据中心](docs/screenshots/evidence-center.png)
 
 ### 学校运营看板
 
-![学校运营看板占位](docs/screenshots/school-dashboard.svg)
+![学校运营看板](docs/screenshots/school-dashboard.png)
 
 ## 仓库结构
 
