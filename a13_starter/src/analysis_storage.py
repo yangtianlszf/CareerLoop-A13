@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from collections import Counter
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -149,4 +150,143 @@ def get_analysis(analysis_id: int) -> dict[str, Any] | None:
         "matches": json.loads(row["matches_json"]),
         "career_plan": json.loads(row["career_plan_json"]),
         "report_markdown": row["report_markdown"],
+    }
+
+
+def find_previous_analysis(
+    *,
+    student_name: str | None,
+    sample_name: str | None = None,
+    limit: int = 30,
+) -> dict[str, Any] | None:
+    init_storage()
+    with _get_connection() as conn:
+        rows = conn.execute(
+            """
+            SELECT *
+            FROM analyses
+            ORDER BY id DESC
+            LIMIT ?
+            """,
+            (max(1, limit),),
+        ).fetchall()
+
+    for row in rows:
+        row_sample_name = row["sample_name"]
+        student_profile = json.loads(row["student_profile_json"])
+        if sample_name and row_sample_name == sample_name:
+            return {
+                "id": row["id"],
+                "created_at": row["created_at"],
+                "sample_name": row_sample_name,
+                "parser_requested_mode": row["parser_requested_mode"],
+                "parser_used_mode": row["parser_used_mode"],
+                "resume_text": row["resume_text"],
+                "student_profile": student_profile,
+                "matches": json.loads(row["matches_json"]),
+                "career_plan": json.loads(row["career_plan_json"]),
+                "report_markdown": row["report_markdown"],
+            }
+        if student_name and student_profile.get("name") == student_name:
+            return {
+                "id": row["id"],
+                "created_at": row["created_at"],
+                "sample_name": row_sample_name,
+                "parser_requested_mode": row["parser_requested_mode"],
+                "parser_used_mode": row["parser_used_mode"],
+                "resume_text": row["resume_text"],
+                "student_profile": student_profile,
+                "matches": json.loads(row["matches_json"]),
+                "career_plan": json.loads(row["career_plan_json"]),
+                "report_markdown": row["report_markdown"],
+            }
+    return None
+
+
+def build_school_dashboard(limit: int = 80) -> dict[str, Any]:
+    init_storage()
+    with _get_connection() as conn:
+        rows = conn.execute(
+            """
+            SELECT *
+            FROM analyses
+            ORDER BY id DESC
+            LIMIT ?
+            """,
+            (max(1, limit),),
+        ).fetchall()
+
+    if not rows:
+        return {
+            "summary_cards": [],
+            "top_roles": [],
+            "major_distribution": [],
+            "city_distribution": [],
+            "follow_up_students": [],
+            "advice": [],
+        }
+
+    role_counter: Counter[str] = Counter()
+    major_counter: Counter[str] = Counter()
+    city_counter: Counter[str] = Counter()
+    follow_up_students: list[dict[str, Any]] = []
+    avg_score_total = 0
+    score_band_counter: Counter[str] = Counter()
+
+    for row in rows:
+        student_profile = json.loads(row["student_profile_json"])
+        career_plan = json.loads(row["career_plan_json"])
+        student_name = student_profile.get("name") or "未命名学生"
+        primary_role = career_plan.get("primary_role") or "未生成"
+        primary_score = int(career_plan.get("primary_score") or 0)
+        completeness = int(student_profile.get("profile_completeness") or 0)
+        competitiveness = int(student_profile.get("competitiveness_score") or 0)
+
+        role_counter[primary_role] += 1
+        major_counter[student_profile.get("major") or "专业未填写"] += 1
+        city_counter[student_profile.get("city_preference") or "城市未填写"] += 1
+        avg_score_total += primary_score
+
+        if primary_score >= 80:
+            score_band_counter["强匹配"] += 1
+        elif primary_score >= 65:
+            score_band_counter["潜力可转化"] += 1
+        else:
+            score_band_counter["重点帮扶"] += 1
+
+        if primary_score < 65 or completeness < 75:
+            follow_up_students.append(
+                {
+                    "name": student_name,
+                    "major": student_profile.get("major") or "专业未填写",
+                    "primary_role": primary_role,
+                    "primary_score": primary_score,
+                    "completeness": completeness,
+                    "competitiveness": competitiveness,
+                    "created_at": row["created_at"],
+                }
+            )
+
+    analysis_count = len(rows)
+    summary_cards = [
+        {"label": "已分析学生", "value": analysis_count, "detail": "来自历史分析记录，可作为学院就业服务沉淀数据。"},
+        {"label": "平均主岗分", "value": round(avg_score_total / analysis_count), "detail": "反映当前样本整体就业准备度。"},
+        {"label": "重点帮扶人数", "value": score_band_counter["重点帮扶"], "detail": "主岗分偏低或画像不完整，建议辅导员优先跟进。"},
+        {"label": "强匹配人数", "value": score_band_counter["强匹配"], "detail": "适合直接推岗、推实习或重点投递。"},
+    ]
+
+    advice = [
+        "对主岗分低于 65 的学生，先补画像完整度和一项可展示项目。",
+        "对强匹配学生，优先推送对应岗位招聘信息和模拟面试机会。",
+        "对城市偏好集中的学生，可做区域化推岗和宣讲活动配置。",
+    ]
+
+    return {
+        "summary_cards": summary_cards,
+        "top_roles": [{"name": name, "count": count} for name, count in role_counter.most_common(5)],
+        "major_distribution": [{"name": name, "count": count} for name, count in major_counter.most_common(5)],
+        "city_distribution": [{"name": name, "count": count} for name, count in city_counter.most_common(5)],
+        "score_bands": [{"name": name, "count": count} for name, count in score_band_counter.items()],
+        "follow_up_students": sorted(follow_up_students, key=lambda item: item["primary_score"])[:6],
+        "advice": advice,
     }

@@ -9,6 +9,12 @@ def _render_list(items: list[str]) -> str:
     return "".join(f"- {item}\n" for item in items)
 
 
+def _render_dict_items(items: list[dict[str, object]], formatter) -> str:
+    if not items:
+        return "- 无\n"
+    return "".join(f"- {formatter(item)}\n" for item in items)
+
+
 def build_report_markdown(
     student: StudentProfile,
     job: JobProfile,
@@ -78,6 +84,51 @@ def build_career_report_markdown(
             f"- {item['role_title']}：{item['score']} 分（置信度：{item.get('confidence_label', '中')}）"
         )
 
+    stakeholder_lines = _render_dict_items(
+        career_plan.stakeholder_views,
+        lambda item: f"{item.get('role', '角色')}：{item.get('headline', '')}；重点：{'、'.join(item.get('items', []))}",
+    )
+    metric_lines = _render_dict_items(
+        career_plan.evaluation_metrics,
+        lambda item: f"{item.get('name', '指标')}：{item.get('score', 0)} 分，{item.get('detail', '')}",
+    )
+    sprint_lines = _render_dict_items(
+        career_plan.learning_sprints,
+        lambda item: (
+            f"{item.get('title', '训练任务')}（{item.get('type', '训练')}）"
+            f"｜原因：{item.get('reason', '')}"
+            f"｜交付物：{item.get('deliverable', '')}"
+        ),
+    )
+    question_lines = _render_dict_items(
+        career_plan.agent_questions,
+        lambda item: (
+            f"{item.get('question', '')}"
+            f"｜建议回答：{item.get('suggested_answer', '')}"
+            f"｜用途：{item.get('rationale', '')}"
+        ),
+    )
+    innovation_lines = _render_dict_items(
+        career_plan.innovation_highlights,
+        lambda item: f"{item.get('title', '')}（{item.get('tag', '')}）：{item.get('detail', '')}",
+    )
+    competency_lines = _render_dict_items(
+        career_plan.competency_dimensions,
+        lambda item: f"{item.get('name', '')}：{item.get('score', 0)} 分（权重 {item.get('weight', '')}），{item.get('note', '')}",
+    )
+    loop_lines = _render_dict_items(
+        career_plan.service_loop,
+        lambda item: f"{item.get('stage', '')}：{item.get('status', '')}，{item.get('detail', '')}",
+    )
+    resource_lines = _render_dict_items(
+        career_plan.resource_map,
+        lambda item: (
+            f"{item.get('category', '')}｜{item.get('priority', '')}｜{item.get('title', '')}"
+            f"：{item.get('description', '')}｜交付物：{item.get('deliverable', '')}"
+        ),
+    )
+    comparison = career_plan.growth_comparison or {}
+
     return f"""# 大学生职业规划报告
 
 ## 1. 学生基本画像
@@ -106,6 +157,8 @@ def build_career_report_markdown(
 {_render_list(student.awards)}
 ### 当前缺失项
 {_render_list(student.missing_sections)}
+### 智能体补充信息
+{_render_list([f"{key}：{value}" for key, value in student.agent_answers.items()])}
 
 ## 3. 岗位匹配结果
 {chr(10).join(top_match_lines)}
@@ -144,4 +197,47 @@ def build_career_report_markdown(
 
 ## 7. 推荐补充项目
 {_render_list(career_plan.recommended_projects)}
+
+## 8. 训练闭环
+### 学习冲刺任务
+{sprint_lines}
+
+### 下一次复测目标
+{_render_list(career_plan.next_review_targets)}
+
+## 9. 成长对比
+- 对比结论：{comparison.get('summary', '暂无对比结果')}
+### 变化明细
+{_render_list(comparison.get('progress_items', []))}
+
+## 10. 多角色服务视角
+{stakeholder_lines}
+
+## 11. 评测快照
+{metric_lines}
+
+## 12. 胜任力模型
+{competency_lines}
+
+## 13. 服务闭环
+{loop_lines}
+
+### 岗位自测任务
+{_render_list(career_plan.assessment_tasks)}
+
+### 岗位自测结果
+- 自测标题：{career_plan.self_assessment.get('title', '未生成')}
+- 自测得分：{career_plan.self_assessment.get('score', 0)}
+- 自测结论：{career_plan.self_assessment.get('summary', '暂无')}
+{_render_list([f"{item.get('focus', '')}：{item.get('level', '')}" for item in career_plan.self_assessment.get('items', [])])}
+
+## 14. 资源映射
+{resource_lines}
+
+## 15. 智能体追问
+{question_lines}
+
+## 16. 创新锚点
+- 产品标签：{career_plan.product_signature or "未设置"}
+{innovation_lines}
 """

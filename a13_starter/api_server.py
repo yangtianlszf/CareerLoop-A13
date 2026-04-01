@@ -10,8 +10,15 @@ from email.parser import BytesParser
 from email.policy import default
 from urllib.parse import parse_qs, urlparse
 
-from a13_starter.src.career_planner import build_career_plan, rank_student_against_templates
-from a13_starter.src.analysis_storage import get_analysis, init_storage, list_analyses, save_analysis
+from a13_starter.src.career_planner import apply_agent_answers, build_career_plan, rank_student_against_templates
+from a13_starter.src.analysis_storage import (
+    build_school_dashboard,
+    find_previous_analysis,
+    get_analysis,
+    init_storage,
+    list_analyses,
+    save_analysis,
+)
 from a13_starter.src.jd_search import get_template_evidence, search_job_profiles
 from a13_starter.src.matcher import match_student_to_job
 from a13_starter.src.models import JobProfile
@@ -88,6 +95,34 @@ def _resolve_sample_resume(name: str | None) -> Path:
     if not path.exists():
         return SAMPLE_RESUME_PATH
     return path
+
+
+def _normalize_agent_answers(raw_answers: object) -> dict[str, str]:
+    if not isinstance(raw_answers, dict):
+        return {}
+    normalized: dict[str, str] = {}
+    for key, value in raw_answers.items():
+        clean_key = str(key).strip()
+        clean_value = str(value).strip()
+        if clean_key and clean_value:
+            normalized[clean_key] = clean_value
+    return normalized
+
+
+def _normalize_self_assessment(raw_answers: object) -> dict[str, int]:
+    if not isinstance(raw_answers, dict):
+        return {}
+    normalized: dict[str, int] = {}
+    for key, value in raw_answers.items():
+        clean_key = str(key).strip()
+        if not clean_key:
+            continue
+        try:
+            score = int(value)
+        except (TypeError, ValueError):
+            continue
+        normalized[clean_key] = max(0, min(score, 2))
+    return normalized
 
 
 class A13RequestHandler(BaseHTTPRequestHandler):
@@ -240,6 +275,11 @@ class A13RequestHandler(BaseHTTPRequestHandler):
 
         if path == "/api/history":
             self._send_json(HTTPStatus.OK, {"items": list_analyses(limit=30)})
+            return
+
+        if path == "/api/school-dashboard":
+            limit = int(query.get("limit", ["80"])[0])
+            self._send_json(HTTPStatus.OK, build_school_dashboard(limit=limit))
             return
 
         if path.startswith("/api/history/"):
@@ -442,13 +482,31 @@ class A13RequestHandler(BaseHTTPRequestHandler):
             top_k = int(body.get("top_k", 5))
             parser_mode = str(body.get("parser_mode", "auto"))
             sample_name = str(body.get("sample_name", "")).strip() or None
+            agent_answers = _normalize_agent_answers(body.get("agent_answers", {}))
+            self_assessment_answers = _normalize_self_assessment(body.get("self_assessment_answers", {}))
+            prior_analysis_id = body.get("prior_analysis_id")
             if not resume_text:
                 self._send_json(HTTPStatus.BAD_REQUEST, {"error": "resume_text is required"})
                 return
 
             student, parser_metadata = parse_student_profile(resume_text, parser_mode=parser_mode)
+            student = apply_agent_answers(student, agent_answers)
             matches = rank_student_against_templates(student, _load_templates())
-            career_plan = build_career_plan(student, matches)
+            previous_analysis = None
+            if prior_analysis_id is not None:
+                try:
+                    previous_analysis = get_analysis(int(prior_analysis_id))
+                except (TypeError, ValueError):
+                    previous_analysis = None
+            if previous_analysis is None:
+                previous_analysis = find_previous_analysis(student_name=student.name, sample_name=sample_name)
+            career_plan = build_career_plan(
+                student,
+                matches,
+                previous_analysis=previous_analysis,
+                parser_metadata=parser_metadata.to_dict(),
+                self_assessment_answers=self_assessment_answers,
+            )
             report_markdown = build_career_report_markdown(student, matches, career_plan)
             analysis_id = save_analysis(
                 sample_name=sample_name,
@@ -469,6 +527,7 @@ class A13RequestHandler(BaseHTTPRequestHandler):
                     "career_plan": career_plan.to_dict(),
                     "report_markdown": report_markdown,
                     "parser": parser_metadata.to_dict(),
+                    "previous_analysis_id": previous_analysis.get("id") if previous_analysis else None,
                 },
             )
             return

@@ -141,6 +141,30 @@
           <section class="control-block soft-block">
             <div class="block-head">
               <div>
+                <h3>智能体补充问答</h3>
+                <p>首次分析后，这里会主动追问最多 3 个关键问题。补充后再次分析，会自动形成成长对比。</p>
+              </div>
+            </div>
+            <div id="agent-question-list" class="agent-question-list">
+              <div class="empty-inline compact">完成首次分析后，系统会在这里生成针对性的追问。</div>
+            </div>
+          </section>
+
+          <section class="control-block soft-block">
+            <div class="block-head">
+              <div>
+                <h3>岗位自测入口</h3>
+                <p>完成首次分析后，系统会生成与主岗位绑定的 3 道轻量自测题。自测结果会纳入下一次规划。</p>
+              </div>
+            </div>
+            <div id="self-assessment-form" class="self-assessment-form">
+              <div class="empty-inline compact">主推荐岗位生成后，这里会出现岗位自测题。</div>
+            </div>
+          </section>
+
+          <section class="control-block soft-block">
+            <div class="block-head">
+              <div>
                 <h3>环境自检</h3>
                 <p>先确认模型、数据、数据库和 PDF 解析依赖。</p>
               </div>
@@ -286,6 +310,134 @@
               </article>
             </section>
 
+            <section class="insight-layout wide-balance">
+              <article class="panel action-card">
+                <div class="card-head">
+                  <div>
+                    <p class="section-kicker">Training Loop</p>
+                    <h3>训练闭环</h3>
+                  </div>
+                </div>
+                <div id="learning-sprints" class="sprint-list"></div>
+                <div class="capability-block">
+                  <span class="summary-label">下一次复测目标</span>
+                  <ul id="review-targets" class="review-target-list"></ul>
+                </div>
+              </article>
+
+              <article class="panel pathway-card">
+                <div class="card-head">
+                  <div>
+                    <p class="section-kicker">Growth Replay</p>
+                    <h3>成长对比</h3>
+                  </div>
+                </div>
+                <div id="growth-comparison" class="comparison-panel"></div>
+              </article>
+            </section>
+
+            <section class="insight-layout">
+              <article class="panel insight-card">
+                <div class="card-head">
+                  <div>
+                    <p class="section-kicker">Competency Model</p>
+                    <h3>胜任力维度</h3>
+                  </div>
+                </div>
+                <div id="competency-radar" class="competency-radar"></div>
+                <div id="competency-dimensions" class="metric-grid"></div>
+              </article>
+
+              <article class="panel insight-card">
+                <div class="card-head">
+                  <div>
+                    <p class="section-kicker">Service Loop</p>
+                    <h3>成长闭环阶段</h3>
+                  </div>
+                </div>
+                <div id="service-loop" class="service-loop"></div>
+                <div class="capability-block">
+                  <span class="summary-label">岗位自测任务</span>
+                  <ul id="assessment-tasks" class="review-target-list"></ul>
+                </div>
+              </article>
+            </section>
+
+            <section class="insight-layout">
+              <article class="panel insight-card">
+                <div class="card-head">
+                  <div>
+                    <p class="section-kicker">Resource Map</p>
+                    <h3>资源映射中心</h3>
+                  </div>
+                </div>
+                <div id="resource-map" class="resource-grid"></div>
+              </article>
+
+              <article class="panel insight-card">
+                <div class="card-head">
+                  <div>
+                    <p class="section-kicker">Assessment Replay</p>
+                    <h3>岗位自测结果</h3>
+                  </div>
+                </div>
+                <div id="self-assessment-summary" class="comparison-panel"></div>
+              </article>
+            </section>
+
+            <section class="story-section">
+              <div class="section-head">
+                <div>
+                  <p class="section-kicker">School Ops</p>
+                  <h3>学校运营看板</h3>
+                </div>
+                <p>用历史分析数据模拟辅导员与就业中心侧的运营观察视角。</p>
+              </div>
+              <div id="school-summary-cards" class="school-card-grid"></div>
+              <div class="insight-layout">
+                <article class="panel insight-card">
+                  <div class="card-head">
+                    <div>
+                      <h3>主岗位与专业分布</h3>
+                      <p>从历史分析中提取当前样本的就业倾向。</p>
+                    </div>
+                  </div>
+                  <div id="school-distribution" class="school-distribution"></div>
+                </article>
+                <article class="panel insight-card">
+                  <div class="card-head">
+                    <div>
+                      <h3>重点跟进名单</h3>
+                      <p>用于辅导员快速识别需要优先帮扶的学生。</p>
+                    </div>
+                  </div>
+                  <div id="school-follow-up" class="school-follow-up"></div>
+                </article>
+              </div>
+            </section>
+
+            <section class="insight-layout">
+              <article class="panel insight-card">
+                <div class="card-head">
+                  <div>
+                    <p class="section-kicker">Stakeholder Views</p>
+                    <h3>多角色价值</h3>
+                  </div>
+                </div>
+                <div id="stakeholder-views" class="stakeholder-grid"></div>
+              </article>
+
+              <article class="panel insight-card">
+                <div class="card-head">
+                  <div>
+                    <p class="section-kicker">Evaluation Snapshot</p>
+                    <h3>评测快照</h3>
+                  </div>
+                </div>
+                <div id="evaluation-metrics" class="metric-grid"></div>
+              </article>
+            </section>
+
             <section class="insight-layout">
               <article class="panel insight-card">
                 <div class="card-head">
@@ -313,6 +465,17 @@
                 </div>
                 <ul id="recommended-projects" class="project-list"></ul>
               </article>
+            </section>
+
+            <section class="story-section">
+              <div class="section-head">
+                <div>
+                  <p class="section-kicker">Innovation Anchor</p>
+                  <h3>创新锚点</h3>
+                </div>
+                <p id="product-signature">用一句话讲清这套系统最不一样的地方。</p>
+              </div>
+              <div id="innovation-highlights" class="innovation-grid"></div>
             </section>
 
             <section class="story-section">

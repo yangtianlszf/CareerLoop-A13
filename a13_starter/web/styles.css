@@ -373,7 +373,8 @@ textarea {
 
 .sample-gallery,
 .history-list,
-.system-check-list {
+.system-check-list,
+.agent-question-list {
   display: grid;
   gap: 12px;
   margin-top: 14px;
@@ -488,6 +489,96 @@ textarea {
 .helper-card p {
   margin: 8px 0 0;
   line-height: 1.65;
+}
+
+.agent-question-card {
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.agent-question-label {
+  display: block;
+  font-weight: 800;
+  line-height: 1.6;
+}
+
+.agent-answer-input {
+  width: 100%;
+  min-height: 48px;
+  margin-top: 10px;
+  padding: 0 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.94);
+}
+
+.agent-question-note {
+  margin: 10px 0 0;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.self-assessment-form {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.assessment-card {
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.assessment-card strong {
+  display: block;
+  line-height: 1.6;
+}
+
+.assessment-card p {
+  margin: 8px 0 0;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.assessment-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.assessment-option {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.assessment-option input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.assessment-option span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: rgba(31, 42, 36, 0.08);
+  color: var(--text);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.assessment-option input:checked + span {
+  background: var(--teal-soft);
+  color: var(--teal-2);
+  box-shadow: inset 0 0 0 1px rgba(32, 104, 89, 0.16);
 }
 
 .action-cluster {
@@ -996,6 +1087,257 @@ textarea {
   line-height: 1.7;
 }
 
+.sprint-list,
+.stakeholder-grid,
+.metric-grid,
+.innovation-grid,
+.service-loop {
+  display: grid;
+  gap: 14px;
+}
+
+.sprint-card,
+.stakeholder-card,
+.metric-snapshot {
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.sprint-top,
+.metric-snapshot-top {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sprint-card strong,
+.stakeholder-card h4,
+.innovation-card h4 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.sprint-card p,
+.stakeholder-card ul,
+.metric-snapshot p,
+.innovation-card p,
+.comparison-summary {
+  margin: 10px 0 0;
+  line-height: 1.7;
+  color: var(--muted);
+}
+
+.sprint-deliverable {
+  margin-top: 12px;
+}
+
+.sprint-deliverable p {
+  margin-top: 8px;
+}
+
+.review-target-list {
+  margin: 12px 0 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 10px;
+}
+
+.comparison-card {
+  padding: 18px;
+  border-radius: 20px;
+  border: 1px dashed var(--line-strong);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.comparison-card.with-baseline {
+  border-style: solid;
+  background: linear-gradient(180deg, rgba(32, 104, 89, 0.08), rgba(255, 255, 255, 0.88));
+}
+
+.comparison-list {
+  margin: 14px 0 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 10px;
+}
+
+.stakeholder-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.stakeholder-card ul {
+  padding-left: 18px;
+}
+
+.metric-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.metric-snapshot-top span {
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.metric-snapshot-top strong {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.innovation-grid {
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.innovation-card {
+  padding: 20px;
+}
+
+.competency-radar {
+  display: grid;
+  place-items: center;
+  min-height: 280px;
+  margin-bottom: 14px;
+  border-radius: 20px;
+  background: linear-gradient(180deg, rgba(32, 104, 89, 0.06), rgba(255, 255, 255, 0.82));
+  border: 1px solid var(--line);
+}
+
+.competency-radar svg {
+  width: 100%;
+  max-width: 360px;
+  height: auto;
+}
+
+.radar-ring,
+.radar-axis {
+  fill: none;
+  stroke: rgba(31, 42, 36, 0.12);
+  stroke-width: 1;
+}
+
+.radar-shape {
+  fill: rgba(196, 81, 43, 0.18);
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+
+.radar-point {
+  fill: var(--accent);
+}
+
+.radar-label {
+  fill: var(--muted);
+  font-size: 11px;
+  text-anchor: middle;
+}
+
+.resource-grid,
+.school-card-grid,
+.school-distribution,
+.school-follow-up {
+  display: grid;
+  gap: 14px;
+}
+
+.resource-grid,
+.school-card-grid {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.resource-card,
+.school-summary-card,
+.distribution-card,
+.follow-up-card {
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.resource-top {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.resource-card h4,
+.distribution-card h4 {
+  margin: 10px 0 0;
+  font-size: 1rem;
+}
+
+.resource-card p,
+.school-summary-card p,
+.follow-up-card p {
+  margin: 10px 0 0;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.school-summary-card span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.school-summary-card strong {
+  display: block;
+  margin-top: 10px;
+  font-family: var(--font-display);
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.distribution-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.distribution-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed var(--line);
+}
+
+.distribution-row span {
+  color: var(--muted);
+}
+
+.follow-up-card strong {
+  display: block;
+}
+
+.service-step {
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  gap: 14px;
+  align-items: start;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.service-step strong {
+  display: block;
+}
+
+.service-step p {
+  margin: 8px 0 0;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
 .career-graph {
   padding: 18px;
   overflow: auto;
@@ -1139,6 +1481,10 @@ textarea {
   line-height: 1.8;
 }
 
+.empty-inline.compact {
+  min-height: 120px;
+}
+
 .report-head {
   align-items: end;
 }
@@ -1221,7 +1567,9 @@ textarea {
   .hero-flow,
   .overview-tag-panels,
   .score-strip,
-  .timeline-grid {
+  .timeline-grid,
+  .metric-grid,
+  .stakeholder-grid {
     grid-template-columns: 1fr;
   }
 

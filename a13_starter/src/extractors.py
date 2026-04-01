@@ -143,6 +143,31 @@ def _estimate_competitiveness(
     return max(0, min(score, 100))
 
 
+def refresh_student_profile_metrics(student: StudentProfile) -> StudentProfile:
+    completeness_score, missing_sections = _estimate_profile_completeness(
+        school_name=student.school_name,
+        major=student.major,
+        education_level=student.education_level,
+        target_roles=student.target_roles,
+        city_preference=student.city_preference,
+        skills=student.skills,
+        certificates=student.certificates,
+        projects=student.projects,
+        internships=student.internships,
+    )
+    competitiveness_score = _estimate_competitiveness(
+        skills=student.skills,
+        certificates=student.certificates,
+        projects=student.projects,
+        internships=student.internships,
+        awards=student.awards,
+    )
+    student.profile_completeness = completeness_score
+    student.competitiveness_score = competitiveness_score
+    student.missing_sections = missing_sections
+    return student
+
+
 def build_job_profile(raw_text: str) -> JobProfile:
     title = _extract_title(raw_text, "未命名岗位")
     growth_path = DEFAULT_GROWTH_PATHS.get(title, [title, "相关岗位提升", "岗位负责人"])
@@ -184,26 +209,8 @@ def build_student_profile(raw_text: str) -> StudentProfile:
     projects = _extract_named_sections(raw_text, "项目")
     internships = _extract_named_sections(raw_text, "实习")
     awards = _extract_awards(raw_text)
-    completeness_score, missing_sections = _estimate_profile_completeness(
-        school_name=school_name,
-        major=major,
-        education_level=education_level,
-        target_roles=target_roles,
-        city_preference=city_preference,
-        skills=skills,
-        certificates=certificates,
-        projects=projects,
-        internships=internships,
-    )
-    competitiveness_score = _estimate_competitiveness(
-        skills=skills,
-        certificates=certificates,
-        projects=projects,
-        internships=internships,
-        awards=awards,
-    )
-
-    return StudentProfile(
+    return refresh_student_profile_metrics(
+        StudentProfile(
         name=name,
         raw_text=raw_text,
         school_name=school_name,
@@ -218,7 +225,5 @@ def build_student_profile(raw_text: str) -> StudentProfile:
         projects=projects,
         internships=internships,
         awards=awards,
-        profile_completeness=completeness_score,
-        competitiveness_score=competitiveness_score,
-        missing_sections=missing_sections,
+        )
     )

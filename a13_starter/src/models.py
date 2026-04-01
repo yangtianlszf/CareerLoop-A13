@@ -44,6 +44,7 @@ class StudentProfile:
     profile_completeness: int = 0
     competitiveness_score: int = 0
     missing_sections: list[str] = field(default_factory=list)
+    agent_answers: dict[str, str] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -106,6 +107,20 @@ class CareerPlan:
     action_plan_90_days: list[str] = field(default_factory=list)
     action_plan_180_days: list[str] = field(default_factory=list)
     recommended_projects: list[str] = field(default_factory=list)
+    learning_sprints: list[dict[str, str]] = field(default_factory=list)
+    next_review_targets: list[str] = field(default_factory=list)
+    growth_comparison: dict[str, Any] = field(default_factory=dict)
+    stakeholder_views: list[dict[str, Any]] = field(default_factory=list)
+    evaluation_metrics: list[dict[str, Any]] = field(default_factory=list)
+    competency_dimensions: list[dict[str, Any]] = field(default_factory=list)
+    service_loop: list[dict[str, str]] = field(default_factory=list)
+    assessment_tasks: list[str] = field(default_factory=list)
+    self_assessment: dict[str, Any] = field(default_factory=dict)
+    resource_map: list[dict[str, Any]] = field(default_factory=list)
+    agent_questions: list[dict[str, str]] = field(default_factory=list)
+    innovation_highlights: list[dict[str, str]] = field(default_factory=list)
+    service_scenarios: list[str] = field(default_factory=list)
+    product_signature: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

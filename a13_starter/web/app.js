@@ -4,6 +4,7 @@ const state = {
   currentReport: "",
   currentAnalysisId: null,
   latestResult: null,
+  schoolDashboard: null,
 };
 
 const resumeInput = document.getElementById("resume-input");
@@ -17,6 +18,8 @@ const statusText = document.getElementById("status-text");
 const sampleGallery = document.getElementById("sample-gallery");
 const systemCheckList = document.getElementById("system-check-list");
 const historyList = document.getElementById("history-list");
+const agentQuestionList = document.getElementById("agent-question-list");
+const selfAssessmentForm = document.getElementById("self-assessment-form");
 const emptyState = document.getElementById("empty-state");
 const resultsContent = document.getElementById("results-content");
 const primaryRole = document.getElementById("primary-role");
@@ -40,9 +43,25 @@ const reportPreview = document.getElementById("report-preview");
 const plan30 = document.getElementById("plan-30");
 const plan90 = document.getElementById("plan-90");
 const plan180 = document.getElementById("plan-180");
+const learningSprints = document.getElementById("learning-sprints");
+const reviewTargets = document.getElementById("review-targets");
+const growthComparison = document.getElementById("growth-comparison");
+const competencyRadar = document.getElementById("competency-radar");
+const competencyDimensions = document.getElementById("competency-dimensions");
+const serviceLoop = document.getElementById("service-loop");
+const assessmentTasks = document.getElementById("assessment-tasks");
+const resourceMap = document.getElementById("resource-map");
+const selfAssessmentSummary = document.getElementById("self-assessment-summary");
+const schoolSummaryCards = document.getElementById("school-summary-cards");
+const schoolDistribution = document.getElementById("school-distribution");
+const schoolFollowUp = document.getElementById("school-follow-up");
+const stakeholderViews = document.getElementById("stakeholder-views");
+const evaluationMetrics = document.getElementById("evaluation-metrics");
 const careerStrengths = document.getElementById("career-strengths");
 const careerRisks = document.getElementById("career-risks");
 const recommendedProjects = document.getElementById("recommended-projects");
+const productSignature = document.getElementById("product-signature");
+const innovationHighlights = document.getElementById("innovation-highlights");
 const careerGraph = document.getElementById("career-graph");
 const copyReportButton = document.getElementById("copy-report-btn");
 const downloadReportButton = document.getElementById("download-report-btn");
@@ -179,6 +198,97 @@ function fillList(container, items) {
     const li = document.createElement("li");
     li.textContent = item;
     container.appendChild(li);
+  });
+}
+
+function collectAgentAnswers() {
+  const answers = {};
+  agentQuestionList.querySelectorAll("[data-agent-id]").forEach((input) => {
+    const value = input.value.trim();
+    if (value) {
+      answers[input.dataset.agentId] = value;
+    }
+  });
+  return answers;
+}
+
+function collectSelfAssessmentAnswers() {
+  const answers = {};
+  selfAssessmentForm.querySelectorAll("[data-self-assessment-id]:checked").forEach((input) => {
+    answers[input.dataset.selfAssessmentId] = Number(input.value);
+  });
+  return answers;
+}
+
+function renderAgentQuestions(questions, existingAnswers = {}) {
+  agentQuestionList.innerHTML = "";
+  if (!questions || questions.length === 0) {
+    agentQuestionList.innerHTML = `<div class="empty-inline compact">当前没有需要补充的追问，可以直接继续分析。</div>`;
+    return;
+  }
+
+  questions.forEach((question, index) => {
+    const card = document.createElement("div");
+    card.className = "agent-question-card";
+    const inputId = `agent-question-${index}`;
+    const preset = existingAnswers?.[question.id] || question.suggested_answer || "";
+    card.innerHTML = `
+      <label for="${inputId}" class="agent-question-label">${question.question}</label>
+      <input
+        id="${inputId}"
+        class="agent-answer-input"
+        type="text"
+        data-agent-id="${question.id}"
+        placeholder="${escapeHtml(question.placeholder || "请输入你的补充信息")}"
+        value="${escapeHtml(preset)}"
+      />
+      <p class="agent-question-note">${question.rationale || ""}</p>
+    `;
+    agentQuestionList.appendChild(card);
+  });
+}
+
+function renderSelfAssessmentForm(selfAssessment) {
+  selfAssessmentForm.innerHTML = "";
+  const items = selfAssessment?.items || [];
+  if (!items.length) {
+    selfAssessmentForm.innerHTML = `<div class="empty-inline compact">主推荐岗位生成后，这里会出现岗位自测题。</div>`;
+    return;
+  }
+
+  items.forEach((item, index) => {
+    const card = document.createElement("div");
+    card.className = "assessment-card";
+    const baseName = `assessment-${item.id}-${index}`;
+    const currentValue = item.score === null || item.score === undefined ? null : Number(item.score);
+    const options = [
+      { label: "待补强", value: 0 },
+      { label: "基础", value: 1 },
+      { label: "熟练", value: 2 },
+    ];
+    card.innerHTML = `
+      <strong>${item.prompt || "岗位自测题"}</strong>
+      <p>${item.focus || ""}</p>
+      <div class="assessment-options">
+        ${options
+          .map(
+            (option) => `
+              <label class="assessment-option">
+                <input
+                  type="radio"
+                  name="${baseName}"
+                  data-self-assessment-id="${item.id}"
+                  value="${option.value}"
+                  ${currentValue !== null && currentValue === option.value ? "checked" : ""}
+                />
+                <span>${option.label}</span>
+              </label>
+            `
+          )
+          .join("")}
+      </div>
+    `;
+    selfAssessmentForm.appendChild(card);
   });
 }
 
@@ -338,7 +448,7 @@ function renderMatches(matches) {
 function renderCareerPlan(plan, matches) {
   const topMatch = matches && matches.length ? matches[0] : null;
   primaryRole.textContent = plan.primary_role || topMatch?.role_title || "待生成";
-  primaryScoreBadge.textContent = `${topMatch?.score ?? 0} 分`;
+  primaryScoreBadge.textContent = `${plan.primary_score ?? topMatch?.score ?? 0} 分`;
   careerOverview.textContent = plan.overview || "";
   fillTagList(backupRoles, plan.backup_roles || [], "暂无备选方向");
   fillTagList(transitionPaths, plan.transition_paths || [], "暂无转岗建议");
@@ -357,6 +467,328 @@ function renderCareerPlan(plan, matches) {
   fillList(plan90, plan.action_plan_90_days || []);
   fillList(plan180, plan.action_plan_180_days || []);
   fillList(recommendedProjects, plan.recommended_projects || []);
+  fillList(reviewTargets, plan.next_review_targets || []);
+  productSignature.textContent = plan.product_signature || "用一句话讲清这套系统最不一样的地方。";
+}
+
+function renderLearningLoop(items) {
+  learningSprints.innerHTML = "";
+  if (!items || items.length === 0) {
+    learningSprints.innerHTML = `<div class="empty-inline compact">当前还没有训练闭环任务。</div>`;
+    return;
+  }
+
+  items.forEach((item) => {
+    const card = document.createElement("article");
+    card.className = "sprint-card";
+    card.innerHTML = `
+      <div class="sprint-top">
+        <strong>${item.title || "训练任务"}</strong>
+        <span class="tag">${item.type || "训练"}</span>
+      </div>
+      <p>${item.reason || ""}</p>
+      <div class="sprint-deliverable">
+        <span class="summary-label">交付物</span>
+        <p>${item.deliverable || "暂无"}</p>
+      </div>
+    `;
+    learningSprints.appendChild(card);
+  });
+}
+
+function renderGrowthComparison(data) {
+  if (!data || !data.summary) {
+    growthComparison.innerHTML = `<div class="empty-inline compact">还没有成长对比结果。</div>`;
+    return;
+  }
+
+  const deltas = [];
+  if (typeof data.score_delta === "number") {
+    deltas.push(`主岗位分数 ${data.score_delta >= 0 ? "+" : ""}${data.score_delta}`);
+  }
+  if (typeof data.completeness_delta === "number") {
+    deltas.push(`完整度 ${data.completeness_delta >= 0 ? "+" : ""}${data.completeness_delta}`);
+  }
+  if (typeof data.competitiveness_delta === "number") {
+    deltas.push(`竞争力 ${data.competitiveness_delta >= 0 ? "+" : ""}${data.competitiveness_delta}`);
+  }
+
+  growthComparison.innerHTML = `
+    <div class="comparison-card ${data.has_baseline ? "with-baseline" : ""}">
+      <p class="comparison-summary">${data.summary}</p>
+      ${deltas.length ? `<div class="tag-list">${deltas.map((item) => `<span class="tag">${escapeHtml(item)}</span>`).join("")}</div>` : ""}
+      <ul class="comparison-list">
+        ${(data.progress_items || []).map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
+      </ul>
+    </div>
+  `;
+}
+
+function renderStakeholderViews(items) {
+  stakeholderViews.innerHTML = "";
+  if (!items || items.length === 0) {
+    stakeholderViews.innerHTML = `<div class="empty-inline compact">当前还没有多角色视角。</div>`;
+    return;
+  }
+
+  items.forEach((item) => {
+    const card = document.createElement("article");
+    card.className = "stakeholder-card";
+    card.innerHTML = `
+      <span class="mini-label">${item.role || "角色"}</span>
+      <h4>${item.headline || "暂无摘要"}</h4>
+      <ul>${(item.items || []).map((line) => `<li>${escapeHtml(line)}</li>`).join("")}</ul>
+    `;
+    stakeholderViews.appendChild(card);
+  });
+}
+
+function renderEvaluationMetrics(items) {
+  evaluationMetrics.innerHTML = "";
+  if (!items || items.length === 0) {
+    evaluationMetrics.innerHTML = `<div class="empty-inline compact">当前还没有评测快照。</div>`;
+    return;
+  }
+
+  items.forEach((item) => {
+    const card = document.createElement("article");
+    card.className = "metric-snapshot";
+    card.innerHTML = `
+      <div class="metric-snapshot-top">
+        <span>${item.name || "指标"}</span>
+        <strong>${item.score ?? 0}</strong>
+      </div>
+      <p>${item.detail || ""}</p>
+    `;
+    evaluationMetrics.appendChild(card);
+  });
+}
+
+function renderCompetencyDimensions(items) {
+  competencyDimensions.innerHTML = "";
+  if (!items || items.length === 0) {
+    competencyDimensions.innerHTML = `<div class="empty-inline compact">当前还没有胜任力维度。</div>`;
+    competencyRadar.innerHTML = `<div class="empty-inline compact">等待生成胜任力可视化。</div>`;
+    return;
+  }
+
+  renderCompetencyRadar(items);
+
+  items.forEach((item) => {
+    const card = document.createElement("article");
+    card.className = "metric-snapshot";
+    card.innerHTML = `
+      <div class="metric-snapshot-top">
+        <span>${item.name || "维度"} · ${item.weight || ""}</span>
+        <strong>${item.score ?? 0}</strong>
+      </div>
+      <p>${item.note || ""}</p>
+    `;
+    competencyDimensions.appendChild(card);
+  });
+}
+
+function renderCompetencyRadar(items) {
+  const width = 320;
+  const height = 280;
+  const cx = 150;
+  const cy = 136;
+  const radius = 92;
+  const count = items.length;
+  const points = items.map((item, index) => {
+    const angle = (-Math.PI / 2) + (Math.PI * 2 * index) / count;
+    const valueRadius = radius * ((Number(item.score) || 0) / 100);
+    return {
+      label: item.name || `维度${index + 1}`,
+      x: cx + Math.cos(angle) * valueRadius,
+      y: cy + Math.sin(angle) * valueRadius,
+      ax: cx + Math.cos(angle) * radius,
+      ay: cy + Math.sin(angle) * radius,
+      lx: cx + Math.cos(angle) * (radius + 24),
+      ly: cy + Math.sin(angle) * (radius + 24),
+    };
+  });
+
+  const polygon = points.map((point) => `${point.x},${point.y}`).join(" ");
+  competencyRadar.innerHTML = `
+    <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="胜任力雷达图">
+      <circle class="radar-ring" cx="${cx}" cy="${cy}" r="${radius}"></circle>
+      <circle class="radar-ring" cx="${cx}" cy="${cy}" r="${radius * 0.66}"></circle>
+      <circle class="radar-ring" cx="${cx}" cy="${cy}" r="${radius * 0.33}"></circle>
+      ${points.map((point) => `<line class="radar-axis" x1="${cx}" y1="${cy}" x2="${point.ax}" y2="${point.ay}"></line>`).join("")}
+      <polygon class="radar-shape" points="${polygon}"></polygon>
+      ${points
+        .map(
+          (point) => `
+            <circle class="radar-point" cx="${point.x}" cy="${point.y}" r="4"></circle>
+            <text class="radar-label" x="${point.lx}" y="${point.ly}">${escapeHtml(point.label)}</text>
+          `
+        )
+        .join("")}
+    </svg>
+  `;
+}
+
+function renderServiceLoop(items) {
+  serviceLoop.innerHTML = "";
+  if (!items || items.length === 0) {
+    serviceLoop.innerHTML = `<div class="empty-inline compact">当前还没有成长闭环阶段。</div>`;
+    return;
+  }
+
+  items.forEach((item, index) => {
+    const card = document.createElement("div");
+    card.className = "service-step";
+    card.innerHTML = `
+      <span class="path-index">0${index + 1}</span>
+      <div>
+        <strong>${item.stage || "阶段"} · ${item.status || ""}</strong>
+        <p>${item.detail || ""}</p>
+      </div>
+    `;
+    serviceLoop.appendChild(card);
+  });
+}
+
+function renderResourceMap(items) {
+  resourceMap.innerHTML = "";
+  if (!items || items.length === 0) {
+    resourceMap.innerHTML = `<div class="empty-inline compact">当前还没有资源映射建议。</div>`;
+    return;
+  }
+
+  items.forEach((item) => {
+    const card = document.createElement("article");
+    card.className = "resource-card";
+    card.innerHTML = `
+      <div class="resource-top">
+        <span class="mini-label">${item.category || "资源"}</span>
+        <span class="tag">${item.priority || "中"}</span>
+      </div>
+      <h4>${item.title || "资源项"}</h4>
+      <p>${item.description || ""}</p>
+      <div class="sprint-deliverable">
+        <span class="summary-label">输出物</span>
+        <p>${item.deliverable || ""}</p>
+      </div>
+    `;
+    resourceMap.appendChild(card);
+  });
+}
+
+function renderSelfAssessmentSummary(data) {
+  if (!data || !data.items || data.items.length === 0) {
+    selfAssessmentSummary.innerHTML = `<div class="empty-inline compact">完成岗位自测后，这里会展示能力回放结果。</div>`;
+    return;
+  }
+
+  selfAssessmentSummary.innerHTML = `
+    <div class="comparison-card with-baseline">
+      <p class="comparison-summary">${data.title || "岗位自测"}：${data.score ?? 0} 分</p>
+      <div class="tag-list">
+        ${(data.items || [])
+          .map((item) => `<span class="tag">${escapeHtml(item.focus || item.prompt)} · ${escapeHtml(item.level || "待补强")}</span>`)
+          .join("")}
+      </div>
+      <ul class="comparison-list">
+        <li>${escapeHtml(data.summary || "暂无结论")}</li>
+      </ul>
+    </div>
+  `;
+}
+
+function renderSchoolDashboard(data) {
+  schoolSummaryCards.innerHTML = "";
+  schoolDistribution.innerHTML = "";
+  schoolFollowUp.innerHTML = "";
+  if (!data || !(data.summary_cards || []).length) {
+    schoolSummaryCards.innerHTML = `<div class="empty-inline compact">生成多条历史分析后，这里会自动形成学校运营看板。</div>`;
+    return;
+  }
+
+  (data.summary_cards || []).forEach((item) => {
+    const card = document.createElement("article");
+    card.className = "school-summary-card";
+    card.innerHTML = `
+      <span>${item.label || "指标"}</span>
+      <strong>${item.value ?? 0}</strong>
+      <p>${item.detail || ""}</p>
+    `;
+    schoolSummaryCards.appendChild(card);
+  });
+
+  const sections = [
+    { title: "主岗位 Top5", items: data.top_roles || [] },
+    { title: "专业分布 Top5", items: data.major_distribution || [] },
+    { title: "城市偏好 Top5", items: data.city_distribution || [] },
+  ];
+
+  sections.forEach((section) => {
+    const card = document.createElement("div");
+    card.className = "distribution-card";
+    card.innerHTML = `
+      <h4>${section.title}</h4>
+      <div class="distribution-list">
+        ${(section.items || [])
+          .map(
+            (item) => `
+              <div class="distribution-row">
+                <span>${escapeHtml(item.name || "未命名")}</span>
+                <strong>${item.count ?? 0}</strong>
+              </div>
+            `
+          )
+          .join("")}
+      </div>
+    `;
+    schoolDistribution.appendChild(card);
+  });
+
+  const followUps = data.follow_up_students || [];
+  if (!followUps.length) {
+    schoolFollowUp.innerHTML = `<div class="empty-inline compact">当前没有重点跟进对象。</div>`;
+  } else {
+    followUps.forEach((item) => {
+      const card = document.createElement("div");
+      card.className = "follow-up-card";
+      card.innerHTML = `
+        <strong>${item.name || "学生"} · ${item.primary_role || "待生成"}</strong>
+        <p>${item.major || "专业未填写"}｜主岗分 ${item.primary_score ?? 0}｜完整度 ${item.completeness ?? 0}</p>
+      `;
+      schoolFollowUp.appendChild(card);
+    });
+  }
+
+  if ((data.advice || []).length) {
+    const adviceCard = document.createElement("div");
+    adviceCard.className = "distribution-card";
+    adviceCard.innerHTML = `
+      <h4>运营建议</h4>
+      <ul class="comparison-list">
+        ${(data.advice || []).map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
+      </ul>
+    `;
+    schoolDistribution.appendChild(adviceCard);
+  }
+}
+
+function renderInnovationHighlights(items) {
+  innovationHighlights.innerHTML = "";
+  if (!items || items.length === 0) {
+    innovationHighlights.innerHTML = `<div class="empty-inline compact">当前还没有创新锚点。</div>`;
+    return;
+  }
+
+  items.forEach((item) => {
+    const card = document.createElement("article");
+    card.className = "innovation-card panel";
+    card.innerHTML = `
+      <span class="metric-label">${item.tag || "创新"}</span>
+      <h4>${item.title || "创新点"}</h4>
+      <p>${item.detail || ""}</p>
+    `;
+    innovationHighlights.appendChild(card);
+  });
 }
 
 function renderCareerGraph(student, plan, matches) {
@@ -572,6 +1004,19 @@ function renderResults(data) {
   renderParserMeta(data.parser);
   renderMatches(data.matches || []);
   renderCareerPlan(data.career_plan || {}, data.matches || []);
+  renderLearningLoop(data.career_plan?.learning_sprints || []);
+  renderGrowthComparison(data.career_plan?.growth_comparison || {});
+  renderCompetencyDimensions(data.career_plan?.competency_dimensions || []);
+  renderServiceLoop(data.career_plan?.service_loop || []);
+  fillList(assessmentTasks, data.career_plan?.assessment_tasks || []);
+  renderSelfAssessmentForm(data.career_plan?.self_assessment || {});
+  renderSelfAssessmentSummary(data.career_plan?.self_assessment || {});
+  renderResourceMap(data.career_plan?.resource_map || []);
+  renderStakeholderViews(data.career_plan?.stakeholder_views || []);
+  renderEvaluationMetrics(data.career_plan?.evaluation_metrics || []);
+  renderInnovationHighlights(data.career_plan?.innovation_highlights || []);
+  renderAgentQuestions(data.career_plan?.agent_questions || [], data.student_profile?.agent_answers || {});
+  renderSchoolDashboard(state.schoolDashboard);
   renderCareerGraph(data.student_profile || {}, data.career_plan || {}, data.matches || []);
   state.currentReport = data.report_markdown || "";
   reportPreview.innerHTML = renderMarkdownPreview(state.currentReport);
@@ -635,6 +1080,15 @@ async function refreshSystemChecks() {
   renderSystemChecks(data);
 }
 
+async function refreshSchoolDashboard() {
+  const response = await fetch("/api/school-dashboard?limit=80");
+  const data = await response.json();
+  state.schoolDashboard = data;
+  if (state.latestResult) {
+    renderSchoolDashboard(data);
+  }
+}
+
 async function loadSampleResume(sampleName = null) {
   setBusy(true);
   setStatus("正在载入演示样例...", "loading");
@@ -668,6 +1122,9 @@ async function analyzeResume() {
         top_k: 5,
         parser_mode: parserModeSelect.value,
         sample_name: state.currentSampleName,
+        prior_analysis_id: state.currentAnalysisId,
+        agent_answers: collectAgentAnswers(),
+        self_assessment_answers: collectSelfAssessmentAnswers(),
       }),
     });
     const data = await response.json();
@@ -676,6 +1133,7 @@ async function analyzeResume() {
     }
     renderResults(data);
     await refreshHistory();
+    await refreshSchoolDashboard();
     const parserInfo = data.parser
       ? `分析完成，当前使用 ${data.parser.used_mode.toUpperCase()} 解析。`
       : "分析完成，结果已刷新。";
@@ -872,7 +1330,7 @@ jdSearchButton.addEventListener("click", () => {
 });
 
 window.addEventListener("load", () => {
-  Promise.all([initSamples(), refreshHistory(), refreshSystemChecks()])
+  Promise.all([initSamples(), refreshHistory(), refreshSystemChecks(), refreshSchoolDashboard()])
     .then(() => loadSampleResume("demo_resume_backend.txt"))
     .catch((error) => {
       setStatus(`初始化样例失败：${error.message}`, "error");
