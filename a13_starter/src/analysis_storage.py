@@ -229,9 +229,16 @@ def build_school_dashboard(limit: int = 80) -> dict[str, Any]:
     role_counter: Counter[str] = Counter()
     major_counter: Counter[str] = Counter()
     city_counter: Counter[str] = Counter()
+    role_city_counter: Counter[str] = Counter()
+    role_major_counter: Counter[str] = Counter()
     follow_up_students: list[dict[str, Any]] = []
+    audit_queue: list[dict[str, Any]] = []
     avg_score_total = 0
     score_band_counter: Counter[str] = Counter()
+    evidence_hit_total = 0
+    loop_completion_total = 0
+    fallback_count = 0
+    llm_count = 0
 
     for row in rows:
         student_profile = json.loads(row["student_profile_json"])
@@ -241,11 +248,25 @@ def build_school_dashboard(limit: int = 80) -> dict[str, Any]:
         primary_score = int(career_plan.get("primary_score") or 0)
         completeness = int(student_profile.get("profile_completeness") or 0)
         competitiveness = int(student_profile.get("competitiveness_score") or 0)
+        city = student_profile.get("city_preference") or "城市未填写"
+        major = student_profile.get("major") or "专业未填写"
+        evidence_hit_rate = int((career_plan.get("evidence_bundle") or {}).get("evidence_hit_rate") or 0)
+        evaluation_metrics = career_plan.get("evaluation_metrics") or []
+        loop_metric = next((item for item in evaluation_metrics if item.get("name") == "闭环完成度"), None)
+        loop_completion = int(loop_metric.get("score") or 0) if loop_metric else 0
 
         role_counter[primary_role] += 1
-        major_counter[student_profile.get("major") or "专业未填写"] += 1
-        city_counter[student_profile.get("city_preference") or "城市未填写"] += 1
+        major_counter[major] += 1
+        city_counter[city] += 1
+        role_city_counter[f"{primary_role}｜{city}"] += 1
+        role_major_counter[f"{major}｜{primary_role}"] += 1
         avg_score_total += primary_score
+        evidence_hit_total += evidence_hit_rate
+        loop_completion_total += loop_completion
+        if row["parser_used_mode"] == "rule" and row["parser_requested_mode"] in {"auto", "llm"}:
+            fallback_count += 1
+        if row["parser_used_mode"] == "llm":
+            llm_count += 1
 
         if primary_score >= 80:
             score_band_counter["强匹配"] += 1
@@ -267,18 +288,105 @@ def build_school_dashboard(limit: int = 80) -> dict[str, Any]:
                 }
             )
 
+        audit_reasons: list[str] = []
+        if evidence_hit_rate < 65:
+            audit_reasons.append("证据命中率偏低")
+        if completeness < 75:
+            audit_reasons.append("画像完整度不足")
+        if row["parser_used_mode"] == "rule" and row["parser_requested_mode"] in {"auto", "llm"}:
+            audit_reasons.append("本次触发规则回退")
+        if primary_score < 68:
+            audit_reasons.append("主岗位匹配分偏低")
+        if audit_reasons:
+            audit_queue.append(
+                {
+                    "name": student_name,
+                    "primary_role": primary_role,
+                    "major": major,
+                    "city": city,
+                    "primary_score": primary_score,
+                    "completeness": completeness,
+                    "evidence_hit_rate": evidence_hit_rate,
+                    "reasons": audit_reasons,
+                    "created_at": row["created_at"],
+                }
+            )
+
     analysis_count = len(rows)
+    avg_evidence_hit = round(evidence_hit_total / analysis_count)
+    avg_loop_completion = round(loop_completion_total / analysis_count)
     summary_cards = [
         {"label": "已分析学生", "value": analysis_count, "detail": "来自历史分析记录，可作为学院就业服务沉淀数据。"},
         {"label": "平均主岗分", "value": round(avg_score_total / analysis_count), "detail": "反映当前样本整体就业准备度。"},
         {"label": "重点帮扶人数", "value": score_band_counter["重点帮扶"], "detail": "主岗分偏低或画像不完整，建议辅导员优先跟进。"},
         {"label": "强匹配人数", "value": score_band_counter["强匹配"], "detail": "适合直接推岗、推实习或重点投递。"},
+        {"label": "证据命中均分", "value": avg_evidence_hit, "detail": "衡量推荐结果是否被官方 JD 和岗位模板片段充分支撑。"},
+        {"label": "闭环完成均分", "value": avg_loop_completion, "detail": "反映追问、自测、复测与补强任务的执行成熟度。"},
     ]
 
     advice = [
         "对主岗分低于 65 的学生，先补画像完整度和一项可展示项目。",
         "对强匹配学生，优先推送对应岗位招聘信息和模拟面试机会。",
         "对城市偏好集中的学生，可做区域化推岗和宣讲活动配置。",
+    ]
+
+    service_segments = [
+        {
+            "label": "强匹配直推",
+            "count": score_band_counter["强匹配"],
+            "detail": "优先投递、推送实习和企业直连活动。",
+        },
+        {
+            "label": "潜力转化",
+            "count": score_band_counter["潜力可转化"],
+            "detail": "围绕技能补强和项目举证做 2 到 4 周集中训练。",
+        },
+        {
+            "label": "重点帮扶",
+            "count": score_band_counter["重点帮扶"],
+            "detail": "辅导员跟进画像补全、岗位收敛与一生一策辅导。",
+        },
+    ]
+
+    push_recommendations = []
+    for name, count in role_city_counter.most_common(4):
+        role_name, city_name = name.split("｜", 1)
+        push_recommendations.append(
+            {
+                "type": "区域推岗",
+                "title": f"{city_name} · {role_name}",
+                "count": count,
+                "detail": "适合做城市专场推岗、区域化企业推送和宣讲活动配置。",
+            }
+        )
+    for name, count in role_major_counter.most_common(3):
+        major_name, role_name = name.split("｜", 1)
+        push_recommendations.append(
+            {
+                "type": "专业定向",
+                "title": f"{major_name} · {role_name}",
+                "count": count,
+                "detail": "适合做学院定向岗位包、课程补强和重点群体投递建议。",
+            }
+        )
+    push_recommendations = push_recommendations[:6]
+
+    governance_metrics = [
+        {
+            "label": "规则回退次数",
+            "value": fallback_count,
+            "detail": "用于定位网络异常或解析不稳定场景，辅助现场兜底和系统治理。",
+        },
+        {
+            "label": "LLM 直出次数",
+            "value": llm_count,
+            "detail": "反映模型可用时的自动解析覆盖情况。",
+        },
+        {
+            "label": "待抽检记录",
+            "value": len(audit_queue),
+            "detail": "聚合证据命中率偏低、画像不完整或匹配分偏低的记录。",
+        },
     ]
 
     return {
@@ -288,5 +396,9 @@ def build_school_dashboard(limit: int = 80) -> dict[str, Any]:
         "city_distribution": [{"name": name, "count": count} for name, count in city_counter.most_common(5)],
         "score_bands": [{"name": name, "count": count} for name, count in score_band_counter.items()],
         "follow_up_students": sorted(follow_up_students, key=lambda item: item["primary_score"])[:6],
+        "audit_queue": sorted(audit_queue, key=lambda item: (item["primary_score"], item["evidence_hit_rate"]))[:6],
+        "governance_metrics": governance_metrics,
+        "service_segments": service_segments,
+        "push_recommendations": push_recommendations,
         "advice": advice,
     }

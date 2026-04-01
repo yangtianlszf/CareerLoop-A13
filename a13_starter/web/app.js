@@ -61,6 +61,10 @@ const selfAssessmentSummary = document.getElementById("self-assessment-summary")
 const schoolSummaryCards = document.getElementById("school-summary-cards");
 const schoolDistribution = document.getElementById("school-distribution");
 const schoolFollowUp = document.getElementById("school-follow-up");
+const schoolServiceSegments = document.getElementById("school-service-segments");
+const schoolPushRecommendations = document.getElementById("school-push-recommendations");
+const schoolGovernanceMetrics = document.getElementById("school-governance-metrics");
+const schoolAuditQueue = document.getElementById("school-audit-queue");
 const stakeholderViews = document.getElementById("stakeholder-views");
 const evaluationMetrics = document.getElementById("evaluation-metrics");
 const benchmarkSummaryCards = document.getElementById("benchmark-summary-cards");
@@ -859,6 +863,10 @@ function renderSchoolDashboard(data) {
   schoolSummaryCards.innerHTML = "";
   schoolDistribution.innerHTML = "";
   schoolFollowUp.innerHTML = "";
+  schoolServiceSegments.innerHTML = "";
+  schoolPushRecommendations.innerHTML = "";
+  schoolGovernanceMetrics.innerHTML = "";
+  schoolAuditQueue.innerHTML = "";
   if (!data || !(data.summary_cards || []).length) {
     schoolSummaryCards.innerHTML = `<div class="empty-inline compact">生成多条历史分析后，这里会自动形成学校运营看板。</div>`;
     return;
@@ -927,6 +935,69 @@ function renderSchoolDashboard(data) {
       </ul>
     `;
     schoolDistribution.appendChild(adviceCard);
+  }
+
+  (data.service_segments || []).forEach((item) => {
+    const card = document.createElement("article");
+    card.className = "school-summary-card";
+    card.innerHTML = `
+      <span>${item.label || "服务分层"}</span>
+      <strong>${item.count ?? 0}</strong>
+      <p>${item.detail || ""}</p>
+    `;
+    schoolServiceSegments.appendChild(card);
+  });
+
+  if (!(data.push_recommendations || []).length) {
+    schoolPushRecommendations.innerHTML = `<div class="empty-inline compact">当前还没有定向推岗建议。</div>`;
+  } else {
+    (data.push_recommendations || []).forEach((item) => {
+      const card = document.createElement("div");
+      card.className = "distribution-card";
+      card.innerHTML = `
+        <h4>${escapeHtml(item.type || "定向建议")} · ${escapeHtml(item.title || "未命名组合")}</h4>
+        <div class="distribution-list">
+          <div class="distribution-row">
+            <span>潜在覆盖人数</span>
+            <strong>${item.count ?? 0}</strong>
+          </div>
+        </div>
+        <p>${escapeHtml(item.detail || "")}</p>
+      `;
+      schoolPushRecommendations.appendChild(card);
+    });
+  }
+
+  if (!(data.governance_metrics || []).length) {
+    schoolGovernanceMetrics.innerHTML = `<div class="empty-inline compact">当前还没有治理指标。</div>`;
+  } else {
+    (data.governance_metrics || []).forEach((item) => {
+      const card = document.createElement("article");
+      card.className = "metric-snapshot";
+      card.innerHTML = `
+        <div class="metric-snapshot-top">
+          <span>${item.label || "治理指标"}</span>
+          <strong>${item.value ?? 0}</strong>
+        </div>
+        <p>${item.detail || ""}</p>
+      `;
+      schoolGovernanceMetrics.appendChild(card);
+    });
+  }
+
+  if (!(data.audit_queue || []).length) {
+    schoolAuditQueue.innerHTML = `<div class="empty-inline compact">当前没有需要抽检的记录。</div>`;
+  } else {
+    (data.audit_queue || []).forEach((item) => {
+      const card = document.createElement("div");
+      card.className = "follow-up-card";
+      card.innerHTML = `
+        <strong>${item.name || "学生"} · ${item.primary_role || "待生成"}</strong>
+        <p>${item.major || "专业未填写"}｜主岗分 ${item.primary_score ?? 0}｜证据 ${item.evidence_hit_rate ?? 0}｜完整度 ${item.completeness ?? 0}</p>
+        <p>${escapeHtml((item.reasons || []).join("、") || "无抽检原因")}</p>
+      `;
+      schoolAuditQueue.appendChild(card);
+    });
   }
 }
 
