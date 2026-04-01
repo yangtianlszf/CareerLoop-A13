@@ -181,6 +181,17 @@
             </div>
             <div id="history-list" class="history-list"></div>
           </section>
+
+          <section class="control-block soft-block">
+            <div class="block-head">
+              <div>
+                <h3>内置验证中心</h3>
+                <p>用典型样例快速验证推荐稳定性、解释覆盖和报告交付性。</p>
+              </div>
+              <button id="run-benchmark-btn" class="button tertiary">运行验证</button>
+            </div>
+            <div id="benchmark-status" class="benchmark-status">等待运行内置样例验证。</div>
+          </section>
         </aside>
 
         <section class="story-panel">
@@ -436,6 +447,19 @@
                 </div>
                 <div id="evaluation-metrics" class="metric-grid"></div>
               </article>
+            </section>
+
+            <section class="story-section">
+              <div class="section-head">
+                <div>
+                  <p class="section-kicker">Validation Center</p>
+                  <h3>内置样例验证</h3>
+                </div>
+                <p>把“系统能跑”变成“系统已经做过样例验证”。</p>
+              </div>
+              <div id="benchmark-summary-cards" class="school-card-grid"></div>
+              <div id="benchmark-verdict" class="benchmark-verdict panel">等待运行内置样例验证。</div>
+              <div id="benchmark-cases" class="stakeholder-grid"></div>
             </section>
 
             <section class="insight-layout">

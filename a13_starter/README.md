@@ -10,6 +10,7 @@
 - 生成职业规划与行动建议
 - 在网页中展示结果
 - 自动保存历史记录
+- 内置样例基准验证
 - 导出 Markdown / HTML / Word 报告
 - 通过打印页导出 PDF
 
@@ -149,6 +150,14 @@ http://127.0.0.1:8001/
 python -m a13_starter.tools.match_resume_to_templates --parser-mode auto
 ```
 
+也可以直接跑内置样例验证：
+
+```bash
+python -m a13_starter.tools.run_benchmark --parser-mode rule
+```
+
+这会输出 4 个典型学生样例的命中率、解释覆盖、报告就绪度和闭环能力评分。
+
 运行后会生成这些结果文件：
 
 - `a13_starter/generated/student_role_matches.json`
@@ -186,6 +195,7 @@ python -m a13_starter.tools.match_resume_to_templates --parser-mode auto
 - 职业图谱可视化
 - 官方原始 JD 检索与模板证据回看
 - 环境自检
+- 内置样例验证中心
 - HTML / Word / PDF 导出
 - Docker 部署文件
 

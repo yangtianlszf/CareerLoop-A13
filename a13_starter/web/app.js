@@ -5,6 +5,7 @@ const state = {
   currentAnalysisId: null,
   latestResult: null,
   schoolDashboard: null,
+  benchmark: null,
 };
 
 const resumeInput = document.getElementById("resume-input");
@@ -18,6 +19,8 @@ const statusText = document.getElementById("status-text");
 const sampleGallery = document.getElementById("sample-gallery");
 const systemCheckList = document.getElementById("system-check-list");
 const historyList = document.getElementById("history-list");
+const runBenchmarkButton = document.getElementById("run-benchmark-btn");
+const benchmarkStatus = document.getElementById("benchmark-status");
 const agentQuestionList = document.getElementById("agent-question-list");
 const selfAssessmentForm = document.getElementById("self-assessment-form");
 const emptyState = document.getElementById("empty-state");
@@ -57,6 +60,9 @@ const schoolDistribution = document.getElementById("school-distribution");
 const schoolFollowUp = document.getElementById("school-follow-up");
 const stakeholderViews = document.getElementById("stakeholder-views");
 const evaluationMetrics = document.getElementById("evaluation-metrics");
+const benchmarkSummaryCards = document.getElementById("benchmark-summary-cards");
+const benchmarkVerdict = document.getElementById("benchmark-verdict");
+const benchmarkCases = document.getElementById("benchmark-cases");
 const careerStrengths = document.getElementById("career-strengths");
 const careerRisks = document.getElementById("career-risks");
 const recommendedProjects = document.getElementById("recommended-projects");
@@ -158,6 +164,7 @@ function setBusy(isBusy) {
   historyList.querySelectorAll(".history-card").forEach((button) => {
     button.disabled = isBusy;
   });
+  runBenchmarkButton.disabled = isBusy;
 }
 
 function renderSystemChecks(payload) {
@@ -561,6 +568,62 @@ function renderEvaluationMetrics(items) {
       <p>${item.detail || ""}</p>
     `;
     evaluationMetrics.appendChild(card);
+  });
+}
+
+function renderBenchmark(data) {
+  benchmarkSummaryCards.innerHTML = "";
+  benchmarkCases.innerHTML = "";
+
+  if (!data || !(data.summary_cards || []).length) {
+    benchmarkVerdict.textContent = "等待运行内置样例验证。";
+    benchmarkSummaryCards.innerHTML = `<div class="empty-inline compact">运行样例验证后，这里会展示命中率、解释覆盖和交付就绪度。</div>`;
+    return;
+  }
+
+  (data.summary_cards || []).forEach((item) => {
+    const card = document.createElement("article");
+    card.className = "school-summary-card";
+    card.innerHTML = `
+      <span>${item.label || "指标"}</span>
+      <strong>${item.value ?? 0}</strong>
+      <p>${item.detail || ""}</p>
+    `;
+    benchmarkSummaryCards.appendChild(card);
+  });
+
+  benchmarkVerdict.innerHTML = `
+    <div class="benchmark-verdict-top">
+      <span class="mini-label">评测结论</span>
+      <strong>${escapeHtml(data.verdict?.label || "待评估")}</strong>
+    </div>
+    <p>${escapeHtml(data.verdict?.detail || "")}</p>
+    <ul class="comparison-list">
+      ${(data.judge_notes || []).map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
+    </ul>
+  `;
+
+  (data.cases || []).forEach((item) => {
+    const card = document.createElement("article");
+    card.className = "stakeholder-card benchmark-case-card";
+    card.innerHTML = `
+      <span class="mini-label">${escapeHtml(item.label || "样例")}</span>
+      <h4>${escapeHtml(item.primary_role || "未生成")} · ${item.primary_score ?? 0} 分</h4>
+      <p class="benchmark-focus">${escapeHtml(item.focus || "")}</p>
+      <div class="tag-list">
+        <span class="tag ${item.top1_hit ? "tag-hit" : "tag-warn"}">Top1 ${item.top1_hit ? "命中" : "未命中"}</span>
+        <span class="tag ${item.top3_hit ? "tag-hit" : "tag-warn"}">Top3 ${item.top3_hit ? "命中" : "未命中"}</span>
+        <span class="tag">解释 ${item.explanation_coverage ?? 0}</span>
+        <span class="tag">报告 ${item.report_readiness ?? 0}</span>
+        <span class="tag">闭环 ${item.loop_readiness ?? 0}</span>
+      </div>
+      <p>预期主岗：${escapeHtml((item.expected_primary_roles || []).join("、") || "未配置")}</p>
+      <p>当前 Top3：${escapeHtml((item.top_roles || []).join("、") || "暂无")}</p>
+      <ul class="comparison-list">
+        ${(item.observations || []).map((line) => `<li>${escapeHtml(line)}</li>`).join("")}
+      </ul>
+    `;
+    benchmarkCases.appendChild(card);
   });
 }
 
@@ -1014,6 +1077,7 @@ function renderResults(data) {
   renderResourceMap(data.career_plan?.resource_map || []);
   renderStakeholderViews(data.career_plan?.stakeholder_views || []);
   renderEvaluationMetrics(data.career_plan?.evaluation_metrics || []);
+  renderBenchmark(state.benchmark);
   renderInnovationHighlights(data.career_plan?.innovation_highlights || []);
   renderAgentQuestions(data.career_plan?.agent_questions || [], data.student_profile?.agent_answers || {});
   renderSchoolDashboard(state.schoolDashboard);
@@ -1086,6 +1150,19 @@ async function refreshSchoolDashboard() {
   state.schoolDashboard = data;
   if (state.latestResult) {
     renderSchoolDashboard(data);
+  }
+}
+
+async function refreshBenchmark(showLoading = false) {
+  if (showLoading) {
+    benchmarkStatus.textContent = "正在运行 4 个内置样例验证...";
+  }
+  const response = await fetch("/api/benchmark?parser_mode=rule");
+  const data = await response.json();
+  state.benchmark = data;
+  benchmarkStatus.textContent = `验证完成：${data.generated_at || "刚刚"} · ${data.verdict?.label || "已生成"}`;
+  if (state.latestResult) {
+    renderBenchmark(data);
   }
 }
 
@@ -1307,6 +1384,12 @@ uploadFileButton.addEventListener("click", () => {
   uploadResumeFile();
 });
 
+runBenchmarkButton.addEventListener("click", () => {
+  refreshBenchmark(true).catch((error) => {
+    benchmarkStatus.textContent = `验证失败：${error.message}`;
+  });
+});
+
 resumeFileInput.addEventListener("change", () => {
   if (resumeFileInput.files && resumeFileInput.files[0]) {
     setStatus(`已选择文件：${resumeFileInput.files[0].name}`, "success");
@@ -1330,7 +1413,7 @@ jdSearchButton.addEventListener("click", () => {
 });
 
 window.addEventListener("load", () => {
-  Promise.all([initSamples(), refreshHistory(), refreshSystemChecks(), refreshSchoolDashboard()])
+  Promise.all([initSamples(), refreshHistory(), refreshSystemChecks(), refreshSchoolDashboard(), refreshBenchmark()])
     .then(() => loadSampleResume("demo_resume_backend.txt"))
     .catch((error) => {
       setStatus(`初始化样例失败：${error.message}`, "error");

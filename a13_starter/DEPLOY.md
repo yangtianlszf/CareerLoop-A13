@@ -48,3 +48,18 @@ export OPENAI_MODEL="gpt-5-mini"
 - 现场网络不稳时切到 `rule`
 - 提前准备 2 到 3 份样例简历
 - 正式答辩前先生成几条历史记录，方便现场快速切换展示
+- 可以提前运行一次内置样例验证，现场直接展示 Top1/Top3 命中率和报告就绪度
+
+## 5. 内置验证
+
+网页端会自动加载内置样例验证，也可以命令行手动运行：
+
+```bash
+python -m a13_starter.tools.run_benchmark --parser-mode rule
+```
+
+如果想把验证结果落盘：
+
+```bash
+python -m a13_starter.tools.run_benchmark --parser-mode rule --output a13_starter/generated/benchmark_summary.json
+```

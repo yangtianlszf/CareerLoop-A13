@@ -1485,6 +1485,47 @@ textarea {
   min-height: 120px;
 }
 
+.benchmark-status {
+  border: 1px solid rgba(40, 81, 70, 0.14);
+  border-radius: 18px;
+  padding: 14px 16px;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.62);
+  font-size: 0.95rem;
+}
+
+.benchmark-verdict {
+  margin-top: 20px;
+  margin-bottom: 20px;
+  display: grid;
+  gap: 12px;
+}
+
+.benchmark-verdict-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.benchmark-case-card {
+  align-content: start;
+}
+
+.benchmark-focus {
+  color: var(--muted);
+}
+
+.tag-hit {
+  background: rgba(42, 134, 101, 0.16);
+  color: #245f49;
+}
+
+.tag-warn {
+  background: rgba(196, 105, 61, 0.14);
+  color: #9e4d25;
+}
+
 .report-head {
   align-items: end;
 }

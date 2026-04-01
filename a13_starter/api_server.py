@@ -19,6 +19,7 @@ from a13_starter.src.analysis_storage import (
     list_analyses,
     save_analysis,
 )
+from a13_starter.src.benchmark import run_benchmark
 from a13_starter.src.jd_search import get_template_evidence, search_job_profiles
 from a13_starter.src.matcher import match_student_to_job
 from a13_starter.src.models import JobProfile
@@ -280,6 +281,11 @@ class A13RequestHandler(BaseHTTPRequestHandler):
         if path == "/api/school-dashboard":
             limit = int(query.get("limit", ["80"])[0])
             self._send_json(HTTPStatus.OK, build_school_dashboard(limit=limit))
+            return
+
+        if path == "/api/benchmark":
+            parser_mode = query.get("parser_mode", ["rule"])[0]
+            self._send_json(HTTPStatus.OK, run_benchmark(parser_mode=parser_mode))
             return
 
         if path.startswith("/api/history/"):

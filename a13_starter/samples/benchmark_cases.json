@@ -1,0 +1,34 @@
+[
+  {
+    "id": "backend-student",
+    "label": "后端开发样例",
+    "sample_name": "demo_resume_backend.txt",
+    "focus": "验证系统能否把 Java / 后端方向学生稳定识别到开发类岗位。",
+    "expected_primary_roles": ["Java开发工程师"],
+    "expected_top3_roles": ["Java开发工程师", "实施工程师", "技术支持工程师"]
+  },
+  {
+    "id": "frontend-student",
+    "label": "前端产品样例",
+    "sample_name": "demo_resume_frontend.txt",
+    "focus": "验证系统能否区分前端研发与产品协同类岗位画像。",
+    "expected_primary_roles": ["前端开发工程师"],
+    "expected_top3_roles": ["前端开发工程师", "产品助理", "技术支持工程师"]
+  },
+  {
+    "id": "implementation-student",
+    "label": "实施交付样例",
+    "sample_name": "demo_resume_implementation.txt",
+    "focus": "验证系统能否将实施与技术支持这类服务交付岗位正确聚焦。",
+    "expected_primary_roles": ["实施工程师", "技术支持工程师"],
+    "expected_top3_roles": ["实施工程师", "技术支持工程师", "测试工程师"]
+  },
+  {
+    "id": "baseline-student",
+    "label": "基础学生样例",
+    "sample_name": "student_resume.txt",
+    "focus": "验证系统在信息不充分、方向相对模糊时是否仍能给出可接受推荐。",
+    "expected_primary_roles": ["实施工程师", "Java开发工程师"],
+    "expected_top3_roles": ["实施工程师", "技术支持工程师", "Java开发工程师"]
+  }
+]
