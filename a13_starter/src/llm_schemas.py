@@ -5,6 +5,7 @@ def student_profile_schema() -> dict:
     return {
         "type": "object",
         "properties": {
+            "_thinking_process": {"type": "string"},
             "name": {"type": "string"},
             "school_name": {"type": ["string", "null"]},
             "major": {"type": ["string", "null"]},
@@ -23,6 +24,7 @@ def student_profile_schema() -> dict:
             "missing_sections": {"type": "array", "items": {"type": "string"}},
         },
         "required": [
+            "_thinking_process",
             "name",
             "school_name",
             "major",
@@ -48,6 +50,7 @@ def job_profile_schema() -> dict:
     return {
         "type": "object",
         "properties": {
+            "_thinking_process": {"type": "string"},
             "title": {"type": "string"},
             "required_skills": {"type": "array", "items": {"type": "string"}},
             "soft_skills": {"type": "array", "items": {"type": "string"}},
@@ -59,6 +62,7 @@ def job_profile_schema() -> dict:
             "growth_path": {"type": "array", "items": {"type": "string"}},
         },
         "required": [
+            "_thinking_process",
             "title",
             "required_skills",
             "soft_skills",

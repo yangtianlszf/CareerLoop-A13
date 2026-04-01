@@ -1,27 +1,78 @@
 from __future__ import annotations
 
-from a13_starter.src.constants import SKILL_ALIASES, SOFT_SKILL_ALIASES
+import math
+from typing import List, Tuple
+from openai import OpenAI
+
+from a13_starter.src.settings import get_openai_api_key, get_openai_base_url
 from a13_starter.src.models import JobProfile, MatchBreakdown, MatchResult, StudentProfile
 
 
-def _normalize_by_aliases(values: list[str], aliases: dict[str, list[str]]) -> tuple[set[str], dict[str, str]]:
-    normalized: set[str] = set()
-    evidence: dict[str, str] = {}
-    for raw_value in values:
-        lowered = raw_value.strip().lower()
-        if not lowered:
-            continue
-        matched = False
-        for canonical, candidates in aliases.items():
-            if lowered == canonical.lower() or lowered in {item.lower() for item in candidates}:
-                normalized.add(canonical)
-                evidence.setdefault(canonical, raw_value)
-                matched = True
-                break
-        if not matched:
-            normalized.add(raw_value)
-            evidence.setdefault(raw_value, raw_value)
-    return normalized, evidence
+def _get_embeddings(texts: list[str]) -> list[list[float]]:
+    """调用大模型 Embedding API 将文本转化为高维向量"""
+    if not texts:
+        return []
+    
+    client = OpenAI(
+        api_key=get_openai_api_key(),
+        base_url=get_openai_base_url()
+    )
+    
+    # 注意：如果你使用的是 DashScope (阿里云灵积)，可以使用 'text-embedding-v1' 或 'text-embedding-v2'
+    # 如果是 OpenAI 原生，通常使用 'text-embedding-3-small'
+    # 这里默认写 text-embedding-v1，请根据你实际支持的模型进行调整
+    response = client.embeddings.create(
+        input=texts,
+        model="text-embedding-v1" 
+    )
+    return [item.embedding for item in response.data]
+
+
+def _cosine_similarity(vec1: list[float], vec2: list[float]) -> float:
+    """计算两个向量的余弦相似度"""
+    dot_product = sum(a * b for a, b in zip(vec1, vec2))
+    magnitude1 = math.sqrt(sum(a * a for a in vec1))
+    magnitude2 = math.sqrt(sum(b * b for b in vec2))
+    if magnitude1 == 0 or magnitude2 == 0:
+        return 0.0
+    return dot_product / (magnitude1 * magnitude2)
+
+
+def _semantic_match_skills(student_skills: list[str], job_skills: list[str], threshold: float = 0.82) -> tuple[list[str], list[str]]:
+    """
+    基于语义向量的技能匹配引擎。
+    返回: (共享技能列表, 缺失技能列表)
+    """
+    if not job_skills:
+        return student_skills, []
+    if not student_skills:
+        return [], job_skills
+
+    # 批量获取向量
+    student_vecs = _get_embeddings(student_skills)
+    job_vecs = _get_embeddings(job_skills)
+
+    shared_skills = []
+    missing_skills = []
+
+    # 遍历企业的每一项要求，去学生的技能池里找“最相似”的一项
+    for i, j_skill in enumerate(job_skills):
+        j_vec = job_vecs[i]
+        best_match_score = 0.0
+        
+        for j, s_skill in enumerate(student_skills):
+            s_vec = student_vecs[j]
+            score = _cosine_similarity(j_vec, s_vec)
+            if score > best_match_score:
+                best_match_score = score
+                
+        # 如果最高相似度超过阈值，认为学生掌握了该技能
+        if best_match_score >= threshold:
+            shared_skills.append(j_skill) 
+        else:
+            missing_skills.append(j_skill)
+
+    return list(set(shared_skills)), list(set(missing_skills))
 
 
 def _role_tags_from_text(text: str) -> set[str]:
@@ -186,30 +237,33 @@ def _build_explanation(
 
 
 def match_student_to_job(student: StudentProfile, job: JobProfile) -> MatchResult:
-    student_skills, _ = _normalize_by_aliases(student.skills, SKILL_ALIASES)
-    job_skills, _ = _normalize_by_aliases(job.required_skills, SKILL_ALIASES)
-    student_soft, _ = _normalize_by_aliases(student.soft_skills, SOFT_SKILL_ALIASES)
-    job_soft, _ = _normalize_by_aliases(job.soft_skills, SOFT_SKILL_ALIASES)
+    # 🌟 核心升级：使用纯语义向量匹配替代规则别名匹配
+    shared_skills, missing_skills = _semantic_match_skills(student.skills, job.required_skills, threshold=0.82)
+    shared_soft_skills, missing_soft_skills = _semantic_match_skills(student.soft_skills, job.soft_skills, threshold=0.85)
 
-    shared_skills = sorted(student_skills & job_skills)
-    missing_skills = sorted(job_skills - student_skills)
-    shared_soft_skills = sorted(student_soft & job_soft)
-    missing_soft_skills = sorted(job_soft - student_soft)
+    # 排序以保证输出结果顺序一致性
+    shared_skills = sorted(shared_skills)
+    missing_skills = sorted(missing_skills)
+    shared_soft_skills = sorted(shared_soft_skills)
+    missing_soft_skills = sorted(missing_soft_skills)
 
+    # 计算各维度得分
     basic = _score_basic_requirements(student, job)
-    skills = _score_overlap(set(shared_skills), set(job_skills))
-    literacy = _score_overlap(set(shared_soft_skills), set(job_soft))
+    skills_score = _score_overlap(set(shared_skills), set(job.required_skills))
+    literacy_score = _score_overlap(set(shared_soft_skills), set(job.soft_skills))
     growth = _score_growth_potential(student)
 
-    total = int(basic * 0.2 + skills * 0.4 + literacy * 0.2 + growth * 0.2)
+    # 综合算分
+    total = int(basic * 0.2 + skills_score * 0.4 + literacy_score * 0.2 + growth * 0.2)
     gaps = _build_gaps(student, missing_skills, missing_soft_skills, job)
 
     breakdown = MatchBreakdown(
         basic_requirements=basic,
-        professional_skills=skills,
-        professional_literacy=literacy,
+        professional_skills=skills_score,
+        professional_literacy=literacy_score,
         growth_potential=growth,
     )
+    
     return MatchResult(
         score=total,
         breakdown=breakdown,

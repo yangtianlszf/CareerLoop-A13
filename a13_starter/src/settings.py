@@ -4,7 +4,7 @@ import os
 
 
 def get_openai_api_key() -> str | None:
-    return os.getenv("OPENAI_API_KEY") or os.getenv("DASHSCOPE_API_KEY")
+    return os.getenv("DASHSCOPE_API_KEY") or os.getenv("OPENAI_API_KEY")
 
 
 def get_llm_provider() -> str:
@@ -20,9 +20,11 @@ def get_openai_base_url() -> str:
     if os.getenv("OPENAI_BASE_URL"):
         return os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
     if os.getenv("DASHSCOPE_BASE_URL"):
-        return os.getenv("DASHSCOPE_BASE_URL", "https://dashscope.aliyuncs.com/api/v2/apps/protocols/compatible-mode/v1")
+        # 🌟 核心修改点：去掉了 /api/v2/apps/protocols/，替换为标准的模型调用接口
+        return os.getenv("DASHSCOPE_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1")
     if get_llm_provider() == "dashscope":
-        return "https://dashscope.aliyuncs.com/api/v2/apps/protocols/compatible-mode/v1"
+        # 🌟 核心修改点：去掉了 /api/v2/apps/protocols/，替换为标准的模型调用接口
+        return "https://dashscope.aliyuncs.com/compatible-mode/v1"
     return "https://api.openai.com/v1"
 
 
