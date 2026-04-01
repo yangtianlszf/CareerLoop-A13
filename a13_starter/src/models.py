@@ -121,6 +121,7 @@ class CareerPlan:
     innovation_highlights: list[dict[str, str]] = field(default_factory=list)
     technical_keywords: list[str] = field(default_factory=list)
     technical_modules: list[dict[str, str]] = field(default_factory=list)
+    evidence_bundle: dict[str, Any] = field(default_factory=dict)
     service_scenarios: list[str] = field(default_factory=list)
     product_signature: str = ""
 

@@ -40,6 +40,9 @@ const jdSearchButton = document.getElementById("jd-search-btn");
 const jdSearchResults = document.getElementById("jd-search-results");
 const templateEvidence = document.getElementById("template-evidence");
 const careerOverview = document.getElementById("career-overview");
+const groundedSummary = document.getElementById("grounded-summary");
+const groundedQuery = document.getElementById("grounded-query");
+const groundedEvidenceList = document.getElementById("grounded-evidence-list");
 const growthPath = document.getElementById("growth-path");
 const transitionPaths = document.getElementById("transition-paths");
 const reportPreview = document.getElementById("report-preview");
@@ -628,6 +631,35 @@ function renderBenchmark(data) {
   });
 }
 
+function renderGroundedEvidence(bundle) {
+  groundedSummary.textContent = bundle?.summary || "生成分析后，这里会显示证据链摘要。";
+  fillTagList(groundedQuery, bundle?.query_terms || [], "等待生成检索词");
+  groundedEvidenceList.innerHTML = "";
+
+  const items = bundle?.items || [];
+  if (!items.length) {
+    groundedEvidenceList.innerHTML = `<div class="empty-inline">当前还没有自动检索到证据片段。</div>`;
+    return;
+  }
+
+  items.forEach((item) => {
+    const card = document.createElement("article");
+    card.className = "jd-card compact";
+    card.innerHTML = `
+      <div class="jd-card-top">
+        <div>
+          <span class="mini-label">${escapeHtml(item.citation_id || "[E]")} · ${escapeHtml(item.source_type || "evidence")}</span>
+          <h4>${escapeHtml(item.job_title || item.source_title || "证据片段")}</h4>
+        </div>
+        <div class="score-badge">${item.score ?? 0}</div>
+      </div>
+      <p class="jd-meta">${escapeHtml(item.company_name || "岗位模板")}｜${escapeHtml(item.city || "位置未知")}｜命中词：${escapeHtml((item.matched_terms || []).join("、") || "无")}</p>
+      <p class="jd-summary">${escapeHtml(item.snippet || "暂无片段")}</p>
+    `;
+    groundedEvidenceList.appendChild(card);
+  });
+}
+
 function renderTechnicalModules(items, keywords) {
   technicalModules.innerHTML = "";
   if (!items || items.length === 0) {
@@ -1097,6 +1129,7 @@ function renderResults(data) {
   renderStudentProfile(data.student_profile);
   renderParserMeta(data.parser);
   renderMatches(data.matches || []);
+  renderGroundedEvidence(data.career_plan?.evidence_bundle || {});
   renderCareerPlan(data.career_plan || {}, data.matches || []);
   renderLearningLoop(data.career_plan?.learning_sprints || []);
   renderGrowthComparison(data.career_plan?.growth_comparison || {});

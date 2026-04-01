@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from a13_starter.src.evidence_retrieval import build_grounded_evidence_bundle
 from a13_starter.src.extractors import refresh_student_profile_metrics
 from a13_starter.src.matcher import match_student_to_job
 from a13_starter.src.models import CareerPlan, JobProfile, StudentProfile
@@ -311,10 +312,12 @@ def _build_evaluation_metrics(
     primary_match: dict[str, Any],
     parser_metadata: dict[str, Any] | None,
     self_assessment: dict[str, Any],
+    evidence_bundle: dict[str, Any],
 ) -> list[dict[str, Any]]:
     shared_count = len(primary_match.get("shared_skills", []))
     required_count = max(1, len(primary_match.get("core_skills", [])))
-    evidence_coverage = min(100, int(shared_count / required_count * 100))
+    retrieved_count = len(evidence_bundle.get("items", []))
+    evidence_coverage = min(100, int(shared_count / required_count * 100) + min(retrieved_count * 6, 18))
     explanation_coverage = 100
     if not primary_match.get("gaps"):
         explanation_coverage -= 10
@@ -343,7 +346,7 @@ def _build_evaluation_metrics(
         {
             "name": "匹配证据覆盖",
             "score": evidence_coverage,
-            "detail": f"Top1 岗位命中了 {shared_count}/{required_count} 个核心技能证据。",
+            "detail": f"Top1 岗位命中了 {shared_count}/{required_count} 个核心技能证据，并自动检索到 {retrieved_count} 条官方证据片段。",
         },
         {
             "name": "解释完整度",
@@ -712,7 +715,7 @@ def _build_technical_modules() -> list[dict[str, str]]:
         {
             "name": "证据驱动生成",
             "tag": "Grounded Generation",
-            "detail": "把官方 JD、岗位模板与学生画像作为知识底座，所有建议都优先绑定证据片段后再输出。",
+            "detail": "把官方 JD、岗位模板与学生画像作为知识底座，系统先分块检索证据，再以引用片段约束建议生成。",
         },
         {
             "name": "可解释匹配引擎",
@@ -727,7 +730,7 @@ def _build_technical_modules() -> list[dict[str, str]]:
         {
             "name": "多阶段工作流智能体",
             "tag": "Workflow Orchestration",
-            "detail": "把解析、追问、自测、复测和运营看板编排成可校验节点，任何一步置信不足都可以触发追问或规则降级。",
+            "detail": "把解析、检索、重排、匹配、规划、追问、自测、复测和运营看板编排成可校验节点，任何一步置信不足都可以触发追问或规则降级。",
         },
         {
             "name": "人机协同治理",
@@ -768,6 +771,7 @@ def build_career_plan(
 
     short_goal = student.agent_answers.get("thirty_day_goal") or "做出一个可展示的求职作品"
     self_assessment = _build_self_assessment_summary(role_title, self_assessment_answers)
+    evidence_bundle = build_grounded_evidence_bundle(student, primary)
     resource_map = _build_resource_map(role_title, top_gap_keywords, self_assessment)
     action_plan_30 = [
         "补齐简历中的关键信息，至少补充专业、目标岗位、项目成果和实习职责",
@@ -805,7 +809,7 @@ def build_career_plan(
         next_review_targets=_build_next_review_targets(student, primary, top_gap_keywords),
         growth_comparison=_build_growth_comparison(student, primary, previous_analysis),
         stakeholder_views=_build_stakeholder_views(student, primary, backups),
-        evaluation_metrics=_build_evaluation_metrics(student, primary, parser_metadata, self_assessment),
+        evaluation_metrics=_build_evaluation_metrics(student, primary, parser_metadata, self_assessment, evidence_bundle),
         competency_dimensions=_build_competency_dimensions(student, primary),
         service_loop=_build_service_loop(student, primary, self_assessment),
         assessment_tasks=_assessment_tasks_for_role(role_title),
@@ -815,6 +819,7 @@ def build_career_plan(
         innovation_highlights=_build_innovation_highlights(student),
         technical_keywords=_build_technical_keywords(),
         technical_modules=_build_technical_modules(),
+        evidence_bundle=evidence_bundle,
         service_scenarios=["学生自助诊断", "辅导员一生一策", "就业中心精准推岗"],
-        product_signature="证据驱动生成 + 可解释匹配 + 人机协同闭环",
+        product_signature="分块检索 + 证据重排 + 可解释匹配 + 人机协同闭环",
     )

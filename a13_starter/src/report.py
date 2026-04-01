@@ -112,6 +112,16 @@ def build_career_report_markdown(
         career_plan.innovation_highlights,
         lambda item: f"{item.get('title', '')}（{item.get('tag', '')}）：{item.get('detail', '')}",
     )
+    evidence_lines = _render_dict_items(
+        career_plan.evidence_bundle.get("items", []),
+        lambda item: (
+            f"{item.get('citation_id', '')} {item.get('source_type', '')}"
+            f"｜{item.get('job_title', '')}"
+            f"｜{item.get('company_name', '')}"
+            f"｜命中词：{'、'.join(item.get('matched_terms', []))}"
+            f"｜片段：{item.get('snippet', '')}"
+        ),
+    )
     technical_module_lines = _render_dict_items(
         career_plan.technical_modules,
         lambda item: f"{item.get('name', '')}（{item.get('tag', '')}）：{item.get('detail', '')}",
@@ -169,6 +179,12 @@ def build_career_report_markdown(
 
 ### 主推荐岗位解释
 {top_matches[0].get('explanation', '暂无解释') if top_matches else '暂无解释'}
+
+### 证据驱动检索链
+- 检索模式：{career_plan.evidence_bundle.get('retrieval_mode', '未生成')}
+- 检索关键词：{'、'.join(career_plan.evidence_bundle.get('query_terms', [])) or '未生成'}
+- 检索摘要：{career_plan.evidence_bundle.get('summary', '暂无')}
+{evidence_lines}
 
 ## 4. 主推荐岗位
 - 主岗位：{career_plan.primary_role}

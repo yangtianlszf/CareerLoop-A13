@@ -286,6 +286,39 @@
               <div id="match-cards" class="match-cards"></div>
             </section>
 
+            <section class="story-section">
+              <div class="section-head">
+                <div>
+                  <p class="section-kicker">Grounded Retrieval</p>
+                  <h3>RAG 证据链</h3>
+                </div>
+                <p>系统会先围绕主推荐岗位做分块检索和重排，再把高相关官方证据片段带入规划与报告。</p>
+              </div>
+              <div class="insight-layout">
+                <article class="panel insight-card">
+                  <div class="card-head">
+                    <div>
+                      <h3>检索摘要</h3>
+                      <p id="grounded-summary">生成分析后，这里会显示证据链摘要。</p>
+                    </div>
+                  </div>
+                  <div class="capability-block">
+                    <span class="summary-label">检索关键词</span>
+                    <div id="grounded-query" class="tag-list"></div>
+                  </div>
+                </article>
+                <article class="panel insight-card">
+                  <div class="card-head">
+                    <div>
+                      <h3>证据片段</h3>
+                      <p>每条片段都给出引用编号、命中词和来源信息。</p>
+                    </div>
+                  </div>
+                  <div id="grounded-evidence-list" class="jd-results"></div>
+                </article>
+              </div>
+            </section>
+
             <section class="insight-layout wide-balance">
               <article class="panel pathway-card">
                 <div class="card-head">

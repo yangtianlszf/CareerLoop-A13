@@ -194,6 +194,7 @@ python -m a13_starter.tools.run_benchmark --parser-mode rule
 - 分析结果持久化存档
 - 职业图谱可视化
 - 官方原始 JD 检索与模板证据回看
+- RAG 式证据链：分块检索、重排与片段引用
 - 环境自检
 - 内置样例验证中心
 - HTML / Word / PDF 导出
