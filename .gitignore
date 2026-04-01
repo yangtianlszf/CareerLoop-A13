@@ -1,23 +1,52 @@
+# OS
 .DS_Store
 Thumbs.db
+Desktop.ini
 
+# Python
+__pycache__/
+*.py[cod]
+*.pyd
+*.so
+.python-version
+
+# Virtual environments
 .venv/
 venv/
 env/
 
-__pycache__/
-*.py[cod]
-
+# Tool caches
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
 
+# Editors / IDEs
 .idea/
 .vscode/
+*.swp
+*.swo
 
-*.zip
+# Local environment / secrets
+.env
+.env.*
+*.local
+
+# Build / runtime artifacts
 *.log
 *.tmp
+*.bak
 
+# Archives
+*.zip
+*.tar
+*.gz
+*.7z
+
+# Project-local generated state
 a13_starter/generated/analysis_history.db
-
+a13_starter/generated/*.html
+a13_starter/generated/*.docx
+a13_starter/generated/*.pdf

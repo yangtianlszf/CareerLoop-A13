@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" fill="none">
+  <rect width="1280" height="720" fill="#F3EDE2"/>
+  <rect x="56" y="52" width="1168" height="104" rx="26" fill="#17352F"/>
+  <rect x="88" y="86" width="320" height="18" rx="9" fill="#A6DBC8"/>
+  <rect x="88" y="118" width="520" height="16" rx="8" fill="#EAF6F1" fill-opacity="0.7"/>
+  <rect x="56" y="190" width="278" height="126" rx="24" fill="#FFF8F0" stroke="#DCCFBA"/>
+  <rect x="354" y="190" width="278" height="126" rx="24" fill="#FFF8F0" stroke="#DCCFBA"/>
+  <rect x="652" y="190" width="278" height="126" rx="24" fill="#FFF8F0" stroke="#DCCFBA"/>
+  <rect x="950" y="190" width="274" height="126" rx="24" fill="#FFF8F0" stroke="#DCCFBA"/>
+  <rect x="56" y="346" width="576" height="320" rx="28" fill="#FFFDF8" stroke="#E6DCCB"/>
+  <rect x="664" y="346" width="560" height="320" rx="28" fill="#FFFDF8" stroke="#E6DCCB"/>
+  <rect x="92" y="394" width="500" height="30" rx="15" fill="#206859" fill-opacity="0.16"/>
+  <rect x="92" y="442" width="460" height="30" rx="15" fill="#C4512B" fill-opacity="0.16"/>
+  <rect x="92" y="490" width="420" height="30" rx="15" fill="#206859" fill-opacity="0.16"/>
+  <rect x="700" y="394" width="488" height="86" rx="20" fill="#FFF8F0" stroke="#E6DCCB"/>
+  <rect x="700" y="498" width="488" height="86" rx="20" fill="#FFF8F0" stroke="#E6DCCB"/>
+  <text x="640" y="614" text-anchor="middle" fill="#17352F" font-size="30" font-family="Arial, sans-serif" font-weight="700">运行截图占位：学校运营看板</text>
+  <text x="640" y="652" text-anchor="middle" fill="#66746F" font-size="18" font-family="Arial, sans-serif">建议替换为学校侧汇总卡片、分布图和重点跟进名单截图</text>
+</svg>

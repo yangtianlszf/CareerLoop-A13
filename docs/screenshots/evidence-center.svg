@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" fill="none">
+  <rect width="1280" height="720" fill="#F3EDE2"/>
+  <rect x="60" y="56" width="1160" height="110" rx="26" fill="#FFF8F0" stroke="#DCCFBA"/>
+  <rect x="90" y="92" width="260" height="18" rx="9" fill="#C4512B" fill-opacity="0.6"/>
+  <rect x="90" y="124" width="520" height="16" rx="8" fill="#66746F" fill-opacity="0.35"/>
+  <rect x="60" y="198" width="560" height="462" rx="30" fill="#FFFDF8" stroke="#E6DCCB"/>
+  <rect x="660" y="198" width="560" height="462" rx="30" fill="#FFFDF8" stroke="#E6DCCB"/>
+  <rect x="94" y="236" width="410" height="52" rx="20" fill="#FFFFFF" stroke="#DCCFBA"/>
+  <rect x="520" y="236" width="72" height="52" rx="20" fill="#206859"/>
+  <rect x="94" y="320" width="492" height="96" rx="22" fill="#FFF8F0" stroke="#E6DCCB"/>
+  <rect x="94" y="436" width="492" height="96" rx="22" fill="#FFF8F0" stroke="#E6DCCB"/>
+  <rect x="94" y="552" width="492" height="72" rx="22" fill="#FFF8F0" stroke="#E6DCCB"/>
+  <rect x="694" y="236" width="492" height="130" rx="22" fill="#FFF8F0" stroke="#E6DCCB"/>
+  <rect x="694" y="388" width="492" height="236" rx="22" fill="#FFF8F0" stroke="#E6DCCB"/>
+  <text x="640" y="104" text-anchor="middle" fill="#17352F" font-size="30" font-family="Arial, sans-serif" font-weight="700">运行截图占位：证据中心与模板回看</text>
+  <text x="640" y="146" text-anchor="middle" fill="#66746F" font-size="18" font-family="Arial, sans-serif">建议替换为官方 JD 检索、模板证据回看、原始样本展示区域截图</text>
+</svg>
