@@ -7,6 +7,7 @@ from a13_starter.src.evidence_retrieval import build_grounded_evidence_bundle
 from a13_starter.src.extractors import refresh_student_profile_metrics
 from a13_starter.src.matcher import match_student_to_job
 from a13_starter.src.models import CareerPlan, JobProfile, StudentProfile
+from a13_starter.src.openai_responses import OpenAIResponsesClient  # 🌟 新增：引入大模型客户端
 
 
 def template_to_job_profile(template: dict[str, object]) -> JobProfile:
@@ -112,7 +113,60 @@ def apply_agent_answers(student: StudentProfile, answers: dict[str, str] | None)
     return refresh_student_profile_metrics(student)
 
 
+# 🌟 新增：动态大模型规划引擎，用于消灭硬编码
+def _generate_dynamic_role_guidance(role_title: str, missing_skills: list[str]) -> dict[str, Any]:
+    """利用大模型动态生成个性化的项目建议和自测题，消灭硬编码"""
+    client = OpenAIResponsesClient()
+    schema = {
+        "type": "object",
+        "properties": {
+            "recommended_projects": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "2条具体的项目实战建议，必须结合目标岗位和学生的技能缺口来写。"
+            },
+            "assessment_tasks": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "2条岗前复测考核任务。"
+            },
+            "self_assessment_questions": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "id": {"type": "string"},
+                        "prompt": {"type": "string", "description": "具体的自测提问语句"},
+                        "focus": {"type": "string", "description": "考察的维度名称"}
+                    },
+                    "required": ["id", "prompt", "focus"],
+                    "additionalProperties": False
+                },
+                "description": "3道岗位自测题，需针对学生薄弱项。"
+            }
+        },
+        "required": ["recommended_projects", "assessment_tasks", "self_assessment_questions"],
+        "additionalProperties": False
+    }
+
+    system_prompt = "你是一个资深的职业规划导师和技术面试官。请根据学生意向的目标岗位和当前缺失的核心技能，动态生成高价值、可执行的项目实战建议、复测考核任务和自测问卷。拒绝假大空的套话，要给出具体的业务场景或技术栈要求。"
+    skills_str = "、".join(missing_skills[:3]) if missing_skills else "通用实战经验"
+    user_prompt = f"目标岗位：{role_title}\n该学生当前急需补强的关键技能缺口：{skills_str}\n请为他量身定制冲刺方案。"
+
+    try:
+        return client.create_structured_output(
+            system_prompt=system_prompt,
+            user_prompt=user_prompt,
+            schema_name="dynamic_guidance",
+            schema=schema
+        )
+    except Exception as e:
+        print(f"动态生成指导方案失败, 将使用规则兜底: {e}")
+        return {}
+
+
 def _project_suggestions_for_role(role_title: str) -> list[str]:
+    # 保留原有的规则映射，作为大模型调用失败时的安全兜底 (Fallback)
     role_map = {
         "Java开发工程师": [
             "做一个带登录、权限和数据库的管理系统后端项目",
@@ -492,11 +546,15 @@ def _self_assessment_questions_for_role(role_title: str) -> list[dict[str, str]]
     )
 
 
+# 🌟 核心修改：支持接收大模型动态生成的题目
 def _build_self_assessment_summary(
     role_title: str,
     answers: dict[str, int] | None,
+    dynamic_questions: list[dict[str, str]] | None = None,
 ) -> dict[str, Any]:
-    questions = _self_assessment_questions_for_role(role_title)
+    # 优先使用大模型生成的针对性问题，如果没有则降级使用规则库兜底
+    questions = dynamic_questions if dynamic_questions else _self_assessment_questions_for_role(role_title)
+    
     answers = answers or {}
     items: list[dict[str, Any]] = []
     total_score = 0
@@ -763,6 +821,10 @@ def build_career_plan(
     if not top_gap_keywords:
         top_gap_keywords = ["项目表达", "岗位举证"]
     role_title = primary["role_title"]
+    
+    # 🌟 核心接入点：触发大模型动态生成专属项目与考核计划
+    dynamic_guidance = _generate_dynamic_role_guidance(role_title, top_gap_keywords)
+
     focus_role = student.agent_answers.get("target_role") or role_title
     overview = (
         f"{student.name} 当前最适合优先冲刺 {role_title}，"
@@ -776,7 +838,14 @@ def build_career_plan(
         risks.append("简历信息仍不完整：" + "、".join(student.missing_sections))
 
     short_goal = student.agent_answers.get("thirty_day_goal") or "做出一个可展示的求职作品"
-    self_assessment = _build_self_assessment_summary(role_title, self_assessment_answers)
+    
+    # 🌟 核心替换：传入大模型生成的动态自测题
+    self_assessment = _build_self_assessment_summary(
+        role_title, 
+        self_assessment_answers,
+        dynamic_questions=dynamic_guidance.get("self_assessment_questions")
+    )
+    
     evidence_bundle = build_grounded_evidence_bundle(student, primary)
     resource_map = _build_resource_map(role_title, top_gap_keywords, self_assessment)
     action_plan_30 = [
@@ -810,7 +879,8 @@ def build_career_plan(
         action_plan_30_days=action_plan_30,
         action_plan_90_days=action_plan_90,
         action_plan_180_days=action_plan_180,
-        recommended_projects=_project_suggestions_for_role(role_title),
+        # 🌟 核心替换：优先使用动态生成的项目，失败则使用规则字典兜底
+        recommended_projects=dynamic_guidance.get("recommended_projects") or _project_suggestions_for_role(role_title),
         learning_sprints=_build_learning_sprints(student, primary, top_gap_keywords),
         next_review_targets=_build_next_review_targets(student, primary, top_gap_keywords),
         growth_comparison=_build_growth_comparison(student, primary, previous_analysis),
@@ -818,7 +888,8 @@ def build_career_plan(
         evaluation_metrics=_build_evaluation_metrics(student, primary, parser_metadata, self_assessment, evidence_bundle),
         competency_dimensions=_build_competency_dimensions(student, primary),
         service_loop=_build_service_loop(student, primary, self_assessment),
-        assessment_tasks=_assessment_tasks_for_role(role_title),
+        # 🌟 核心替换：优先使用动态生成的任务，失败则使用规则字典兜底
+        assessment_tasks=dynamic_guidance.get("assessment_tasks") or _assessment_tasks_for_role(role_title),
         self_assessment=self_assessment,
         resource_map=resource_map,
         agent_questions=_build_agent_questions(student, primary, self_assessment),
@@ -827,5 +898,6 @@ def build_career_plan(
         technical_modules=_build_technical_modules(),
         evidence_bundle=evidence_bundle,
         service_scenarios=["学生自助诊断", "辅导员一生一策", "就业中心精准推岗"],
-        product_signature="分块检索 + 证据重排 + 可解释匹配 + 人机协同闭环",
+        # 🌟 亮点：更新了产品底层的技术签名
+        product_signature="分块检索 + 证据重排 + 可解释匹配 + 动态Agent规划",
     )
