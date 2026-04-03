@@ -1531,12 +1531,54 @@ textarea {
   font-weight: 700;
 }
 
+.citation-inline {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(196, 81, 43, 0.12);
+  color: var(--accent-2);
+  font-size: 0.82em;
+  font-weight: 800;
+}
+
 .evidence-highlight {
   padding: 0 5px;
   border-radius: 6px;
   background: rgba(212, 101, 52, 0.14);
   color: var(--accent-2);
   font-weight: 700;
+}
+
+.gap-benefit-card h4 {
+  margin-bottom: 0;
+}
+
+.self-check-card.is-pass {
+  background: linear-gradient(180deg, rgba(32, 104, 89, 0.1), rgba(255, 255, 255, 0.9));
+}
+
+.self-check-card.is-warn {
+  background: linear-gradient(180deg, rgba(196, 81, 43, 0.08), rgba(255, 255, 255, 0.9));
+}
+
+.self-check-card.is-pending {
+  background: linear-gradient(180deg, rgba(156, 123, 44, 0.08), rgba(255, 255, 255, 0.9));
+}
+
+.review-form-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.review-notes-field {
+  display: grid;
+  gap: 8px;
+}
+
+.resume-input.compact {
+  min-height: 120px;
 }
 
 .report-head {

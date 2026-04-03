@@ -319,6 +319,28 @@
               </div>
             </section>
 
+            <section class="insight-layout">
+              <article class="panel insight-card">
+                <div class="card-head">
+                  <div>
+                    <p class="section-kicker">Gap Benefit</p>
+                    <h3>差距-收益分析</h3>
+                  </div>
+                </div>
+                <div id="gap-benefit-grid" class="resource-grid"></div>
+              </article>
+
+              <article class="panel insight-card">
+                <div class="card-head">
+                  <div>
+                    <p class="section-kicker">Plan Self-check</p>
+                    <h3>计划自检</h3>
+                  </div>
+                </div>
+                <div id="plan-self-checks" class="metric-grid"></div>
+              </article>
+            </section>
+
             <section class="insight-layout wide-balance">
               <article class="panel pathway-card">
                 <div class="card-head">
@@ -432,6 +454,17 @@
             <section class="story-section">
               <div class="section-head">
                 <div>
+                  <p class="section-kicker">Case Grounding</p>
+                  <h3>相似案例参考</h3>
+                </div>
+                <p>把历史相近案例、主岗位和复核状态一起展示，增强“样例库对照”感。</p>
+              </div>
+              <div id="similar-cases" class="stakeholder-grid"></div>
+            </section>
+
+            <section class="story-section">
+              <div class="section-head">
+                <div>
                   <p class="section-kicker">School Ops</p>
                   <h3>学校运营看板</h3>
                 </div>
@@ -478,6 +511,59 @@
                   </div>
                   <div id="school-governance-metrics" class="metric-grid"></div>
                   <div id="school-audit-queue" class="school-follow-up"></div>
+                </article>
+              </div>
+              <div class="insight-layout">
+                <article class="panel insight-card">
+                  <div class="card-head">
+                    <div>
+                      <h3>辅导员复核指标</h3>
+                      <p>把抽检结果留痕到系统里，形成真实的人机协同治理链路。</p>
+                    </div>
+                  </div>
+                  <div id="school-review-metrics" class="metric-grid"></div>
+                  <div id="school-recent-reviews" class="school-follow-up"></div>
+                </article>
+                <article class="panel insight-card">
+                  <div class="card-head">
+                    <div>
+                      <h3>当前分析复核</h3>
+                      <p>对当前学生结果做通过 / 补强 / 重点跟进留痕，便于答辩展示老师抽检闭环。</p>
+                    </div>
+                  </div>
+                  <div class="review-form-grid">
+                    <div class="comparison-card">
+                      <p id="current-review-analysis" class="comparison-summary">当前还没有可复核的分析记录。</p>
+                    </div>
+                    <label class="select-field">
+                      <span>复核人</span>
+                      <input id="reviewer-name-input" class="search-input" type="text" placeholder="例如：李老师" />
+                    </label>
+                    <label class="select-field">
+                      <span>角色</span>
+                      <select id="reviewer-role-select">
+                        <option value="辅导员">辅导员</option>
+                        <option value="就业中心">就业中心</option>
+                        <option value="班主任">班主任</option>
+                      </select>
+                    </label>
+                    <label class="select-field">
+                      <span>结论</span>
+                      <select id="review-decision-select">
+                        <option value="通过">通过</option>
+                        <option value="需补强">需补强</option>
+                        <option value="重点跟进">重点跟进</option>
+                      </select>
+                    </label>
+                    <label class="select-field review-notes-field">
+                      <span>复核备注</span>
+                      <textarea id="review-notes-input" class="resume-input compact" spellcheck="false" placeholder="写下抽检意见、建议补强点或推岗建议..."></textarea>
+                    </label>
+                    <div class="action-cluster">
+                      <button id="submit-review-btn" class="button secondary wide">提交复核留痕</button>
+                    </div>
+                  </div>
+                  <div id="review-records" class="school-follow-up"></div>
                 </article>
               </div>
             </section>

@@ -6,6 +6,7 @@ const state = {
   latestResult: null,
   schoolDashboard: null,
   benchmark: null,
+  analysisReviews: [],
 };
 
 const resumeInput = document.getElementById("resume-input");
@@ -43,6 +44,8 @@ const careerOverview = document.getElementById("career-overview");
 const groundedSummary = document.getElementById("grounded-summary");
 const groundedQuery = document.getElementById("grounded-query");
 const groundedEvidenceList = document.getElementById("grounded-evidence-list");
+const gapBenefitGrid = document.getElementById("gap-benefit-grid");
+const planSelfChecks = document.getElementById("plan-self-checks");
 const growthPath = document.getElementById("growth-path");
 const transitionPaths = document.getElementById("transition-paths");
 const reportPreview = document.getElementById("report-preview");
@@ -58,6 +61,7 @@ const serviceLoop = document.getElementById("service-loop");
 const assessmentTasks = document.getElementById("assessment-tasks");
 const resourceMap = document.getElementById("resource-map");
 const selfAssessmentSummary = document.getElementById("self-assessment-summary");
+const similarCases = document.getElementById("similar-cases");
 const schoolSummaryCards = document.getElementById("school-summary-cards");
 const schoolDistribution = document.getElementById("school-distribution");
 const schoolFollowUp = document.getElementById("school-follow-up");
@@ -65,6 +69,15 @@ const schoolServiceSegments = document.getElementById("school-service-segments")
 const schoolPushRecommendations = document.getElementById("school-push-recommendations");
 const schoolGovernanceMetrics = document.getElementById("school-governance-metrics");
 const schoolAuditQueue = document.getElementById("school-audit-queue");
+const schoolReviewMetrics = document.getElementById("school-review-metrics");
+const schoolRecentReviews = document.getElementById("school-recent-reviews");
+const currentReviewAnalysis = document.getElementById("current-review-analysis");
+const reviewerNameInput = document.getElementById("reviewer-name-input");
+const reviewerRoleSelect = document.getElementById("reviewer-role-select");
+const reviewDecisionSelect = document.getElementById("review-decision-select");
+const reviewNotesInput = document.getElementById("review-notes-input");
+const submitReviewButton = document.getElementById("submit-review-btn");
+const reviewRecords = document.getElementById("review-records");
 const stakeholderViews = document.getElementById("stakeholder-views");
 const evaluationMetrics = document.getElementById("evaluation-metrics");
 const benchmarkSummaryCards = document.getElementById("benchmark-summary-cards");
@@ -106,6 +119,10 @@ function highlightTerms(text, terms = []) {
     html = html.replace(pattern, (match) => `<mark class="evidence-highlight">${match}</mark>`);
   });
   return html;
+}
+
+function formatInlineCitations(text) {
+  return escapeHtml(text ?? "").replace(/(\[E\d+\])/g, '<span class="citation-inline">$1</span>');
 }
 
 function renderMarkdownPreview(markdownText) {
@@ -189,6 +206,7 @@ function setBusy(isBusy) {
     button.disabled = isBusy;
   });
   runBenchmarkButton.disabled = isBusy;
+  submitReviewButton.disabled = isBusy;
 }
 
 function renderSystemChecks(payload) {
@@ -418,7 +436,7 @@ function renderMatches(matches) {
 
     const explanation = document.createElement("p");
     explanation.className = "match-explanation";
-    explanation.textContent = match.explanation || "暂无解释";
+    explanation.innerHTML = formatInlineCitations(match.explanation || "暂无解释");
 
     const breakdown = document.createElement("div");
     breakdown.className = "breakdown-grid";
@@ -480,7 +498,7 @@ function renderCareerPlan(plan, matches) {
   const topMatch = matches && matches.length ? matches[0] : null;
   primaryRole.textContent = plan.primary_role || topMatch?.role_title || "待生成";
   primaryScoreBadge.textContent = `${plan.primary_score ?? topMatch?.score ?? 0} 分`;
-  careerOverview.textContent = plan.overview || "";
+  careerOverview.innerHTML = formatInlineCitations(plan.overview || "");
   fillTagList(backupRoles, plan.backup_roles || [], "暂无备选方向");
   fillTagList(transitionPaths, plan.transition_paths || [], "暂无转岗建议");
   fillTagList(careerStrengths, plan.strengths || [], "暂无明显优势");
@@ -637,13 +655,17 @@ function renderBenchmark(data) {
       <div class="tag-list">
         <span class="tag ${item.top1_hit ? "tag-hit" : "tag-warn"}">Top1 ${item.top1_hit ? "命中" : "未命中"}</span>
         <span class="tag ${item.top3_hit ? "tag-hit" : "tag-warn"}">Top3 ${item.top3_hit ? "命中" : "未命中"}</span>
+        <span class="tag ${item.pass_case ? "tag-hit" : "tag-warn"}">通过 ${item.pass_case ? "是" : "否"}</span>
         <span class="tag">证据 ${item.evidence_hit_rate ?? 0}</span>
         <span class="tag">解释 ${item.explanation_coverage ?? 0}</span>
         <span class="tag">报告 ${item.report_readiness ?? 0}</span>
         <span class="tag">闭环 ${item.loop_readiness ?? 0}</span>
+        <span class="tag">提升 ${item.improvement_delta ?? 0}</span>
+        <span class="tag">回退 ${item.fallback_used ? "是" : "否"}</span>
       </div>
       <p>预期主岗：${escapeHtml((item.expected_primary_roles || []).join("、") || "未配置")}</p>
       <p>当前 Top3：${escapeHtml((item.top_roles || []).join("、") || "暂无")}</p>
+      <p>模拟复测：${escapeHtml(item.follow_up_primary_role || item.primary_role || "未生成")} · ${item.follow_up_primary_score ?? item.primary_score ?? 0} 分</p>
       <ul class="comparison-list">
         ${(item.observations || []).map((line) => `<li>${escapeHtml(line)}</li>`).join("")}
       </ul>
@@ -693,6 +715,103 @@ function renderGroundedEvidence(bundle) {
       <p class="jd-summary">${highlightTerms(item.snippet || "暂无片段", item.matched_terms || [])}</p>
     `;
     groundedEvidenceList.appendChild(card);
+  });
+}
+
+function renderGapBenefitAnalysis(items) {
+  gapBenefitGrid.innerHTML = "";
+  if (!items || items.length === 0) {
+    gapBenefitGrid.innerHTML = `<div class="empty-inline compact">当前还没有差距-收益分析。</div>`;
+    return;
+  }
+
+  items.forEach((item) => {
+    const card = document.createElement("article");
+    card.className = "resource-card gap-benefit-card";
+    card.innerHTML = `
+      <div class="resource-top">
+        <span class="mini-label">${escapeHtml(item.dimension || "维度")}</span>
+        <span class="tag">+${item.expected_gain ?? 0}</span>
+      </div>
+      <h4>${escapeHtml(item.gap || "差距项")}</h4>
+      <p>${escapeHtml(item.detail || "")}</p>
+      <div class="comparison-card">
+        <p class="comparison-summary">当前 ${item.current_score ?? 0} 分 → 预计 ${item.projected_score ?? 0} 分</p>
+        <ul class="comparison-list">
+          <li>${escapeHtml(item.action || "暂无动作")}</li>
+          <li>${escapeHtml(item.expected_evidence || "暂无证据建议")}</li>
+        </ul>
+        ${(item.citations || []).length ? `<div class="tag-list">${(item.citations || []).map((citation) => `<span class="tag">${escapeHtml(citation)}</span>`).join("")}</div>` : ""}
+      </div>
+    `;
+    gapBenefitGrid.appendChild(card);
+  });
+}
+
+function renderPlanSelfChecks(items) {
+  planSelfChecks.innerHTML = "";
+  if (!items || items.length === 0) {
+    planSelfChecks.innerHTML = `<div class="empty-inline compact">当前还没有计划自检结果。</div>`;
+    return;
+  }
+
+  items.forEach((item) => {
+    const card = document.createElement("article");
+    card.className = `metric-snapshot self-check-card ${item.status === "通过" ? "is-pass" : item.status === "关注" ? "is-warn" : "is-pending"}`;
+    card.innerHTML = `
+      <div class="metric-snapshot-top">
+        <span>${escapeHtml(item.name || "自检项")}</span>
+        <strong>${item.score ?? 0}</strong>
+      </div>
+      <p><strong>${escapeHtml(item.status || "待检查")}</strong> · ${escapeHtml(item.detail || "")}</p>
+      <p>${escapeHtml(item.action || "")}</p>
+    `;
+    planSelfChecks.appendChild(card);
+  });
+}
+
+function renderSimilarCases(items) {
+  similarCases.innerHTML = "";
+  if (!items || items.length === 0) {
+    similarCases.innerHTML = `<div class="empty-inline compact">当前还没有可参考的相似案例。</div>`;
+    return;
+  }
+
+  items.forEach((item) => {
+    const card = document.createElement("article");
+    card.className = "stakeholder-card";
+    card.innerHTML = `
+      <span class="mini-label">${escapeHtml(item.student_name || "相似案例")}</span>
+      <h4>${escapeHtml(item.primary_role || "未生成")} · ${item.primary_score ?? 0} 分</h4>
+      <p>${escapeHtml(item.major || "专业未填写")}｜${escapeHtml(item.created_at || "")}｜复核：${escapeHtml(item.review_status || "未复核")}</p>
+      <div class="tag-list">
+        <span class="tag">相似度 ${item.similarity_score ?? 0}</span>
+        ${(item.reasons || []).map((reason) => `<span class="tag">${escapeHtml(reason)}</span>`).join("")}
+      </div>
+      <ul class="comparison-list">
+        <li>${escapeHtml(item.takeaway || "暂无启发")}</li>
+      </ul>
+    `;
+    similarCases.appendChild(card);
+  });
+}
+
+function renderReviewRecords(items) {
+  reviewRecords.innerHTML = "";
+  if (!items || items.length === 0) {
+    reviewRecords.innerHTML = `<div class="empty-inline compact">当前分析还没有老师复核记录。</div>`;
+    return;
+  }
+
+  items.forEach((item) => {
+    const card = document.createElement("div");
+    card.className = "follow-up-card";
+    card.innerHTML = `
+      <strong>${escapeHtml(item.reviewer_name || "老师")} · ${escapeHtml(item.decision || "待定")}</strong>
+      <p>${escapeHtml(item.reviewer_role || "辅导员")}｜${escapeHtml(item.created_at || "")}</p>
+      <p>${escapeHtml(item.notes || "未填写复核备注")}</p>
+    `;
+    reviewRecords.appendChild(card);
   });
 }
 
@@ -867,6 +986,8 @@ function renderSchoolDashboard(data) {
   schoolPushRecommendations.innerHTML = "";
   schoolGovernanceMetrics.innerHTML = "";
   schoolAuditQueue.innerHTML = "";
+  schoolReviewMetrics.innerHTML = "";
+  schoolRecentReviews.innerHTML = "";
   if (!data || !(data.summary_cards || []).length) {
     schoolSummaryCards.innerHTML = `<div class="empty-inline compact">生成多条历史分析后，这里会自动形成学校运营看板。</div>`;
     return;
@@ -919,7 +1040,7 @@ function renderSchoolDashboard(data) {
       card.className = "follow-up-card";
       card.innerHTML = `
         <strong>${item.name || "学生"} · ${item.primary_role || "待生成"}</strong>
-        <p>${item.major || "专业未填写"}｜主岗分 ${item.primary_score ?? 0}｜完整度 ${item.completeness ?? 0}</p>
+        <p>${item.major || "专业未填写"}｜主岗分 ${item.primary_score ?? 0}｜完整度 ${item.completeness ?? 0}｜复核 ${item.review_status || "待复核"}</p>
       `;
       schoolFollowUp.appendChild(card);
     });
@@ -993,10 +1114,42 @@ function renderSchoolDashboard(data) {
       card.className = "follow-up-card";
       card.innerHTML = `
         <strong>${item.name || "学生"} · ${item.primary_role || "待生成"}</strong>
-        <p>${item.major || "专业未填写"}｜主岗分 ${item.primary_score ?? 0}｜证据 ${item.evidence_hit_rate ?? 0}｜完整度 ${item.completeness ?? 0}</p>
+        <p>${item.major || "专业未填写"}｜主岗分 ${item.primary_score ?? 0}｜证据 ${item.evidence_hit_rate ?? 0}｜完整度 ${item.completeness ?? 0}｜复核 ${item.review_status || "待复核"}</p>
         <p>${escapeHtml((item.reasons || []).join("、") || "无抽检原因")}</p>
       `;
       schoolAuditQueue.appendChild(card);
+    });
+  }
+
+  if (!(data.review_metrics || []).length) {
+    schoolReviewMetrics.innerHTML = `<div class="empty-inline compact">当前还没有复核指标。</div>`;
+  } else {
+    (data.review_metrics || []).forEach((item) => {
+      const card = document.createElement("article");
+      card.className = "metric-snapshot";
+      card.innerHTML = `
+        <div class="metric-snapshot-top">
+          <span>${item.label || "复核指标"}</span>
+          <strong>${item.value ?? 0}</strong>
+        </div>
+        <p>${item.detail || ""}</p>
+      `;
+      schoolReviewMetrics.appendChild(card);
+    });
+  }
+
+  if (!(data.recent_reviews || []).length) {
+    schoolRecentReviews.innerHTML = `<div class="empty-inline compact">当前还没有最近复核记录。</div>`;
+  } else {
+    (data.recent_reviews || []).forEach((item) => {
+      const card = document.createElement("div");
+      card.className = "follow-up-card";
+      card.innerHTML = `
+        <strong>${escapeHtml(item.student_name || "学生")} · ${escapeHtml(item.decision || "待定")}</strong>
+        <p>${escapeHtml(item.primary_role || "未生成")}｜${escapeHtml(item.reviewer_name || "老师")}｜${escapeHtml(item.reviewer_role || "辅导员")}</p>
+        <p>${escapeHtml(item.notes || "未填写复核备注")}</p>
+      `;
+      schoolRecentReviews.appendChild(card);
     });
   }
 }
@@ -1233,6 +1386,8 @@ function renderResults(data) {
   renderParserMeta(data.parser);
   renderMatches(data.matches || []);
   renderGroundedEvidence(data.career_plan?.evidence_bundle || {});
+  renderGapBenefitAnalysis(data.career_plan?.gap_benefit_analysis || []);
+  renderPlanSelfChecks(data.career_plan?.plan_self_checks || []);
   renderCareerPlan(data.career_plan || {}, data.matches || []);
   renderLearningLoop(data.career_plan?.learning_sprints || []);
   renderGrowthComparison(data.career_plan?.growth_comparison || {});
@@ -1242,6 +1397,7 @@ function renderResults(data) {
   renderSelfAssessmentForm(data.career_plan?.self_assessment || {});
   renderSelfAssessmentSummary(data.career_plan?.self_assessment || {});
   renderResourceMap(data.career_plan?.resource_map || []);
+  renderSimilarCases(data.career_plan?.similar_cases || []);
   renderStakeholderViews(data.career_plan?.stakeholder_views || []);
   renderEvaluationMetrics(data.career_plan?.evaluation_metrics || []);
   renderBenchmark(state.benchmark);
@@ -1250,6 +1406,11 @@ function renderResults(data) {
   renderAgentQuestions(data.career_plan?.agent_questions || [], data.student_profile?.agent_answers || {});
   renderSchoolDashboard(state.schoolDashboard);
   renderCareerGraph(data.student_profile || {}, data.career_plan || {}, data.matches || []);
+  currentReviewAnalysis.textContent = state.currentAnalysisId
+    ? `当前复核对象：#${state.currentAnalysisId} · ${(data.student_profile?.name || "学生")} · ${(data.career_plan?.primary_role || "未生成")}`
+    : "当前还没有可复核的分析记录。";
+  state.analysisReviews = data.reviews || [];
+  renderReviewRecords(state.analysisReviews);
   state.currentReport = data.report_markdown || "";
   reportPreview.innerHTML = renderMarkdownPreview(state.currentReport);
 
@@ -1325,13 +1486,26 @@ async function refreshBenchmark(showLoading = false) {
   if (showLoading) {
     benchmarkStatus.textContent = "正在运行 4 个内置样例验证...";
   }
-  const response = await fetch("/api/benchmark?parser_mode=rule");
+  const benchmarkMode = parserModeSelect.value || "auto";
+  const response = await fetch(`/api/benchmark?parser_mode=${encodeURIComponent(benchmarkMode)}`);
   const data = await response.json();
   state.benchmark = data;
   benchmarkStatus.textContent = `验证完成：${data.generated_at || "刚刚"} · ${data.verdict?.label || "已生成"}`;
   if (state.latestResult) {
     renderBenchmark(data);
   }
+}
+
+async function loadReviews(analysisId) {
+  if (!analysisId) {
+    state.analysisReviews = [];
+    renderReviewRecords([]);
+    return;
+  }
+  const response = await fetch(`/api/reviews?analysis_id=${encodeURIComponent(analysisId)}`);
+  const data = await response.json();
+  state.analysisReviews = data.items || [];
+  renderReviewRecords(state.analysisReviews);
 }
 
 async function loadSampleResume(sampleName = null) {
@@ -1377,6 +1551,7 @@ async function analyzeResume() {
       throw new Error(data.error || "请求失败");
     }
     renderResults(data);
+    await loadReviews(data.analysis_id);
     await refreshHistory();
     await refreshSchoolDashboard();
     const parserInfo = data.parser
@@ -1408,6 +1583,7 @@ async function loadAnalysis(analysisId) {
       matches: data.matches,
       career_plan: data.career_plan,
       report_markdown: data.report_markdown,
+      reviews: data.reviews || [],
       parser: {
         requested_mode: data.parser_requested_mode || "unknown",
         used_mode: data.parser_used_mode || "unknown",
@@ -1417,6 +1593,7 @@ async function loadAnalysis(analysisId) {
         message: `该结果生成于 ${data.created_at}`,
       },
     });
+    await loadReviews(data.id);
     setStatus(`已载入历史记录 #${analysisId}。`, "success");
   } catch (error) {
     setStatus(`载入历史失败：${error.message}`, "error");
@@ -1537,6 +1714,49 @@ function printReportPdf() {
   setStatus("已打开打印页，请在浏览器中选择“另存为 PDF”。", "success");
 }
 
+async function submitReview() {
+  if (!state.currentAnalysisId) {
+    setStatus("请先生成或载入一条分析结果，再提交复核。", "error");
+    return;
+  }
+  const reviewerName = reviewerNameInput.value.trim();
+  if (!reviewerName) {
+    setStatus("请先填写复核人姓名。", "error");
+    return;
+  }
+
+  setBusy(true);
+  setStatus("正在提交复核留痕...", "loading");
+  try {
+    const response = await fetch("/api/reviews", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        analysis_id: state.currentAnalysisId,
+        reviewer_name: reviewerName,
+        reviewer_role: reviewerRoleSelect.value,
+        decision: reviewDecisionSelect.value,
+        notes: reviewNotesInput.value.trim(),
+      }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || "复核提交失败");
+    }
+    state.analysisReviews = data.items || [];
+    renderReviewRecords(state.analysisReviews);
+    reviewNotesInput.value = "";
+    await refreshSchoolDashboard();
+    setStatus("复核留痕已保存。", "success");
+  } catch (error) {
+    setStatus(`复核提交失败：${error.message}`, "error");
+  } finally {
+    setBusy(false);
+  }
+}
+
 loadSampleButton.addEventListener("click", () => {
   loadSampleResume().catch((error) => {
     setBusy(false);
@@ -1578,6 +1798,9 @@ jdSearchButton.addEventListener("click", () => {
   searchJd().catch((error) => {
     setStatus(`JD 检索失败：${error.message}`, "error");
   });
+});
+submitReviewButton.addEventListener("click", () => {
+  submitReview();
 });
 
 window.addEventListener("load", () => {

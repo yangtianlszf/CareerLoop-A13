@@ -141,6 +141,34 @@ def build_career_report_markdown(
             f"：{item.get('description', '')}｜交付物：{item.get('deliverable', '')}"
         ),
     )
+    gap_benefit_lines = _render_dict_items(
+        career_plan.gap_benefit_analysis,
+        lambda item: (
+            f"{item.get('gap', '')} → {item.get('dimension', '')}"
+            f"｜当前 {item.get('current_score', 0)} 分"
+            f"｜预计提升 {item.get('expected_gain', 0)} 分"
+            f"｜补强动作：{item.get('action', '')}"
+            f"｜证据：{item.get('expected_evidence', '')}"
+            f"{('｜引用：' + ' '.join(item.get('citations', []))) if item.get('citations') else ''}"
+        ),
+    )
+    plan_check_lines = _render_dict_items(
+        career_plan.plan_self_checks,
+        lambda item: (
+            f"{item.get('name', '')}：{item.get('status', '')}（{item.get('score', 0)} 分）"
+            f"｜说明：{item.get('detail', '')}"
+            f"｜建议：{item.get('action', '')}"
+        ),
+    )
+    similar_case_lines = _render_dict_items(
+        career_plan.similar_cases,
+        lambda item: (
+            f"{item.get('student_name', '')}｜{item.get('primary_role', '')}｜{item.get('primary_score', 0)} 分"
+            f"｜相似原因：{'、'.join(item.get('reasons', []))}"
+            f"｜启发：{item.get('takeaway', '')}"
+            f"｜复核状态：{item.get('review_status', '未复核')}"
+        ),
+    )
     comparison = career_plan.growth_comparison or {}
 
     return f"""# 大学生职业规划报告
@@ -226,15 +254,24 @@ def build_career_report_markdown(
 ### 下一次复测目标
 {_render_list(career_plan.next_review_targets)}
 
-## 9. 成长对比
+## 9. 差距-收益分析
+{gap_benefit_lines}
+
+## 10. 计划自检
+{plan_check_lines}
+
+## 11. 成长对比
 - 对比结论：{comparison.get('summary', '暂无对比结果')}
 ### 变化明细
 {_render_list(comparison.get('progress_items', []))}
 
-## 10. 多角色服务视角
+## 12. 相似案例参考
+{similar_case_lines}
+
+## 13. 多角色服务视角
 {stakeholder_lines}
 
-## 11. 技术方案概述
+## 14. 技术方案概述
 - 技术定位：证据驱动生成 + 可解释匹配 + 人机协同闭环
 - 方案概述：系统先把学生简历解析为结构化画像，再将官方 JD 与岗位模板转为可计算的岗位能力维度；匹配阶段输出总分与分维度解释，并对每条结论保留证据回看入口；规划阶段将能力差距映射为补强动作，通过智能体追问、岗位自测与复测形成成长闭环；学校侧再用运营看板承接个体结果与群体趋势，实现从推荐到运营的一体化服务。
 
@@ -244,13 +281,13 @@ def build_career_report_markdown(
 ### 核心技术模块
 {technical_module_lines}
 
-## 12. 评测快照
+## 15. 评测快照
 {metric_lines}
 
-## 13. 胜任力模型
+## 16. 胜任力模型
 {competency_lines}
 
-## 14. 服务闭环
+## 17. 服务闭环
 {loop_lines}
 
 ### 岗位自测任务
@@ -262,13 +299,13 @@ def build_career_report_markdown(
 - 自测结论：{career_plan.self_assessment.get('summary', '暂无')}
 {_render_list([f"{item.get('focus', '')}：{item.get('level', '')}" for item in career_plan.self_assessment.get('items', [])])}
 
-## 15. 资源映射
+## 18. 资源映射
 {resource_lines}
 
-## 16. 智能体追问
+## 19. 智能体追问
 {question_lines}
 
-## 17. 创新锚点
+## 20. 创新锚点
 - 产品标签：{career_plan.product_signature or "未设置"}
 {innovation_lines}
 """
