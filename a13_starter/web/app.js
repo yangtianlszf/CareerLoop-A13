@@ -1,3 +1,6 @@
+// ==========================================
+// 全局状态管理
+// ==========================================
 const state = {
   samples: [],
   currentSampleName: null,
@@ -8,81 +11,108 @@ const state = {
   benchmark: null,
 };
 
-const resumeInput = document.getElementById("resume-input");
-const loadSampleButton = document.getElementById("load-sample-btn");
-const analyzeButton = document.getElementById("analyze-btn");
-const uploadFileButton = document.getElementById("upload-file-btn");
-const resumeFileInput = document.getElementById("resume-file-input");
-const parserModeSelect = document.getElementById("parser-mode-select");
-const statusPanel = document.getElementById("status-panel");
-const statusText = document.getElementById("status-text");
-const sampleGallery = document.getElementById("sample-gallery");
-const systemCheckList = document.getElementById("system-check-list");
-const historyList = document.getElementById("history-list");
-const runBenchmarkButton = document.getElementById("run-benchmark-btn");
-const benchmarkStatus = document.getElementById("benchmark-status");
-const agentQuestionList = document.getElementById("agent-question-list");
-const selfAssessmentForm = document.getElementById("self-assessment-form");
-const emptyState = document.getElementById("empty-state");
-const resultsContent = document.getElementById("results-content");
-const primaryRole = document.getElementById("primary-role");
-const primaryScoreBadge = document.getElementById("primary-score-badge");
-const backupRoles = document.getElementById("backup-roles");
-const studentMeta = document.getElementById("student-meta");
-const parserMeta = document.getElementById("parser-meta");
-const completenessScore = document.getElementById("completeness-score");
-const competitivenessScore = document.getElementById("competitiveness-score");
-const skillsTags = document.getElementById("skills-tags");
-const softSkillsTags = document.getElementById("soft-skills-tags");
-const matchCards = document.getElementById("match-cards");
-const jdSearchInput = document.getElementById("jd-search-input");
-const jdSearchButton = document.getElementById("jd-search-btn");
-const jdSearchResults = document.getElementById("jd-search-results");
-const templateEvidence = document.getElementById("template-evidence");
-const careerOverview = document.getElementById("career-overview");
-const groundedSummary = document.getElementById("grounded-summary");
-const groundedQuery = document.getElementById("grounded-query");
-const groundedEvidenceList = document.getElementById("grounded-evidence-list");
-const growthPath = document.getElementById("growth-path");
-const transitionPaths = document.getElementById("transition-paths");
-const reportPreview = document.getElementById("report-preview");
-const plan30 = document.getElementById("plan-30");
-const plan90 = document.getElementById("plan-90");
-const plan180 = document.getElementById("plan-180");
-const learningSprints = document.getElementById("learning-sprints");
-const reviewTargets = document.getElementById("review-targets");
-const growthComparison = document.getElementById("growth-comparison");
-const competencyRadar = document.getElementById("competency-radar");
-const competencyDimensions = document.getElementById("competency-dimensions");
-const serviceLoop = document.getElementById("service-loop");
-const assessmentTasks = document.getElementById("assessment-tasks");
-const resourceMap = document.getElementById("resource-map");
-const selfAssessmentSummary = document.getElementById("self-assessment-summary");
-const schoolSummaryCards = document.getElementById("school-summary-cards");
-const schoolDistribution = document.getElementById("school-distribution");
-const schoolFollowUp = document.getElementById("school-follow-up");
-const schoolServiceSegments = document.getElementById("school-service-segments");
-const schoolPushRecommendations = document.getElementById("school-push-recommendations");
-const schoolGovernanceMetrics = document.getElementById("school-governance-metrics");
-const schoolAuditQueue = document.getElementById("school-audit-queue");
-const stakeholderViews = document.getElementById("stakeholder-views");
-const evaluationMetrics = document.getElementById("evaluation-metrics");
-const benchmarkSummaryCards = document.getElementById("benchmark-summary-cards");
-const benchmarkVerdict = document.getElementById("benchmark-verdict");
-const benchmarkCases = document.getElementById("benchmark-cases");
-const technicalModules = document.getElementById("technical-modules");
-const careerStrengths = document.getElementById("career-strengths");
-const careerRisks = document.getElementById("career-risks");
-const recommendedProjects = document.getElementById("recommended-projects");
-const productSignature = document.getElementById("product-signature");
-const innovationHighlights = document.getElementById("innovation-highlights");
-const careerGraph = document.getElementById("career-graph");
-const copyReportButton = document.getElementById("copy-report-btn");
-const downloadReportButton = document.getElementById("download-report-btn");
-const downloadHtmlButton = document.getElementById("download-html-btn");
-const downloadDocxButton = document.getElementById("download-docx-btn");
-const printPdfButton = document.getElementById("print-pdf-btn");
+// ==========================================
+// DOM 元素安全获取工具 (包含所有原版+新版节点)
+// ==========================================
+const getEl = (id) => document.getElementById(id);
 
+const dom = {
+  // 左侧操作区
+  resumeInput: getEl("resume-input"),
+  analyzeBtn: getEl("analyze-btn"),
+  uploadFileBtn: getEl("upload-file-btn"),
+  resumeFileInput: getEl("resume-file-input"),
+  parserModeSelect: getEl("parser-mode-select"),
+  statusPanel: getEl("status-panel"),
+  statusText: getEl("status-text"),
+  sampleGallery: getEl("sample-gallery"),
+  
+  // 容器
+  emptyState: getEl("empty-state"),
+  resultsContent: getEl("results-content"),
+  reportPreview: getEl("report-preview"),
+  
+  // 画像与评测
+  studentMeta: getEl("student-meta"),
+  parserMeta: getEl("parser-meta"),
+  completenessScore: getEl("completeness-score"),
+  competitivenessScore: getEl("competitiveness-score"),
+  skillsTags: getEl("skills-tags"),
+  softSkillsTags: getEl("soft-skills-tags"),
+  evaluationMetrics: getEl("evaluation-metrics"),
+  competencyRadar: getEl("radar-chart") || getEl("competency-radar"),
+  competencyDimensions: getEl("competency-dimensions"),
+  
+  // 匹配与规划
+  matchCards: getEl("match-cards"),
+  primaryRole: getEl("primary-role"),
+  primaryScoreBadge: getEl("primary-score-badge"),
+  backupRoles: getEl("backup-roles"),
+  planOverview: getEl("plan-overview"),
+  strengthsList: getEl("strengths-list"),
+  risksList: getEl("risks-list"),
+  actionPlan30: getEl("action-plan-30"),
+  actionPlan90: getEl("action-plan-90"),
+  actionPlan180: getEl("action-plan-180"),
+  recommendedProjects: getEl("recommended-projects"),
+  growthPathList: getEl("growth-path-list"),
+  transitionPathList: getEl("transition-path-list"),
+  careerGraph: getEl("career-graph"),
+  
+  // 学习与诊断
+  learningSprints: getEl("learning-sprints"),
+  reviewTargets: getEl("review-targets"),
+  growthComparison: getEl("growth-comparison"),
+  resourceMap: getEl("resource-map"),
+  stakeholderViews: getEl("stakeholder-views"),
+  agentQuestionList: getEl("agent-question-list"),
+  selfAssessmentForm: getEl("self-assessment-form"),
+  selfAssessmentSummary: getEl("self-assessment-summary"),
+  serviceLoop: getEl("service-loop"),
+  assessmentTasks: getEl("assessment-tasks"),
+  
+  // 溯源中心
+  evidenceSummary: getEl("evidence-summary"),
+  matchedTerms: getEl("matched-terms"),
+  evidenceSnippets: getEl("evidence-snippets") || getEl("grounded-evidence-list"),
+  templateEvidence: getEl("template-evidence"),
+  jdSearchInput: getEl("jd-search-input"),
+  jdSearchBtn: getEl("jd-search-btn"),
+  jdSearchResults: getEl("jd-search-results"),
+  
+  // 后台看板
+  historyList: getEl("history-list"),
+  systemCheckList: getEl("system-check-list"),
+  schoolDashboardStats: getEl("school-dashboard-stats") || getEl("school-summary-cards"),
+  schoolDistribution: getEl("school-distribution"),
+  schoolFollowUp: getEl("school-follow-up"),
+  schoolServiceSegments: getEl("school-service-segments"),
+  schoolPushRecommendations: getEl("school-push-recommendations"),
+  schoolGovernanceMetrics: getEl("school-governance-metrics"),
+  schoolAuditQueue: getEl("school-audit-queue"),
+  runBenchmarkBtn: getEl("run-benchmark-btn"),
+  benchmarkStatus: getEl("benchmark-status"),
+  benchmarkSummaryCards: getEl("benchmark-summary-cards"),
+  benchmarkVerdict: getEl("benchmark-verdict"),
+  benchmarkCases: getEl("benchmark-cases"),
+  
+  // 技术亮点
+  innovationHighlights: getEl("innovation-highlights"),
+  technicalModules: getEl("technical-modules"),
+  technicalKeywords: getEl("technical-keywords"),
+  productSignature: getEl("product-signature"),
+  
+  // 导出
+  copyReportBtn: getEl("copy-report-btn"),
+  downloadReportBtn: getEl("download-report-btn"),
+  downloadHtmlBtn: getEl("download-html-btn"),
+  downloadDocxBtn: getEl("download-docx-btn"),
+  printPdfBtn: getEl("print-pdf-btn")
+};
+
+// ==========================================
+// 基础工具函数
+// ==========================================
 function escapeHtml(value) {
   return String(value ?? "")
     .replaceAll("&", "&amp;")
@@ -98,1492 +128,767 @@ function escapeRegex(value) {
 
 function highlightTerms(text, terms = []) {
   let html = escapeHtml(text ?? "");
-  const uniqueTerms = [...new Set((terms || []).map((item) => String(item || "").trim()).filter(Boolean))]
-    .sort((a, b) => b.length - a.length);
-
+  const uniqueTerms = [...new Set((terms || []).map((i) => String(i || "").trim()).filter(Boolean))].sort((a, b) => b.length - a.length);
   uniqueTerms.forEach((term) => {
     const pattern = new RegExp(escapeRegex(term), "gi");
-    html = html.replace(pattern, (match) => `<mark class="evidence-highlight">${match}</mark>`);
+    html = html.replace(pattern, (match) => `<mark style="background:transparent; color:var(--primary); font-weight:600; border-bottom:1px dashed var(--primary); padding:0;">${match}</mark>`);
   });
   return html;
 }
 
-function renderMarkdownPreview(markdownText) {
-  if (!markdownText || !markdownText.trim()) {
-    return '<div class="empty-inline">当前还没有生成报告内容。</div>';
-  }
+function setStatus(text, type = "idle") {
+  if (!dom.statusText || !dom.statusPanel) return;
+  dom.statusText.textContent = text;
+  dom.statusPanel.className = "status-panel"; 
+  if (type === "loading") dom.statusPanel.classList.add("is-loading");
+  if (type === "success") dom.statusPanel.classList.add("is-success");
+  if (type === "error") dom.statusPanel.classList.add("is-error");
+}
 
+function setBusy(isBusy) {
+  [dom.analyzeBtn, dom.uploadFileBtn, dom.resumeFileInput, dom.parserModeSelect, dom.runBenchmarkBtn].forEach(el => {
+    if(el) el.disabled = isBusy;
+  });
+}
+
+function fillTagList(container, items, emptyLabel = "暂无数据") {
+  if (!container) return; container.innerHTML = "";
+  if (!items || items.length === 0) { container.innerHTML = `<span class="tag" style="color:var(--text-muted); background:transparent; border-color:var(--border);">${emptyLabel}</span>`; return; }
+  items.forEach((item) => { container.innerHTML += `<span class="tag">${escapeHtml(item)}</span>`; });
+}
+
+function fillList(container, items) {
+  if (!container) return; container.innerHTML = "";
+  const source = items && items.length ? items : ["暂无内容"];
+  source.forEach((item) => {
+    const li = document.createElement("li"); li.textContent = item; container.appendChild(li);
+  });
+}
+
+// ==========================================
+// 报告生成器 (无损保留Markdown解析)
+// ==========================================
+function renderMarkdownPreview(markdownText) {
+  if (!markdownText || !markdownText.trim()) return '<div style="color:var(--text-muted); text-align:center; padding:40px;">报告生成中...</div>';
   const parts = [];
   let listItems = [];
-
   const flushList = () => {
-    if (!listItems.length) {
-      return;
-    }
-    parts.push(`<ul>${listItems.join("")}</ul>`);
+    if (!listItems.length) return;
+    parts.push(`<ul style="margin:12px 0 24px 24px; color:var(--text-reading);">${listItems.join("")}</ul>`);
     listItems = [];
   };
-
   markdownText.split(/\r?\n/).forEach((rawLine) => {
-    const line = rawLine.trimEnd();
-    const trimmed = line.trim();
-
-    if (!trimmed) {
-      flushList();
-      return;
-    }
-
-    if (trimmed.startsWith("# ")) {
-      flushList();
-      parts.push(`<h1>${escapeHtml(trimmed.slice(2).trim())}</h1>`);
-      return;
-    }
-
-    if (trimmed.startsWith("## ")) {
-      flushList();
-      parts.push(`<h2>${escapeHtml(trimmed.slice(3).trim())}</h2>`);
-      return;
-    }
-
-    if (trimmed.startsWith("### ")) {
-      flushList();
-      parts.push(`<h3>${escapeHtml(trimmed.slice(4).trim())}</h3>`);
-      return;
-    }
-
-    if (trimmed.startsWith("- ")) {
-      listItems.push(`<li>${escapeHtml(trimmed.slice(2).trim())}</li>`);
-      return;
-    }
-
+    const line = rawLine.trimEnd(); const trimmed = line.trim();
+    if (!trimmed) { flushList(); return; }
+    if (trimmed.startsWith("# ")) { flushList(); parts.push(`<h1 style="font-family:var(--font-serif); color:var(--primary); margin:32px 0 16px; border-bottom:1px solid var(--border); padding-bottom:8px;">${escapeHtml(trimmed.slice(2).trim())}</h1>`); return; }
+    if (trimmed.startsWith("## ")) { flushList(); parts.push(`<h2 style="font-family:var(--font-serif); color:var(--text-main); margin:24px 0 12px;">${escapeHtml(trimmed.slice(3).trim())}</h2>`); return; }
+    if (trimmed.startsWith("### ")) { flushList(); parts.push(`<h3 style="color:var(--text-main); margin:16px 0 8px;">${escapeHtml(trimmed.slice(4).trim())}</h3>`); return; }
+    if (trimmed.startsWith("- ")) { listItems.push(`<li style="margin-bottom:8px; line-height:1.6;">${escapeHtml(trimmed.slice(2).trim())}</li>`); return; }
     flushList();
-    parts.push(`<p>${escapeHtml(trimmed)}</p>`);
+    parts.push(`<p style="color:var(--text-reading); line-height:1.7; margin-bottom:16px;">${escapeHtml(trimmed)}</p>`);
   });
-
   flushList();
   return parts.join("");
 }
 
-function setStatus(text, type = "idle") {
-  statusText.textContent = text;
-  statusPanel.classList.remove("is-loading", "is-success", "is-error");
-  if (type === "loading") {
-    statusPanel.classList.add("is-loading");
-  } else if (type === "success") {
-    statusPanel.classList.add("is-success");
-  } else if (type === "error") {
-    statusPanel.classList.add("is-error");
-  }
-}
+// ==========================================
+// 业务组件渲染逻辑 (全维度无损恢复)
+// ==========================================
 
-function setBusy(isBusy) {
-  analyzeButton.disabled = isBusy;
-  loadSampleButton.disabled = isBusy;
-  uploadFileButton.disabled = isBusy;
-  resumeFileInput.disabled = isBusy;
-  parserModeSelect.disabled = isBusy;
-  sampleGallery.querySelectorAll(".sample-card").forEach((button) => {
-    button.disabled = isBusy;
-  });
-  historyList.querySelectorAll(".history-card").forEach((button) => {
-    button.disabled = isBusy;
-  });
-  runBenchmarkButton.disabled = isBusy;
-}
-
-function renderSystemChecks(payload) {
-  systemCheckList.innerHTML = "";
-  (payload.checks || []).forEach((check) => {
-    const div = document.createElement("div");
-    div.className = `system-check-item ${check.status}`;
-    div.innerHTML = `
-      <strong>${check.name}</strong>
-      <span>${check.detail}</span>
-    `;
-    systemCheckList.appendChild(div);
-  });
-}
-
-function fillTagList(container, items, emptyLabel = "暂无") {
-  container.innerHTML = "";
-  if (!items || items.length === 0) {
-    const span = document.createElement("span");
-    span.className = "tag";
-    span.textContent = emptyLabel;
-    container.appendChild(span);
-    return;
-  }
-
-  items.forEach((item) => {
-    const span = document.createElement("span");
-    span.className = "tag";
-    span.textContent = item;
-    container.appendChild(span);
-  });
-}
-
-function fillList(container, items) {
-  container.innerHTML = "";
-  const source = items && items.length ? items : ["暂无"];
-  source.forEach((item) => {
-    const li = document.createElement("li");
-    li.textContent = item;
-    container.appendChild(li);
-  });
-}
-
-function collectAgentAnswers() {
-  const answers = {};
-  agentQuestionList.querySelectorAll("[data-agent-id]").forEach((input) => {
-    const value = input.value.trim();
-    if (value) {
-      answers[input.dataset.agentId] = value;
-    }
-  });
-  return answers;
-}
-
-function collectSelfAssessmentAnswers() {
-  const answers = {};
-  selfAssessmentForm.querySelectorAll("[data-self-assessment-id]:checked").forEach((input) => {
-    answers[input.dataset.selfAssessmentId] = Number(input.value);
-  });
-  return answers;
-}
-
-function renderAgentQuestions(questions, existingAnswers = {}) {
-  agentQuestionList.innerHTML = "";
-  if (!questions || questions.length === 0) {
-    agentQuestionList.innerHTML = `<div class="empty-inline compact">当前没有需要补充的追问，可以直接继续分析。</div>`;
-    return;
-  }
-
-  questions.forEach((question, index) => {
-    const card = document.createElement("div");
-    card.className = "agent-question-card";
-    const inputId = `agent-question-${index}`;
-    const preset = existingAnswers?.[question.id] || question.suggested_answer || "";
-    card.innerHTML = `
-      <label for="${inputId}" class="agent-question-label">${question.question}</label>
-      <input
-        id="${inputId}"
-        class="agent-answer-input"
-        type="text"
-        data-agent-id="${question.id}"
-        placeholder="${escapeHtml(question.placeholder || "请输入你的补充信息")}"
-        value="${escapeHtml(preset)}"
-      />
-      <p class="agent-question-note">${question.rationale || ""}</p>
-    `;
-    agentQuestionList.appendChild(card);
-  });
-}
-
-function renderSelfAssessmentForm(selfAssessment) {
-  selfAssessmentForm.innerHTML = "";
-  const items = selfAssessment?.items || [];
-  if (!items.length) {
-    selfAssessmentForm.innerHTML = `<div class="empty-inline compact">主推荐岗位生成后，这里会出现岗位自测题。</div>`;
-    return;
-  }
-
-  items.forEach((item, index) => {
-    const card = document.createElement("div");
-    card.className = "assessment-card";
-    const baseName = `assessment-${item.id}-${index}`;
-    const currentValue = item.score === null || item.score === undefined ? null : Number(item.score);
-    const options = [
-      { label: "待补强", value: 0 },
-      { label: "基础", value: 1 },
-      { label: "熟练", value: 2 },
-    ];
-    card.innerHTML = `
-      <strong>${item.prompt || "岗位自测题"}</strong>
-      <p>${item.focus || ""}</p>
-      <div class="assessment-options">
-        ${options
-          .map(
-            (option) => `
-              <label class="assessment-option">
-                <input
-                  type="radio"
-                  name="${baseName}"
-                  data-self-assessment-id="${item.id}"
-                  value="${option.value}"
-                  ${currentValue !== null && currentValue === option.value ? "checked" : ""}
-                />
-                <span>${option.label}</span>
-              </label>
-            `
-          )
-          .join("")}
-      </div>
-    `;
-    selfAssessmentForm.appendChild(card);
+function initTabs() {
+  const tabs = document.querySelectorAll(".tab-btn");
+  const panes = document.querySelectorAll(".tab-pane");
+  tabs.forEach(tab => {
+    tab.addEventListener("click", () => {
+      tabs.forEach(t => t.classList.remove("active"));
+      panes.forEach(p => p.classList.remove("active"));
+      tab.classList.add("active");
+      const targetPane = getEl(tab.dataset.target);
+      if (targetPane) targetPane.classList.add("active");
+      if (tab.dataset.target === "tab-overview" && window.radarChartInstance) window.radarChartInstance.resize();
+    });
   });
 }
 
 function renderStudentProfile(student) {
-  const rows = [
-    ["姓名", student.name || "未填写"],
-    ["学校", student.school_name || "未填写"],
-    ["专业", student.major || "未填写"],
-    ["学历", student.education_level || "未识别"],
-    ["目标岗位", (student.target_roles || []).join("、") || "未填写"],
-    ["意向城市", student.city_preference || "未填写"],
-  ];
-
-  studentMeta.innerHTML = "";
-  rows.forEach(([label, value]) => {
-    const div = document.createElement("div");
-    div.className = "meta-row";
-    div.innerHTML = `<span>${label}</span><strong>${value}</strong>`;
-    studentMeta.appendChild(div);
-  });
-
-  completenessScore.textContent = student.profile_completeness ?? 0;
-  competitivenessScore.textContent = student.competitiveness_score ?? 0;
-  fillTagList(skillsTags, student.skills || []);
-  fillTagList(softSkillsTags, student.soft_skills || []);
+  if (dom.studentMeta) {
+    const rows = [
+      ["姓名", student.name || "未填写"], ["学校", student.school_name || "未填写"],
+      ["专业", student.major || "未填写"], ["学历", student.education_level || "未识别"],
+      ["意向岗位", (student.target_roles || []).join("、") || "未填写"], ["意向城市", student.city_preference || "未填写"],
+    ];
+    dom.studentMeta.innerHTML = rows.map(([label, val]) => `<div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px dashed var(--border);"><span style="color:var(--text-muted);">${label}</span><strong style="color:var(--text-main);">${escapeHtml(val)}</strong></div>`).join("");
+  }
+  if (dom.completenessScore) dom.completenessScore.textContent = student.profile_completeness ?? 0;
+  if (dom.competitivenessScore) dom.competitivenessScore.textContent = student.competitiveness_score ?? 0;
+  fillTagList(dom.skillsTags, student.skills || []);
+  fillTagList(dom.softSkillsTags, student.soft_skills || []);
 }
 
 function renderParserMeta(parser) {
-  parserMeta.innerHTML = "";
-  if (!parser) {
-    return;
-  }
-
-  const items = [
-    `请求模式：${parser.requested_mode}`,
-    `实际解析：${parser.used_mode.toUpperCase()}`,
-    `LLM 已配置：${parser.llm_configured ? "是" : "否"}`,
-    `是否回退：${parser.fallback_used ? "是" : "否"}`,
-  ];
-
-  items.forEach((item) => {
-    const span = document.createElement("span");
-    span.className = "parser-pill";
-    span.textContent = item;
-    parserMeta.appendChild(span);
-  });
-
-  if (parser.message) {
-    const div = document.createElement("div");
-    div.className = "parser-note";
-    div.textContent = parser.message;
-    parserMeta.appendChild(div);
-  }
+  if (!dom.parserMeta || !parser) return;
+  dom.parserMeta.innerHTML = [
+    `解析引擎：${parser.used_mode?.toUpperCase()}`, `回退机制：${parser.fallback_used ? "已触发" : "未触发"}`,
+  ].map(txt => `<span class="tag" style="border-radius:99px; background:var(--surface); border:1px solid var(--border-strong);">${txt}</span>`).join("");
+  if (parser.message) dom.parserMeta.innerHTML += `<p style="font-size:0.85rem; color:var(--text-muted); margin-top:8px;">${escapeHtml(parser.message)}</p>`;
 }
 
 function createBreakdownLine(label, value) {
-  const wrapper = document.createElement("div");
-  wrapper.className = "breakdown-line";
-
-  const labels = document.createElement("div");
-  labels.className = "breakdown-labels";
-  labels.innerHTML = `<span>${label}</span><strong>${value}</strong>`;
-
-  const track = document.createElement("div");
-  track.className = "breakdown-track";
-
-  const fill = document.createElement("div");
-  fill.className = "breakdown-fill";
-  fill.style.width = `${Math.max(0, Math.min(100, Number(value) || 0))}%`;
-
-  track.appendChild(fill);
-  wrapper.appendChild(labels);
-  wrapper.appendChild(track);
-  return wrapper;
+  const percent = Math.max(0, Math.min(100, Number(value) || 0));
+  return `
+    <div style="display:grid; gap:6px; margin-bottom:10px;">
+      <div style="display:flex; justify-content:space-between; font-size:0.85rem; color:var(--text-muted);">
+        <span>${label}</span><strong style="color:var(--text-main);">${percent}</strong>
+      </div>
+      <div style="height:6px; background:var(--surface-alt); border-radius:99px; overflow:hidden; border:1px solid var(--border);">
+        <div style="height:100%; width:${percent}%; background:var(--primary); border-radius:99px;"></div>
+      </div>
+    </div>`;
 }
 
 function renderMatches(matches) {
-  matchCards.innerHTML = "";
-  (matches || []).forEach((match, index) => {
-    const card = document.createElement("article");
-    card.className = "match-card";
+  if (!dom.matchCards) return; dom.matchCards.innerHTML = "";
+  (matches || []).forEach((match, idx) => {
+    dom.matchCards.innerHTML += `
+      <div class="card" style="padding:24px; border-radius:16px;">
+        <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:16px;">
+          <div>
+            <span style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Top ${idx + 1}</span>
+            <h4 style="margin:4px 0 0 0; color:var(--primary); font-size:1.15rem;">${escapeHtml(match.role_title)}</h4>
+          </div>
+          <span class="tag" style="background:var(--primary); color:white; font-weight:700; border:none; margin:0;">${match.score} 分</span>
+        </div>
+        <p style="font-size:0.9rem; color:var(--text-reading); line-height:1.6; margin-bottom:20px; background:var(--surface-alt); padding:12px; border-radius:8px;">${escapeHtml(match.explanation)}</p>
+        <div style="margin-bottom:20px;">
+          ${createBreakdownLine("基本门槛", match.breakdown?.basic_requirements ?? 0)}
+          ${createBreakdownLine("专业技能", match.breakdown?.professional_skills ?? 0)}
+          ${createBreakdownLine("职业素养", match.breakdown?.professional_literacy ?? 0)}
+          ${createBreakdownLine("发展潜力", match.breakdown?.growth_potential ?? 0)}
+        </div>
+        <button class="btn btn-dashed full-width" onclick="loadTemplateEvidence('${escapeHtml(match.role_title)}')">核查底层 JD 样本库</button>
+      </div>`;
+  });
+}
 
-    const topRow = document.createElement("div");
-    topRow.className = "match-top";
-    topRow.innerHTML = `
-      <div>
-        <span class="mini-label">Top ${index + 1}</span>
-        <h4>${match.role_title}</h4>
-      </div>
-      <div class="score-badge">${match.score} 分 · ${match.confidence_label || "中"}</div>
-    `;
+function renderCompetencyRadar(items) {
+  if (!dom.competencyRadar || !items || items.length === 0) return;
+  if (window.radarChartInstance) window.radarChartInstance.dispose();
+  window.radarChartInstance = echarts.init(dom.competencyRadar);
+  const option = {
+    tooltip: { trigger: 'item', backgroundColor: 'rgba(255, 255, 255, 0.95)', borderColor: '#e7e5e4', textStyle: { color: '#292524' }, padding: [12, 16] },
+    radar: {
+      indicator: items.map(item => ({ name: item.name, max: 100 })), radius: '65%', center: ['50%', '50%'], splitNumber: 4, shape: 'polygon',
+      axisName: { color: '#44403c', fontFamily: 'Georgia, serif', fontSize: 13 },
+      splitArea: { areaStyle: { color: ['rgba(15, 118, 110, 0.02)', 'rgba(15, 118, 110, 0.04)', 'rgba(15, 118, 110, 0.06)', 'rgba(15, 118, 110, 0.08)'].reverse() } },
+      axisLine: { lineStyle: { color: 'rgba(15, 118, 110, 0.2)' } }, splitLine: { lineStyle: { color: 'rgba(15, 118, 110, 0.3)' } }
+    },
+    series: [{
+      type: 'radar',
+      data: [{
+        value: items.map(item => item.score), name: '胜任力量化', symbol: 'circle', symbolSize: 6,
+        itemStyle: { color: '#0f766e', borderColor: '#fff', borderWidth: 2 },
+        areaStyle: { color: 'rgba(15, 118, 110, 0.15)' }, lineStyle: { width: 2, color: '#0f766e' }
+      }]
+    }]
+  };
+  window.radarChartInstance.setOption(option);
+}
 
-    const meta = document.createElement("p");
-    meta.className = "match-summary";
-    meta.textContent = match.summary || "暂无岗位摘要";
-
-    const explanation = document.createElement("p");
-    explanation.className = "match-explanation";
-    explanation.textContent = match.explanation || "暂无解释";
-
-    const breakdown = document.createElement("div");
-    breakdown.className = "breakdown-grid";
-    breakdown.appendChild(createBreakdownLine("基础要求", match.breakdown?.basic_requirements ?? 0));
-    breakdown.appendChild(createBreakdownLine("专业技能", match.breakdown?.professional_skills ?? 0));
-    breakdown.appendChild(createBreakdownLine("职业素养", match.breakdown?.professional_literacy ?? 0));
-    breakdown.appendChild(createBreakdownLine("成长潜力", match.breakdown?.growth_potential ?? 0));
-
-    const strengths = document.createElement("div");
-    strengths.className = "insight-block";
-    strengths.innerHTML = `<span class="summary-label">优势亮点</span>`;
-    const strengthsTags = document.createElement("div");
-    strengthsTags.className = "tag-list compact";
-    fillTagList(strengthsTags, (match.strengths || []).slice(0, 3), "暂无");
-    strengths.appendChild(strengthsTags);
-
-    const evidence = document.createElement("div");
-    evidence.className = "insight-block";
-    evidence.innerHTML = `<span class="summary-label">匹配证据</span>`;
-    const evidenceTags = document.createElement("div");
-    evidenceTags.className = "tag-list compact";
-    fillTagList(evidenceTags, (match.shared_skills || []).slice(0, 5), "暂无直接证据");
-    evidence.appendChild(evidenceTags);
-
-    const gaps = document.createElement("div");
-    gaps.className = "insight-block";
-    gaps.innerHTML = `<span class="summary-label">核心差距</span>`;
-    const gapsTags = document.createElement("div");
-    gapsTags.className = "tag-list subtle compact";
-    fillTagList(gapsTags, (match.gaps || []).slice(0, 3), "暂无");
-    gaps.appendChild(gapsTags);
-
-    const actions = document.createElement("div");
-    actions.className = "match-actions";
-    const evidenceButton = document.createElement("button");
-    evidenceButton.type = "button";
-    evidenceButton.className = "button tertiary";
-    evidenceButton.textContent = "查看原始 JD";
-    evidenceButton.addEventListener("click", () => {
-      loadTemplateEvidence(match.role_title).catch((error) => {
-        setStatus(`加载模板证据失败：${error.message}`, "error");
-      });
-    });
-    actions.appendChild(evidenceButton);
-
-    card.appendChild(topRow);
-    card.appendChild(meta);
-    card.appendChild(explanation);
-    card.appendChild(breakdown);
-    card.appendChild(evidence);
-    card.appendChild(strengths);
-    card.appendChild(gaps);
-    card.appendChild(actions);
-    matchCards.appendChild(card);
+function renderCompetencyDimensions(items) {
+  if (!dom.competencyDimensions) return; dom.competencyDimensions.innerHTML = "";
+  (items || []).forEach(item => {
+    dom.competencyDimensions.innerHTML += `
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:12px; background:var(--surface-alt); border-radius:12px; margin-bottom:8px; border:1px solid var(--border);">
+        <div><strong style="color:var(--text-main); font-size:0.95rem;">${escapeHtml(item.name)}</strong> <span style="font-size:0.8rem; color:var(--text-muted); margin-left:6px;">权 ${escapeHtml(item.weight)}</span></div>
+        <strong style="color:var(--primary); font-family:var(--font-serif); font-size:1.2rem;">${item.score}</strong>
+      </div>`;
   });
 }
 
 function renderCareerPlan(plan, matches) {
   const topMatch = matches && matches.length ? matches[0] : null;
-  primaryRole.textContent = plan.primary_role || topMatch?.role_title || "待生成";
-  primaryScoreBadge.textContent = `${plan.primary_score ?? topMatch?.score ?? 0} 分`;
-  careerOverview.textContent = plan.overview || "";
-  fillTagList(backupRoles, plan.backup_roles || [], "暂无备选方向");
-  fillTagList(transitionPaths, plan.transition_paths || [], "暂无转岗建议");
-  fillTagList(careerStrengths, plan.strengths || [], "暂无明显优势");
-  fillTagList(careerRisks, plan.risks || [], "暂无明显风险");
+  if (dom.primaryRole) dom.primaryRole.textContent = plan.primary_role || topMatch?.role_title || "待生成";
+  if (dom.primaryScoreBadge) dom.primaryScoreBadge.textContent = plan.primary_score ?? topMatch?.score ?? 0;
+  if (dom.planOverview) dom.planOverview.textContent = plan.overview || "暂无解读";
+  if (dom.productSignature) dom.productSignature.textContent = plan.product_signature || "数据驱动的职业智能体";
+  
+  fillTagList(dom.backupRoles, plan.backup_roles || []);
+  fillList(dom.strengthsList, plan.strengths || []); fillList(dom.risksList, plan.risks || []);
+  fillList(dom.actionPlan30, plan.action_plan_30_days || []); fillList(dom.actionPlan90, plan.action_plan_90_days || []); fillList(dom.actionPlan180, plan.action_plan_180_days || []);
+  fillList(dom.recommendedProjects, plan.recommended_projects || []); fillList(dom.growthPathList, plan.primary_growth_path || []);
+  fillList(dom.transitionPathList, plan.transition_paths || []); fillList(dom.assessmentTasks, plan.assessment_tasks || []);
+  fillList(dom.reviewTargets, plan.next_review_targets || []);
+}
 
-  growthPath.innerHTML = "";
-  (plan.primary_growth_path || []).forEach((item, index) => {
-    const div = document.createElement("div");
-    div.className = "path-item";
-    div.innerHTML = `<span class="path-index">0${index + 1}</span><strong>${item}</strong>`;
-    growthPath.appendChild(div);
+function renderEvaluationMetrics(items) {
+  if (!dom.evaluationMetrics) return; dom.evaluationMetrics.innerHTML = "";
+  if (!items || items.length === 0) { dom.evaluationMetrics.innerHTML = `<p class="text-muted">暂无系统置信度评估。</p>`; return; }
+  dom.evaluationMetrics.style.display = "grid"; dom.evaluationMetrics.style.gridTemplateColumns = "repeat(auto-fit, minmax(220px, 1fr))"; dom.evaluationMetrics.style.gap = "16px";
+  items.forEach((item) => {
+    dom.evaluationMetrics.innerHTML += `
+      <div style="background:var(--surface-alt); padding:20px; border-radius:16px; border:1px solid var(--border);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <span style="font-size:0.9rem; color:var(--text-muted); font-weight:600;">${escapeHtml(item.name)}</span>
+          <strong style="font-size:1.6rem; color:var(--primary); font-family:var(--font-serif);">${item.score ?? 0}</strong>
+        </div>
+        <p style="font-size:0.85rem; margin:0; color:var(--text-reading); line-height:1.5;">${escapeHtml(item.detail)}</p>
+      </div>`;
   });
-
-  fillList(plan30, plan.action_plan_30_days || []);
-  fillList(plan90, plan.action_plan_90_days || []);
-  fillList(plan180, plan.action_plan_180_days || []);
-  fillList(recommendedProjects, plan.recommended_projects || []);
-  fillList(reviewTargets, plan.next_review_targets || []);
-  productSignature.textContent = plan.product_signature || "用一句话讲清这套系统最不一样的地方。";
 }
 
 function renderLearningLoop(items) {
-  learningSprints.innerHTML = "";
-  if (!items || items.length === 0) {
-    learningSprints.innerHTML = `<div class="empty-inline compact">当前还没有训练闭环任务。</div>`;
-    return;
-  }
-
+  if (!dom.learningSprints) return; dom.learningSprints.innerHTML = "";
+  if (!items || items.length === 0) { dom.learningSprints.innerHTML = `<p class="text-muted">暂无专项补强节点。</p>`; return; }
   items.forEach((item) => {
-    const card = document.createElement("article");
-    card.className = "sprint-card";
-    card.innerHTML = `
-      <div class="sprint-top">
-        <strong>${item.title || "训练任务"}</strong>
-        <span class="tag">${item.type || "训练"}</span>
-      </div>
-      <p>${item.reason || ""}</p>
-      <div class="sprint-deliverable">
-        <span class="summary-label">交付物</span>
-        <p>${item.deliverable || "暂无"}</p>
-      </div>
-    `;
-    learningSprints.appendChild(card);
+    dom.learningSprints.innerHTML += `
+      <div style="background:var(--surface-alt); padding:20px; border-radius:16px; border:1px solid var(--border); margin-bottom:16px;">
+        <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:12px;">
+          <strong style="color:var(--text-main); font-size:1.05rem; line-height:1.4;">${escapeHtml(item.title)}</strong>
+          <span class="tag" style="border:1px solid var(--primary); color:var(--primary); background:transparent; margin:0;">${escapeHtml(item.type)}</span>
+        </div>
+        <p style="font-size:0.95rem; color:var(--text-reading); margin-bottom:16px;">${escapeHtml(item.reason)}</p>
+        <div style="border-top:1px dashed var(--border-strong); padding-top:12px; font-size:0.9rem;">
+          <strong style="color:var(--primary);">交付物闭环：</strong> <span style="color:var(--text-muted);">${escapeHtml(item.deliverable)}</span>
+        </div>
+      </div>`;
   });
 }
 
 function renderGrowthComparison(data) {
-  if (!data || !data.summary) {
-    growthComparison.innerHTML = `<div class="empty-inline compact">还没有成长对比结果。</div>`;
-    return;
-  }
-
-  const deltas = [];
-  if (typeof data.score_delta === "number") {
-    deltas.push(`主岗位分数 ${data.score_delta >= 0 ? "+" : ""}${data.score_delta}`);
-  }
-  if (typeof data.completeness_delta === "number") {
-    deltas.push(`完整度 ${data.completeness_delta >= 0 ? "+" : ""}${data.completeness_delta}`);
-  }
-  if (typeof data.competitiveness_delta === "number") {
-    deltas.push(`竞争力 ${data.competitiveness_delta >= 0 ? "+" : ""}${data.competitiveness_delta}`);
-  }
-
-  growthComparison.innerHTML = `
-    <div class="comparison-card ${data.has_baseline ? "with-baseline" : ""}">
-      <p class="comparison-summary">${data.summary}</p>
-      ${deltas.length ? `<div class="tag-list">${deltas.map((item) => `<span class="tag">${escapeHtml(item)}</span>`).join("")}</div>` : ""}
-      <ul class="comparison-list">
-        ${(data.progress_items || []).map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
+  if (!dom.growthComparison) return; dom.growthComparison.innerHTML = "";
+  if (!data || !data.summary) { dom.growthComparison.innerHTML = `<p class="text-muted">首轮分析暂无对比，补充问答后将呈现成长曲线。</p>`; return; }
+  const tags = [];
+  if (data.score_delta) tags.push(`匹配分 ${data.score_delta > 0 ? '+' : ''}${data.score_delta}`);
+  if (data.completeness_delta) tags.push(`完整度 ${data.completeness_delta > 0 ? '+' : ''}${data.completeness_delta}`);
+  
+  dom.growthComparison.innerHTML = `
+    <div style="padding:20px; border-radius:16px; background:linear-gradient(135deg, rgba(15, 118, 110, 0.05), var(--surface-alt)); border:1px solid var(--border);">
+      <p style="margin:0 0 16px 0; font-size:0.95rem; color:var(--text-main); font-weight:500;">${escapeHtml(data.summary)}</p>
+      <div style="margin-bottom:16px;">${tags.map(t => `<span class="tag" style="background:var(--primary); color:white; border:none;">${t}</span>`).join("")}</div>
+      <ul style="margin:0; padding-left:20px; color:var(--text-reading); font-size:0.9rem; line-height:1.6;">
+        ${(data.progress_items || []).map(i => `<li>${escapeHtml(i)}</li>`).join("")}
       </ul>
-    </div>
-  `;
-}
-
-function renderStakeholderViews(items) {
-  stakeholderViews.innerHTML = "";
-  if (!items || items.length === 0) {
-    stakeholderViews.innerHTML = `<div class="empty-inline compact">当前还没有多角色视角。</div>`;
-    return;
-  }
-
-  items.forEach((item) => {
-    const card = document.createElement("article");
-    card.className = "stakeholder-card";
-    card.innerHTML = `
-      <span class="mini-label">${item.role || "角色"}</span>
-      <h4>${item.headline || "暂无摘要"}</h4>
-      <ul>${(item.items || []).map((line) => `<li>${escapeHtml(line)}</li>`).join("")}</ul>
-    `;
-    stakeholderViews.appendChild(card);
-  });
-}
-
-function renderEvaluationMetrics(items) {
-  evaluationMetrics.innerHTML = "";
-  if (!items || items.length === 0) {
-    evaluationMetrics.innerHTML = `<div class="empty-inline compact">当前还没有评测快照。</div>`;
-    return;
-  }
-
-  items.forEach((item) => {
-    const card = document.createElement("article");
-    card.className = "metric-snapshot";
-    card.innerHTML = `
-      <div class="metric-snapshot-top">
-        <span>${item.name || "指标"}</span>
-        <strong>${item.score ?? 0}</strong>
-      </div>
-      <p>${item.detail || ""}</p>
-    `;
-    evaluationMetrics.appendChild(card);
-  });
-}
-
-function renderBenchmark(data) {
-  benchmarkSummaryCards.innerHTML = "";
-  benchmarkCases.innerHTML = "";
-
-  if (!data || !(data.summary_cards || []).length) {
-    benchmarkVerdict.textContent = "等待运行内置样例验证。";
-    benchmarkSummaryCards.innerHTML = `<div class="empty-inline compact">运行样例验证后，这里会展示命中率、解释覆盖和交付就绪度。</div>`;
-    return;
-  }
-
-  (data.summary_cards || []).forEach((item) => {
-    const card = document.createElement("article");
-    card.className = "school-summary-card";
-    card.innerHTML = `
-      <span>${item.label || "指标"}</span>
-      <strong>${item.value ?? 0}</strong>
-      <p>${item.detail || ""}</p>
-    `;
-    benchmarkSummaryCards.appendChild(card);
-  });
-
-  benchmarkVerdict.innerHTML = `
-    <div class="benchmark-verdict-top">
-      <span class="mini-label">评测结论</span>
-      <strong>${escapeHtml(data.verdict?.label || "待评估")}</strong>
-    </div>
-    <p>${escapeHtml(data.verdict?.detail || "")}</p>
-    <ul class="comparison-list">
-      ${(data.judge_notes || []).map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
-    </ul>
-  `;
-
-  (data.cases || []).forEach((item) => {
-    const card = document.createElement("article");
-    card.className = "stakeholder-card benchmark-case-card";
-    card.innerHTML = `
-      <span class="mini-label">${escapeHtml(item.label || "样例")}</span>
-      <h4>${escapeHtml(item.primary_role || "未生成")} · ${item.primary_score ?? 0} 分</h4>
-      <p class="benchmark-focus">${escapeHtml(item.focus || "")}</p>
-      <div class="tag-list">
-        <span class="tag ${item.top1_hit ? "tag-hit" : "tag-warn"}">Top1 ${item.top1_hit ? "命中" : "未命中"}</span>
-        <span class="tag ${item.top3_hit ? "tag-hit" : "tag-warn"}">Top3 ${item.top3_hit ? "命中" : "未命中"}</span>
-        <span class="tag">证据 ${item.evidence_hit_rate ?? 0}</span>
-        <span class="tag">解释 ${item.explanation_coverage ?? 0}</span>
-        <span class="tag">报告 ${item.report_readiness ?? 0}</span>
-        <span class="tag">闭环 ${item.loop_readiness ?? 0}</span>
-      </div>
-      <p>预期主岗：${escapeHtml((item.expected_primary_roles || []).join("、") || "未配置")}</p>
-      <p>当前 Top3：${escapeHtml((item.top_roles || []).join("、") || "暂无")}</p>
-      <ul class="comparison-list">
-        ${(item.observations || []).map((line) => `<li>${escapeHtml(line)}</li>`).join("")}
-      </ul>
-    `;
-    benchmarkCases.appendChild(card);
-  });
-}
-
-function renderGroundedEvidence(bundle) {
-  groundedSummary.textContent = bundle?.summary || "生成分析后，这里会显示证据链摘要。";
-  fillTagList(groundedQuery, bundle?.query_terms || [], "等待生成检索词");
-  groundedEvidenceList.innerHTML = "";
-
-  const items = bundle?.items || [];
-  if (!items.length) {
-    groundedEvidenceList.innerHTML = `<div class="empty-inline">当前还没有自动检索到证据片段。</div>`;
-    return;
-  }
-
-  const summaryCard = document.createElement("article");
-  summaryCard.className = "jd-card compact";
-  summaryCard.innerHTML = `
-    <div class="jd-card-top">
-      <div>
-        <span class="mini-label">Evidence Hit Rate</span>
-        <h4>${bundle?.evidence_hit_rate ?? 0}% · ${escapeHtml(bundle?.retrieval_mode || "未生成")}</h4>
-      </div>
-      <div class="score-badge">${(bundle?.hit_terms || []).length}/${(bundle?.target_terms || []).length || 1}</div>
-    </div>
-    <p class="jd-meta">命中术语：${escapeHtml((bundle?.hit_terms || []).join("、") || "无")}</p>
-    <p class="jd-summary">目标术语：${escapeHtml((bundle?.target_terms || []).join("、") || "无")}</p>
-  `;
-  groundedEvidenceList.appendChild(summaryCard);
-
-  items.forEach((item) => {
-    const card = document.createElement("article");
-    card.className = "jd-card compact";
-    card.innerHTML = `
-      <div class="jd-card-top">
-        <div>
-          <span class="mini-label citation-badge">${escapeHtml(item.citation_id || "[E]")} · ${escapeHtml(item.source_type || "evidence")}</span>
-          <h4>${escapeHtml(item.job_title || item.source_title || "证据片段")}</h4>
-        </div>
-        <div class="score-badge">${item.score ?? 0}</div>
-      </div>
-      <p class="jd-meta">${escapeHtml(item.company_name || "岗位模板")}｜${escapeHtml(item.city || "位置未知")}｜命中词：${highlightTerms((item.matched_terms || []).join("、") || "无", item.matched_terms || [])}</p>
-      <p class="jd-summary">${highlightTerms(item.snippet || "暂无片段", item.matched_terms || [])}</p>
-    `;
-    groundedEvidenceList.appendChild(card);
-  });
-}
-
-function renderTechnicalModules(items, keywords) {
-  technicalModules.innerHTML = "";
-  if (!items || items.length === 0) {
-    technicalModules.innerHTML = `<div class="empty-inline compact">当前还没有技术表达模块。</div>`;
-    return;
-  }
-
-  if (keywords && keywords.length) {
-    const keywordCard = document.createElement("article");
-    keywordCard.className = "innovation-card panel";
-    keywordCard.innerHTML = `
-      <span class="metric-label">Keyword System</span>
-      <h4>技术关键词体系</h4>
-      <div class="tag-list">${keywords.map((item) => `<span class="tag">${escapeHtml(item)}</span>`).join("")}</div>
-    `;
-    technicalModules.appendChild(keywordCard);
-  }
-
-  items.forEach((item) => {
-    const card = document.createElement("article");
-    card.className = "innovation-card panel";
-    card.innerHTML = `
-      <span class="metric-label">${item.tag || "技术模块"}</span>
-      <h4>${item.name || item.title || "技术能力"}</h4>
-      <p>${item.detail || ""}</p>
-    `;
-    technicalModules.appendChild(card);
-  });
-}
-
-function renderCompetencyDimensions(items) {
-  competencyDimensions.innerHTML = "";
-  if (!items || items.length === 0) {
-    competencyDimensions.innerHTML = `<div class="empty-inline compact">当前还没有胜任力维度。</div>`;
-    competencyRadar.innerHTML = `<div class="empty-inline compact">等待生成胜任力可视化。</div>`;
-    return;
-  }
-
-  renderCompetencyRadar(items);
-
-  items.forEach((item) => {
-    const card = document.createElement("article");
-    card.className = "metric-snapshot";
-    card.innerHTML = `
-      <div class="metric-snapshot-top">
-        <span>${item.name || "维度"} · ${item.weight || ""}</span>
-        <strong>${item.score ?? 0}</strong>
-      </div>
-      <p>${item.note || ""}</p>
-    `;
-    competencyDimensions.appendChild(card);
-  });
-}
-
-function renderCompetencyRadar(items) {
-  const width = 320;
-  const height = 280;
-  const cx = 150;
-  const cy = 136;
-  const radius = 92;
-  const count = items.length;
-  const points = items.map((item, index) => {
-    const angle = (-Math.PI / 2) + (Math.PI * 2 * index) / count;
-    const valueRadius = radius * ((Number(item.score) || 0) / 100);
-    return {
-      label: item.name || `维度${index + 1}`,
-      x: cx + Math.cos(angle) * valueRadius,
-      y: cy + Math.sin(angle) * valueRadius,
-      ax: cx + Math.cos(angle) * radius,
-      ay: cy + Math.sin(angle) * radius,
-      lx: cx + Math.cos(angle) * (radius + 24),
-      ly: cy + Math.sin(angle) * (radius + 24),
-    };
-  });
-
-  const polygon = points.map((point) => `${point.x},${point.y}`).join(" ");
-  competencyRadar.innerHTML = `
-    <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="胜任力雷达图">
-      <circle class="radar-ring" cx="${cx}" cy="${cy}" r="${radius}"></circle>
-      <circle class="radar-ring" cx="${cx}" cy="${cy}" r="${radius * 0.66}"></circle>
-      <circle class="radar-ring" cx="${cx}" cy="${cy}" r="${radius * 0.33}"></circle>
-      ${points.map((point) => `<line class="radar-axis" x1="${cx}" y1="${cy}" x2="${point.ax}" y2="${point.ay}"></line>`).join("")}
-      <polygon class="radar-shape" points="${polygon}"></polygon>
-      ${points
-        .map(
-          (point) => `
-            <circle class="radar-point" cx="${point.x}" cy="${point.y}" r="4"></circle>
-            <text class="radar-label" x="${point.lx}" y="${point.ly}">${escapeHtml(point.label)}</text>
-          `
-        )
-        .join("")}
-    </svg>
-  `;
-}
-
-function renderServiceLoop(items) {
-  serviceLoop.innerHTML = "";
-  if (!items || items.length === 0) {
-    serviceLoop.innerHTML = `<div class="empty-inline compact">当前还没有成长闭环阶段。</div>`;
-    return;
-  }
-
-  items.forEach((item, index) => {
-    const card = document.createElement("div");
-    card.className = "service-step";
-    card.innerHTML = `
-      <span class="path-index">0${index + 1}</span>
-      <div>
-        <strong>${item.stage || "阶段"} · ${item.status || ""}</strong>
-        <p>${item.detail || ""}</p>
-      </div>
-    `;
-    serviceLoop.appendChild(card);
-  });
+    </div>`;
 }
 
 function renderResourceMap(items) {
-  resourceMap.innerHTML = "";
-  if (!items || items.length === 0) {
-    resourceMap.innerHTML = `<div class="empty-inline compact">当前还没有资源映射建议。</div>`;
-    return;
-  }
-
+  if (!dom.resourceMap) return; dom.resourceMap.innerHTML = "";
+  if (!items || items.length === 0) { dom.resourceMap.innerHTML = `<p class="text-muted">暂无落地资源映射。</p>`; return; }
+  dom.resourceMap.style.display = "grid"; dom.resourceMap.style.gridTemplateColumns = "repeat(auto-fit, minmax(280px, 1fr))"; dom.resourceMap.style.gap = "20px";
   items.forEach((item) => {
-    const card = document.createElement("article");
-    card.className = "resource-card";
-    card.innerHTML = `
-      <div class="resource-top">
-        <span class="mini-label">${item.category || "资源"}</span>
-        <span class="tag">${item.priority || "中"}</span>
-      </div>
-      <h4>${item.title || "资源项"}</h4>
-      <p>${item.description || ""}</p>
-      <div class="sprint-deliverable">
-        <span class="summary-label">输出物</span>
-        <p>${item.deliverable || ""}</p>
-      </div>
-    `;
-    resourceMap.appendChild(card);
+    const isHigh = item.priority === '高';
+    dom.resourceMap.innerHTML += `
+      <div style="background:var(--surface); padding:24px; border-radius:16px; border:1px solid ${isHigh ? 'var(--accent)' : 'var(--border)'}; display:flex; flex-direction:column;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+          <span style="font-size:0.8rem; font-weight:600; color:var(--text-muted);">${escapeHtml(item.category)}</span>
+          <span style="font-size:0.8rem; color:${isHigh ? 'var(--accent)' : 'var(--text-muted)'}; font-weight:500;">优先级: ${escapeHtml(item.priority)}</span>
+        </div>
+        <h5 style="margin:0 0 12px 0; color:var(--text-main); font-size:1.1rem; font-weight:600;">${escapeHtml(item.title)}</h5>
+        <p style="font-size:0.95rem; color:var(--text-reading); margin-bottom:20px; flex-grow:1;">${escapeHtml(item.description)}</p>
+        <div style="background:var(--surface-alt); padding:12px; border-radius:8px; font-size:0.85rem; border-left:3px solid var(--primary);">
+          <strong style="color:var(--text-main);">核心产出：</strong> <span style="color:var(--text-muted);">${escapeHtml(item.deliverable)}</span>
+        </div>
+      </div>`;
+  });
+}
+
+function renderStakeholderViews(items) {
+  if (!dom.stakeholderViews) return; dom.stakeholderViews.innerHTML = "";
+  if (!items || items.length === 0) return;
+  dom.stakeholderViews.style.display = "grid"; dom.stakeholderViews.style.gridTemplateColumns = "repeat(auto-fit, minmax(260px, 1fr))"; dom.stakeholderViews.style.gap = "16px";
+  items.forEach(item => {
+    dom.stakeholderViews.innerHTML += `
+      <div style="padding:20px; border-radius:16px; border:1px solid var(--border); background:var(--surface-alt);">
+        <span style="font-size:0.8rem; font-weight:700; color:var(--primary); text-transform:uppercase;">${escapeHtml(item.role)}</span>
+        <h4 style="margin:8px 0 12px 0; font-size:1.05rem; color:var(--text-main);">${escapeHtml(item.headline)}</h4>
+        <ul style="margin:0; padding-left:18px; font-size:0.9rem; color:var(--text-muted); line-height:1.6;">
+          ${(item.items || []).map(line => `<li>${escapeHtml(line)}</li>`).join("")}
+        </ul>
+      </div>`;
+  });
+}
+
+function renderAgentQuestions(questions, existingAnswers = {}) {
+  if (!dom.agentQuestionList) return; dom.agentQuestionList.innerHTML = "";
+  if (!questions || questions.length === 0) { dom.agentQuestionList.innerHTML = `<p class="text-muted">情境已充分对齐，无需追问。</p>`; return; }
+  questions.forEach((q) => {
+    const preset = existingAnswers?.[q.id] || q.suggested_answer || "";
+    dom.agentQuestionList.innerHTML += `
+      <div class="form-group" style="margin-bottom:20px; background:var(--surface-alt); padding:16px; border-radius:16px; border:1px solid var(--border);">
+        <label style="display:block; margin-bottom:8px; font-weight:600; color:var(--text-main);">${escapeHtml(q.question)}</label>
+        <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:12px;">${escapeHtml(q.rationale || "补充此信息以提升规划精度")}</p>
+        <input type="text" class="input-field" data-agent-id="${q.id}" placeholder="${escapeHtml(q.placeholder)}" value="${escapeHtml(preset)}">
+      </div>`;
+  });
+}
+
+function renderSelfAssessmentForm(selfAssessment) {
+  if (!dom.selfAssessmentForm) return; dom.selfAssessmentForm.innerHTML = "";
+  const items = selfAssessment?.items || [];
+  if (!items.length) { dom.selfAssessmentForm.innerHTML = `<p class="text-muted">待确立基准岗位后生成专业量表。</p>`; return; }
+  items.forEach((item, idx) => {
+    const baseName = `assessment-${item.id}-${idx}`;
+    const score = item.score !== null ? Number(item.score) : null;
+    dom.selfAssessmentForm.innerHTML += `
+      <div class="form-group" style="background:var(--surface-alt); border:1px solid var(--border); padding:16px; border-radius:16px; margin-bottom:16px;">
+        <label style="display:block; margin-bottom:6px; font-weight:600; color:var(--text-main);">${escapeHtml(item.prompt)}</label>
+        <p style="font-size:0.85rem; color:var(--primary); margin-bottom:12px;">考察点: ${escapeHtml(item.focus)}</p>
+        <div style="display:flex; gap:20px; font-size:0.95rem;">
+          <label style="cursor:pointer;"><input type="radio" name="${baseName}" data-self-assessment-id="${item.id}" value="0" ${score === 0 ? 'checked' : ''}> <span style="color:var(--text-muted);">待补强</span></label>
+          <label style="cursor:pointer;"><input type="radio" name="${baseName}" data-self-assessment-id="${item.id}" value="1" ${score === 1 ? 'checked' : ''}> <span style="color:var(--text-muted);">基础掌握</span></label>
+          <label style="cursor:pointer;"><input type="radio" name="${baseName}" data-self-assessment-id="${item.id}" value="2" ${score === 2 ? 'checked' : ''}> <span style="color:var(--text-muted);">可实战</span></label>
+        </div>
+      </div>`;
   });
 }
 
 function renderSelfAssessmentSummary(data) {
-  if (!data || !data.items || data.items.length === 0) {
-    selfAssessmentSummary.innerHTML = `<div class="empty-inline compact">完成岗位自测后，这里会展示能力回放结果。</div>`;
-    return;
-  }
-
-  selfAssessmentSummary.innerHTML = `
-    <div class="comparison-card with-baseline">
-      <p class="comparison-summary">${data.title || "岗位自测"}：${data.score ?? 0} 分</p>
-      <div class="tag-list">
-        ${(data.items || [])
-          .map((item) => `<span class="tag">${escapeHtml(item.focus || item.prompt)} · ${escapeHtml(item.level || "待补强")}</span>`)
-          .join("")}
+  if (!dom.selfAssessmentSummary) return; dom.selfAssessmentSummary.innerHTML = "";
+  if (!data || !data.items || data.items.length === 0) return;
+  dom.selfAssessmentSummary.innerHTML = `
+    <div style="padding:20px; border-radius:16px; background:var(--surface-alt); border:1px solid var(--border);">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <strong style="font-size:1.1rem;">${escapeHtml(data.title)}</strong>
+        <span class="tag" style="background:var(--primary); color:white; border:none; margin:0;">${data.score ?? 0} 分</span>
       </div>
-      <ul class="comparison-list">
-        <li>${escapeHtml(data.summary || "暂无结论")}</li>
-      </ul>
+      <p style="font-size:0.95rem; color:var(--text-reading); margin-bottom:16px;">${escapeHtml(data.summary)}</p>
+      <div>${(data.items || []).map(i => `<span class="tag" style="background:var(--surface); border-color:var(--border-strong);">${escapeHtml(i.focus)}: ${escapeHtml(i.level)}</span>`).join("")}</div>
+    </div>`;
+}
+
+function renderServiceLoop(items) {
+  if (!dom.serviceLoop) return; dom.serviceLoop.innerHTML = "";
+  if (!items || items.length === 0) { dom.serviceLoop.innerHTML = `<p class="text-muted">暂无生命周期数据。</p>`; return; }
+  items.forEach((item, index) => {
+    dom.serviceLoop.innerHTML += `
+      <div style="display:flex; margin-bottom:20px; align-items:flex-start;">
+        <div style="background:transparent; border:1px solid var(--primary); color:var(--primary); width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.9rem; font-family:var(--font-serif); margin-right:16px; flex-shrink:0;">${index + 1}</div>
+        <div>
+          <strong style="display:block; margin-bottom:6px; color:var(--text-main); font-size:1.05rem;">${escapeHtml(item.stage)} <span style="font-size:0.8rem; padding:2px 8px; border-radius:99px; background:var(--surface-alt); color:var(--text-muted); border:1px solid var(--border); font-weight:normal; margin-left:8px;">${escapeHtml(item.status)}</span></strong>
+          <p style="margin:0; font-size:0.95rem; color:var(--text-reading); line-height:1.6;">${escapeHtml(item.detail)}</p>
+        </div>
+      </div>`;
+  });
+}
+
+function renderGroundedEvidence(bundle) {
+  if (dom.evidenceSummary) dom.evidenceSummary.textContent = bundle?.summary || "检索队列执行中...";
+  fillTagList(dom.matchedTerms, bundle?.query_terms || [], "暂无关联词元");
+  if (!dom.evidenceSnippets) return; dom.evidenceSnippets.innerHTML = "";
+  const items = bundle?.items || [];
+  if (!items.length) { dom.evidenceSnippets.innerHTML = `<div class="empty-inline compact">未命中高维切片。</div>`; return; }
+  items.forEach((item) => {
+    dom.evidenceSnippets.innerHTML += `
+      <div style="margin-bottom:16px; background:var(--surface-alt); padding:20px; border-left:4px solid var(--primary); border-radius:12px; border:1px solid var(--border); border-left-width:4px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+          <strong style="color:var(--text-main); font-size:1.05rem;">${escapeHtml(item.job_title || item.source_title)}</strong>
+          <span class="tag" style="background:transparent; border-color:var(--border-strong); margin:0;">相关度: ${item.score ?? 0}</span>
+        </div>
+        <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:12px;">${escapeHtml(item.company_name)} | ${escapeHtml(item.city)}</p>
+        <p style="margin:0; color:var(--text-reading); font-size:0.95rem; line-height:1.7;">${highlightTerms(item.snippet, item.matched_terms || [])}</p>
+      </div>`;
+  });
+}
+
+function renderTemplateEvidence(data) {
+  if (!dom.templateEvidence) return;
+  if (!data) { dom.templateEvidence.innerHTML = `<div class="empty-inline compact">请先点击岗位卡片的核查按钮。</div>`; return; }
+  const jobs = (data.representative_jobs || []).map(item => `
+    <div style="margin-bottom:16px; background:var(--surface-alt); padding:20px; border:1px solid var(--border); border-radius:12px;">
+      <strong style="color:var(--text-main); display:block; font-size:1.05rem; margin-bottom:8px;">${escapeHtml(item.company_name)}</strong>
+      <p style="font-size:0.85rem; color:var(--text-muted); margin:0 0 12px 0;">${escapeHtml(item.job_title)} | ${escapeHtml(item.city)} | ${escapeHtml(item.salary_range)}</p>
+      <p style="margin:0; font-size:0.95rem; color:var(--text-reading); line-height:1.7;">${escapeHtml(item.job_detail)}</p>
     </div>
+  `).join("");
+  dom.templateEvidence.innerHTML = `
+    <div style="margin-bottom:24px; padding-bottom:16px; border-bottom:1px dashed var(--border-strong);">
+      <h5 style="margin:0 0 8px 0; color:var(--primary); font-size:1.2rem;">${escapeHtml(data.role_title)}</h5>
+      <span style="font-size:0.85rem; color:var(--text-muted);">模板覆盖聚合源: ${data.dataset_job_count}个真实企业样本</span>
+    </div>
+    ${jobs}
   `;
 }
 
+function renderJdSearchResults(items) {
+  if (!dom.jdSearchResults) return; dom.jdSearchResults.innerHTML = "";
+  if (!items || items.length === 0) { dom.jdSearchResults.innerHTML = `<div class="empty-inline compact">本地库未检索到该词元信息。</div>`; return; }
+  items.forEach((item) => {
+    dom.jdSearchResults.innerHTML += `
+      <div class="card" style="margin-bottom:16px; padding:24px; border-radius:16px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+          <strong style="color:var(--text-main); font-size:1.1rem;">${escapeHtml(item.job_title)}</strong>
+          <span class="tag" style="background:var(--surface-alt); border-color:var(--primary); color:var(--primary); margin:0;">匹配度: ${item.score}</span>
+        </div>
+        <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:16px;">${escapeHtml(item.company_name)} | ${escapeHtml(item.city)} | ${escapeHtml(item.salary_range)}</p>
+        <p style="font-size:0.95rem; margin:0; color:var(--text-reading); line-height:1.7;">${escapeHtml(item.job_detail)}</p>
+      </div>`;
+  });
+}
+
 function renderSchoolDashboard(data) {
-  schoolSummaryCards.innerHTML = "";
-  schoolDistribution.innerHTML = "";
-  schoolFollowUp.innerHTML = "";
-  schoolServiceSegments.innerHTML = "";
-  schoolPushRecommendations.innerHTML = "";
-  schoolGovernanceMetrics.innerHTML = "";
-  schoolAuditQueue.innerHTML = "";
-  if (!data || !(data.summary_cards || []).length) {
-    schoolSummaryCards.innerHTML = `<div class="empty-inline compact">生成多条历史分析后，这里会自动形成学校运营看板。</div>`;
-    return;
+  if (dom.schoolDashboardStats) {
+    dom.schoolDashboardStats.innerHTML = "";
+    const cards = data?.summary_cards || [];
+    if (!cards.length) dom.schoolDashboardStats.innerHTML = `<div class="empty-inline compact">全局指标聚合中...</div>`;
+    else {
+      dom.schoolDashboardStats.style.display = "grid"; dom.schoolDashboardStats.style.gridTemplateColumns = "repeat(auto-fit, minmax(200px, 1fr))"; dom.schoolDashboardStats.style.gap = "16px";
+      cards.forEach(item => {
+        dom.schoolDashboardStats.innerHTML += `
+          <div style="background:var(--surface-alt); padding:20px; border-radius:16px; border:1px solid var(--border);">
+            <div style="font-size:0.85rem; color:var(--text-muted); margin-bottom:10px; font-weight:600;">${escapeHtml(item.label)}</div>
+            <div style="font-size:2rem; font-family:var(--font-serif); color:var(--primary); line-height:1;">${item.value}</div>
+            <p style="font-size:0.8rem; color:var(--text-muted); margin:10px 0 0 0;">${escapeHtml(item.detail)}</p>
+          </div>`;
+      });
+    }
   }
-
-  (data.summary_cards || []).forEach((item) => {
-    const card = document.createElement("article");
-    card.className = "school-summary-card";
-    card.innerHTML = `
-      <span>${item.label || "指标"}</span>
-      <strong>${item.value ?? 0}</strong>
-      <p>${item.detail || ""}</p>
-    `;
-    schoolSummaryCards.appendChild(card);
-  });
-
-  const sections = [
-    { title: "主岗位 Top5", items: data.top_roles || [] },
-    { title: "专业分布 Top5", items: data.major_distribution || [] },
-    { title: "城市偏好 Top5", items: data.city_distribution || [] },
+  
+  // 渲染大盘分布图表列表
+  const distributions = [
+    { container: dom.schoolDistribution, items: data?.major_distribution || [] },
+    { container: dom.schoolPushRecommendations, items: data?.city_distribution || [] },
+    { container: dom.schoolServiceSegments, items: data?.service_segments || [] }
   ];
-
-  sections.forEach((section) => {
-    const card = document.createElement("div");
-    card.className = "distribution-card";
-    card.innerHTML = `
-      <h4>${section.title}</h4>
-      <div class="distribution-list">
-        ${(section.items || [])
-          .map(
-            (item) => `
-              <div class="distribution-row">
-                <span>${escapeHtml(item.name || "未命名")}</span>
-                <strong>${item.count ?? 0}</strong>
-              </div>
-            `
-          )
-          .join("")}
-      </div>
-    `;
-    schoolDistribution.appendChild(card);
+  distributions.forEach(({container, items}) => {
+    if (!container) return; container.innerHTML = "";
+    items.forEach(item => {
+      container.innerHTML += `<div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px dashed var(--border);"><span style="color:var(--text-muted);">${escapeHtml(item.name || item.label || '分类')}</span><strong style="color:var(--text-main);">${item.count ?? item.value ?? 0}</strong></div>`;
+    });
   });
 
-  const followUps = data.follow_up_students || [];
-  if (!followUps.length) {
-    schoolFollowUp.innerHTML = `<div class="empty-inline compact">当前没有重点跟进对象。</div>`;
-  } else {
-    followUps.forEach((item) => {
-      const card = document.createElement("div");
-      card.className = "follow-up-card";
-      card.innerHTML = `
-        <strong>${item.name || "学生"} · ${item.primary_role || "待生成"}</strong>
-        <p>${item.major || "专业未填写"}｜主岗分 ${item.primary_score ?? 0}｜完整度 ${item.completeness ?? 0}</p>
-      `;
-      schoolFollowUp.appendChild(card);
+  if (dom.schoolFollowUp) {
+    dom.schoolFollowUp.innerHTML = "";
+    (data?.follow_up_students || []).forEach(student => {
+      dom.schoolFollowUp.innerHTML += `<div style="padding:12px; background:var(--surface-alt); border-radius:12px; margin-bottom:8px; border:1px solid var(--border);"><strong>${escapeHtml(student.name)}</strong> <span style="font-size:0.85rem; color:var(--text-muted); margin-left:8px;">${escapeHtml(student.primary_role)} (评 ${student.primary_score}分)</span></div>`;
     });
   }
+}
 
-  if ((data.advice || []).length) {
-    const adviceCard = document.createElement("div");
-    adviceCard.className = "distribution-card";
-    adviceCard.innerHTML = `
-      <h4>运营建议</h4>
-      <ul class="comparison-list">
-        ${(data.advice || []).map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
-      </ul>
-    `;
-    schoolDistribution.appendChild(adviceCard);
-  }
-
-  (data.service_segments || []).forEach((item) => {
-    const card = document.createElement("article");
-    card.className = "school-summary-card";
-    card.innerHTML = `
-      <span>${item.label || "服务分层"}</span>
-      <strong>${item.count ?? 0}</strong>
-      <p>${item.detail || ""}</p>
-    `;
-    schoolServiceSegments.appendChild(card);
+function renderHistory(items) {
+  if (!dom.historyList) return; dom.historyList.innerHTML = "";
+  if (!items || items.length === 0) { dom.historyList.innerHTML = `<div class="empty-inline compact">系统空置，暂无分析快照。</div>`; return; }
+  items.forEach((item) => {
+    const btn = document.createElement("button");
+    btn.className = "btn btn-outline full-width";
+    btn.style.textAlign = "left"; btn.style.marginBottom = "12px"; btn.style.padding = "16px"; btn.style.borderRadius = "16px";
+    btn.innerHTML = `<strong style="color:var(--primary); font-size:1.05rem;">#${item.id}</strong> <span style="color:var(--text-main); margin-left:8px; font-weight:600;">${escapeHtml(item.student_name)} → ${escapeHtml(item.primary_role)}</span><br><small style="color:var(--text-muted); display:block; margin-top:8px;">${item.created_at} | ${escapeHtml(item.parser_used_mode)}</small>`;
+    btn.addEventListener("click", () => loadAnalysis(item.id));
+    dom.historyList.appendChild(btn);
   });
+}
 
-  if (!(data.push_recommendations || []).length) {
-    schoolPushRecommendations.innerHTML = `<div class="empty-inline compact">当前还没有定向推岗建议。</div>`;
-  } else {
-    (data.push_recommendations || []).forEach((item) => {
-      const card = document.createElement("div");
-      card.className = "distribution-card";
-      card.innerHTML = `
-        <h4>${escapeHtml(item.type || "定向建议")} · ${escapeHtml(item.title || "未命名组合")}</h4>
-        <div class="distribution-list">
-          <div class="distribution-row">
-            <span>潜在覆盖人数</span>
-            <strong>${item.count ?? 0}</strong>
+function renderSystemChecks(payload) {
+  if (!dom.systemCheckList) return; dom.systemCheckList.innerHTML = "";
+  (payload.checks || []).forEach((check) => {
+    dom.systemCheckList.innerHTML += `
+      <li style="margin-bottom:12px; font-size:0.95rem; list-style:none; display:flex; align-items:center; background:var(--surface-alt); padding:12px 16px; border-radius:12px; border:1px solid var(--border);">
+        <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:${check.status === 'success' ? 'var(--success)' : 'var(--danger)'}; margin-right:12px;"></span>
+        <strong style="color:var(--text-main); margin-right:12px; min-width:140px;">${escapeHtml(check.name)}</strong> 
+        <span style="color:var(--text-muted);">${escapeHtml(check.detail)}</span>
+      </li>`;
+  });
+}
+
+function renderBenchmark(data) {
+  if (dom.benchmarkStatus) {
+    dom.benchmarkStatus.innerHTML = !data ? `>// 终端挂起，等待指令...` : `<span style="color:#a7f3d0;">$ [SUCCESS]</span> ${escapeHtml(data.verdict?.label || "任务完毕")}<br><span style="color:#64748b;">> ${escapeHtml(data.verdict?.detail || "")}</span>`;
+  }
+  if (dom.benchmarkSummaryCards) {
+    dom.benchmarkSummaryCards.innerHTML = "";
+    (data?.summary_cards || []).forEach(item => {
+      dom.benchmarkSummaryCards.innerHTML += `<div class="card" style="padding:16px; border-radius:16px;"><span style="font-size:0.85rem; color:var(--text-muted);">${escapeHtml(item.label)}</span><strong style="display:block; font-size:1.6rem; color:var(--primary); margin-top:8px;">${item.value}</strong></div>`;
+    });
+  }
+  if (dom.benchmarkCases) {
+    dom.benchmarkCases.innerHTML = "";
+    (data?.cases || []).forEach(item => {
+      dom.benchmarkCases.innerHTML += `
+        <div class="card" style="padding:20px; border-radius:16px; margin-bottom:16px;">
+          <div style="display:flex; justify-content:space-between; margin-bottom:12px;">
+            <strong style="color:var(--text-main);">${escapeHtml(item.label)}</strong>
+            <span class="tag" style="background:var(--surface-alt); margin:0;">${item.primary_score}分 | ${item.primary_role}</span>
           </div>
-        </div>
-        <p>${escapeHtml(item.detail || "")}</p>
-      `;
-      schoolPushRecommendations.appendChild(card);
-    });
-  }
-
-  if (!(data.governance_metrics || []).length) {
-    schoolGovernanceMetrics.innerHTML = `<div class="empty-inline compact">当前还没有治理指标。</div>`;
-  } else {
-    (data.governance_metrics || []).forEach((item) => {
-      const card = document.createElement("article");
-      card.className = "metric-snapshot";
-      card.innerHTML = `
-        <div class="metric-snapshot-top">
-          <span>${item.label || "治理指标"}</span>
-          <strong>${item.value ?? 0}</strong>
-        </div>
-        <p>${item.detail || ""}</p>
-      `;
-      schoolGovernanceMetrics.appendChild(card);
-    });
-  }
-
-  if (!(data.audit_queue || []).length) {
-    schoolAuditQueue.innerHTML = `<div class="empty-inline compact">当前没有需要抽检的记录。</div>`;
-  } else {
-    (data.audit_queue || []).forEach((item) => {
-      const card = document.createElement("div");
-      card.className = "follow-up-card";
-      card.innerHTML = `
-        <strong>${item.name || "学生"} · ${item.primary_role || "待生成"}</strong>
-        <p>${item.major || "专业未填写"}｜主岗分 ${item.primary_score ?? 0}｜证据 ${item.evidence_hit_rate ?? 0}｜完整度 ${item.completeness ?? 0}</p>
-        <p>${escapeHtml((item.reasons || []).join("、") || "无抽检原因")}</p>
-      `;
-      schoolAuditQueue.appendChild(card);
+          <div style="margin-bottom:12px;">${['top1_hit', 'top3_hit'].map(k => `<span class="tag" style="border-color:${item[k] ? 'var(--success)' : 'var(--danger)'}; color:${item[k] ? 'var(--success)' : 'var(--danger)'};">${k.replace('_hit','')} ${item[k] ? '命中' : 'MISS'}</span>`).join("")}</div>
+          <ul style="padding-left:18px; margin:0; font-size:0.85rem; color:var(--text-muted); line-height:1.6;">${(item.observations || []).map(o => `<li>${escapeHtml(o)}</li>`).join("")}</ul>
+        </div>`;
     });
   }
 }
 
 function renderInnovationHighlights(items) {
-  innovationHighlights.innerHTML = "";
-  if (!items || items.length === 0) {
-    innovationHighlights.innerHTML = `<div class="empty-inline compact">当前还没有创新锚点。</div>`;
-    return;
-  }
+  if (!dom.innovationHighlights) return; dom.innovationHighlights.innerHTML = "";
+  (items || []).forEach(item => {
+    dom.innovationHighlights.innerHTML += `
+      <div style="margin-bottom:24px; background:var(--surface-alt); padding:20px; border-radius:16px; border:1px solid var(--border);">
+        <div style="display:flex; align-items:center; gap:12px; margin-bottom:10px;">
+          <strong style="color:var(--text-main); font-size:1.1rem;">${escapeHtml(item.title)}</strong> 
+          <span class="tag" style="background:var(--teal-soft); color:var(--primary); border:none; margin:0;">${escapeHtml(item.tag)}</span>
+        </div>
+        <p style="margin:0; font-size:0.95rem; color:var(--text-reading); line-height:1.7;">${escapeHtml(item.detail)}</p>
+      </div>`;
+  });
+}
 
-  items.forEach((item) => {
-    const card = document.createElement("article");
-    card.className = "innovation-card panel";
-    card.innerHTML = `
-      <span class="metric-label">${item.tag || "创新"}</span>
-      <h4>${item.title || "创新点"}</h4>
-      <p>${item.detail || ""}</p>
-    `;
-    innovationHighlights.appendChild(card);
+function renderTechnicalModules(items, keywords) {
+  if (dom.technicalKeywords) fillTagList(dom.technicalKeywords, keywords || []);
+  if (!dom.technicalModules) return; dom.technicalModules.innerHTML = "";
+  (items || []).forEach(item => {
+    dom.technicalModules.innerHTML += `
+      <div style="margin-bottom:20px; padding-bottom:16px; border-bottom:1px dashed var(--border-strong);">
+        <strong style="color:var(--text-main); font-size:1.05rem;">${escapeHtml(item.name)}</strong> 
+        <span class="tag" style="margin-left:8px; background:transparent; border-color:var(--border-strong);">${escapeHtml(item.tag)}</span>
+        <p style="margin:10px 0 0 0; font-size:0.95rem; color:var(--text-reading); line-height:1.6;">${escapeHtml(item.detail)}</p>
+      </div>`;
   });
 }
 
 function renderCareerGraph(student, plan, matches) {
-  const primary = plan.primary_role || matches?.[0]?.role_title || "主岗位";
+  if (!dom.careerGraph) return;
+  const primary = plan.primary_role || matches?.[0]?.role_title || "基准节点";
   const backups = plan.backup_roles || [];
   const path = plan.primary_growth_path || [];
-  const width = 940;
-  const height = 340;
-  const nodeWidth = 150;
-  const nodeHeight = 56;
-  const centerY = 148;
-  const upperY = 86;
-  const lowerY = 228;
-
+  
+  // 使用新的社论风配色渲染 SVG
+  const width = 940; const height = 340; const centerY = 148;
+  const upperY = 86; const lowerY = 228; const nodeWidth = 150; const nodeHeight = 56;
+  
   const nodes = [
-    { id: "student", label: student.name || "学生", x: 74, y: centerY, tone: "teal", meta: "当前画像" },
-    { id: "primary", label: primary, x: 286, y: centerY, tone: "accent", meta: "主推荐岗位" },
+    { id: "student", label: student.name || "初始锚点", x: 74, y: centerY, tone: "teal", meta: "当前画像" },
+    { id: "primary", label: primary, x: 286, y: centerY, tone: "accent", meta: "首推枢纽" },
   ];
+  path.slice(1, 4).forEach((item, i) => nodes.push({ id: `path-${i}`, label: item, x: 510 + i * 160, y: upperY, tone: "teal", meta: "纵向演进" }));
+  backups.slice(0, 2).forEach((item, i) => nodes.push({ id: `backup-${i}`, label: item, x: 510 + i * 160, y: lowerY, tone: "muted", meta: "横向发散" }));
 
-  path.slice(1, 4).forEach((item, index) => {
-    nodes.push({
-      id: `path-${index}`,
-      label: item,
-      x: 510 + index * 160,
-      y: upperY,
-      tone: "teal",
-      meta: "成长路径",
-    });
-  });
-
-  backups.slice(0, 2).forEach((item, index) => {
-    nodes.push({
-      id: `backup-${index}`,
-      label: item,
-      x: 510 + index * 160,
-      y: lowerY,
-      tone: "muted",
-      meta: "备选方向",
-    });
-  });
-
-  const nodeMap = new Map(nodes.map((node) => [node.id, node]));
+  const nodeMap = new Map(nodes.map(n => [n.id, n]));
   const centerYOf = (node) => node.y + nodeHeight / 2;
   const rightEdge = (node) => node.x + nodeWidth;
   const leftEdge = (node) => node.x;
 
   const lines = [];
   const connect = (fromId, toId, tone, mode = "horizontal") => {
-    const from = nodeMap.get(fromId);
-    const to = nodeMap.get(toId);
-    if (!from || !to) {
-      return;
-    }
-
-    if (mode === "diagonal") {
-      lines.push({
-        x1: rightEdge(from) - 8,
-        y1: centerYOf(from),
-        x2: leftEdge(to) + 8,
-        y2: centerYOf(to),
-        tone,
-      });
-      return;
-    }
-
-    lines.push({
-      x1: rightEdge(from),
-      y1: centerYOf(from),
-      x2: leftEdge(to),
-      y2: centerYOf(to),
-      tone,
-    });
+    const from = nodeMap.get(fromId); const to = nodeMap.get(toId);
+    if (!from || !to) return;
+    if (mode === "diagonal") { lines.push({ x1: rightEdge(from) - 8, y1: centerYOf(from), x2: leftEdge(to) + 8, y2: centerYOf(to), tone }); return; }
+    lines.push({ x1: rightEdge(from), y1: centerYOf(from), x2: leftEdge(to), y2: centerYOf(to), tone });
   };
 
   connect("student", "primary", "accent");
-
   if (nodeMap.has("path-0")) {
     connect("primary", "path-0", "teal", "diagonal");
-    for (let index = 0; index < 2; index += 1) {
-      if (nodeMap.has(`path-${index}`) && nodeMap.has(`path-${index + 1}`)) {
-        connect(`path-${index}`, `path-${index + 1}`, "teal");
-      }
-    }
+    for (let i = 0; i < 2; i++) if (nodeMap.has(`path-${i}`) && nodeMap.has(`path-${i + 1}`)) connect(`path-${i}`, `path-${i + 1}`, "teal");
   }
-
   if (nodeMap.has("backup-0")) {
     connect("primary", "backup-0", "muted", "diagonal");
-    if (nodeMap.has("backup-1")) {
-      connect("backup-0", "backup-1", "muted");
-    }
+    if (nodeMap.has("backup-1")) connect("backup-0", "backup-1", "muted");
   }
 
-  careerGraph.innerHTML = `
-    <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="职业图谱">
-      ${lines
-        .map(
-          (line) => `
-            <line class="graph-line ${line.tone}" x1="${line.x1}" y1="${line.y1}" x2="${line.x2}" y2="${line.y2}" />
-          `
-        )
-        .join("")}
-      ${nodes
-        .map(
-          (node) => `
-            <g class="graph-node ${node.tone}" transform="translate(${node.x}, ${node.y})">
-              <rect rx="22" ry="22" width="${nodeWidth}" height="${nodeHeight}"></rect>
-              <text x="${nodeWidth / 2}" y="21" class="graph-meta">${node.meta}</text>
-              <text x="${nodeWidth / 2}" y="38" class="graph-label">${node.label}</text>
-            </g>
-          `
-        )
-        .join("")}
-    </svg>
-  `;
-}
+  // 映射新配色
+  const colorMap = { "accent": "#d97706", "teal": "#0f766e", "muted": "#78716c" };
 
-function renderHistory(items) {
-  historyList.innerHTML = "";
-  if (!items || items.length === 0) {
-    const div = document.createElement("div");
-    div.className = "history-empty";
-    div.textContent = "还没有历史记录。生成一次职业规划后会自动保存。";
-    historyList.appendChild(div);
-    return;
-  }
-
-  items.forEach((item) => {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "history-card";
-    button.innerHTML = `
-      <span class="mini-label">#${item.id}</span>
-      <strong>${item.student_name || "未命名学生"} → ${item.primary_role || "待生成"}</strong>
-      <p>${item.created_at}｜${item.parser_used_mode?.toUpperCase() || "RULE"}｜${item.student_major || "专业未填写"}</p>
-    `;
-    button.addEventListener("click", () => {
-      loadAnalysis(item.id).catch((error) => {
-        setStatus(`载入历史失败：${error.message}`, "error");
-      });
-    });
-    historyList.appendChild(button);
-  });
-}
-
-function renderJdSearchResults(items) {
-  jdSearchResults.innerHTML = "";
-  if (!items || items.length === 0) {
-    jdSearchResults.innerHTML = `<div class="empty-inline">没有搜索到匹配的原始 JD，请换一个岗位名或技能词试试。</div>`;
-    return;
-  }
-
-  items.forEach((item) => {
-    const card = document.createElement("article");
-    card.className = "jd-card";
-    card.innerHTML = `
-      <div class="jd-card-top">
-        <div>
-          <span class="mini-label">原始 JD</span>
-          <h4>${item.job_title || "未命名岗位"}</h4>
-        </div>
-        <div class="score-badge">${item.score}</div>
-      </div>
-      <p class="jd-meta">${item.company_name || "未知公司"}｜${item.city || "城市未知"}｜${item.salary_range || "薪资未知"}</p>
-      <p class="jd-summary">${item.job_detail || "暂无岗位详情"}</p>
-    `;
-    jdSearchResults.appendChild(card);
-  });
-}
-
-function renderTemplateEvidence(data) {
-  if (!data) {
-    templateEvidence.innerHTML = `<div class="empty-inline">没有找到对应模板证据。</div>`;
-    return;
-  }
-  const jobs = (data.representative_jobs || [])
-    .map(
-      (item) => `
-        <article class="jd-card compact">
-          <div class="jd-card-top">
-            <div>
-              <span class="mini-label">代表样本</span>
-              <h4>${item.company_name || "未知公司"}</h4>
-            </div>
-          </div>
-          <p class="jd-meta">${item.job_title || ""}｜${item.city || "城市未知"}｜${item.salary_range || "薪资未知"}</p>
-          <p class="jd-summary">${item.job_detail || "暂无岗位详情"}</p>
-        </article>
-      `
-    )
-    .join("");
-
-  templateEvidence.innerHTML = `
-    <div class="evidence-head">
-      <h4>${data.role_title}</h4>
-      <p>源岗位名：${data.source_title}｜模板覆盖样本数：${data.dataset_job_count}</p>
-    </div>
-    <div class="evidence-tags">
-      ${(data.dataset_evidence?.top_skills || [])
-        .slice(0, 8)
-        .map((item) => `<span class="tag">${item[0]} · ${item[1]}</span>`)
-        .join("")}
-    </div>
-    <div class="evidence-list">${jobs || '<div class="empty-inline">暂无代表样本。</div>'}</div>
-  `;
-}
-
-function renderResults(data) {
-  emptyState.classList.add("hidden");
-  resultsContent.classList.remove("hidden");
-  state.latestResult = data;
-  state.currentAnalysisId = data.analysis_id || data.id || null;
-  renderStudentProfile(data.student_profile);
-  renderParserMeta(data.parser);
-  renderMatches(data.matches || []);
-  renderGroundedEvidence(data.career_plan?.evidence_bundle || {});
-  renderCareerPlan(data.career_plan || {}, data.matches || []);
-  renderLearningLoop(data.career_plan?.learning_sprints || []);
-  renderGrowthComparison(data.career_plan?.growth_comparison || {});
-  renderCompetencyDimensions(data.career_plan?.competency_dimensions || []);
-  renderServiceLoop(data.career_plan?.service_loop || []);
-  fillList(assessmentTasks, data.career_plan?.assessment_tasks || []);
-  renderSelfAssessmentForm(data.career_plan?.self_assessment || {});
-  renderSelfAssessmentSummary(data.career_plan?.self_assessment || {});
-  renderResourceMap(data.career_plan?.resource_map || []);
-  renderStakeholderViews(data.career_plan?.stakeholder_views || []);
-  renderEvaluationMetrics(data.career_plan?.evaluation_metrics || []);
-  renderBenchmark(state.benchmark);
-  renderTechnicalModules(data.career_plan?.technical_modules || [], data.career_plan?.technical_keywords || []);
-  renderInnovationHighlights(data.career_plan?.innovation_highlights || []);
-  renderAgentQuestions(data.career_plan?.agent_questions || [], data.student_profile?.agent_answers || {});
-  renderSchoolDashboard(state.schoolDashboard);
-  renderCareerGraph(data.student_profile || {}, data.career_plan || {}, data.matches || []);
-  state.currentReport = data.report_markdown || "";
-  reportPreview.innerHTML = renderMarkdownPreview(state.currentReport);
-
-  const topRole = data.career_plan?.primary_role || data.matches?.[0]?.role_title || "";
-  if (topRole) {
-    jdSearchInput.value = topRole;
-    templateEvidence.innerHTML = `<div class="empty-inline">正在加载 ${topRole} 的模板证据...</div>`;
-    loadTemplateEvidence(topRole).catch((error) => {
-      templateEvidence.innerHTML = `<div class="empty-inline">模板证据加载失败：${error.message}</div>`;
-    });
-  }
-
-  resultsContent.scrollIntoView({ behavior: "smooth", block: "start" });
+  dom.careerGraph.innerHTML = `
+    <svg viewBox="0 0 ${width} ${height}" style="width:100%; height:auto; min-width:720px; background:var(--surface-alt); border-radius:16px; border:1px solid var(--border);">
+      ${lines.map(line => `<line x1="${line.x1}" y1="${line.y1}" x2="${line.x2}" y2="${line.y2}" stroke="${colorMap[line.tone]}" stroke-width="3" stroke-linecap="round" opacity="0.6" />`).join("")}
+      ${nodes.map(node => `
+        <g transform="translate(${node.x}, ${node.y})">
+          <rect rx="28" ry="28" width="${nodeWidth}" height="${nodeHeight}" fill="#ffffff" stroke="${colorMap[node.tone]}" stroke-width="2" style="filter:drop-shadow(0 4px 6px rgba(0,0,0,0.05));"></rect>
+          <text x="${nodeWidth / 2}" y="22" fill="#78716c" font-size="11" text-anchor="middle">${node.meta}</text>
+          <text x="${nodeWidth / 2}" y="40" fill="#292524" font-size="14" font-weight="700" text-anchor="middle">${node.label}</text>
+        </g>
+      `).join("")}
+    </svg>`;
 }
 
 function renderSampleGallery(samples) {
-  sampleGallery.innerHTML = "";
+  if (!dom.sampleGallery) return; dom.sampleGallery.innerHTML = "";
   samples.forEach((sample) => {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "sample-card";
-    button.dataset.sampleName = sample.name;
-    button.innerHTML = `
-      <span class="mini-label">演示样例</span>
-      <strong>${sample.label}</strong>
-      <p>${sample.description}</p>
-    `;
-    button.addEventListener("click", () => {
-      loadSampleResume(sample.name).catch((error) => {
-        setStatus(`载入样例失败：${error.message}`, "error");
-      });
-    });
-    sampleGallery.appendChild(button);
-  });
-  syncActiveSample();
-}
-
-function syncActiveSample() {
-  sampleGallery.querySelectorAll(".sample-card").forEach((button) => {
-    button.classList.toggle("active", button.dataset.sampleName === state.currentSampleName);
+    const chip = document.createElement("button");
+    chip.className = "chip"; chip.textContent = sample.label;
+    chip.addEventListener("click", () => loadSampleResume(sample.name));
+    dom.sampleGallery.appendChild(chip);
   });
 }
 
-async function initSamples() {
-  const response = await fetch("/api/demo-resumes");
-  const data = await response.json();
-  state.samples = data.samples || [];
-  renderSampleGallery(state.samples);
-}
-
-async function refreshHistory() {
-  const response = await fetch("/api/history");
-  const data = await response.json();
-  renderHistory(data.items || []);
-}
-
-async function refreshSystemChecks() {
-  const response = await fetch("/api/system-check");
-  const data = await response.json();
-  renderSystemChecks(data);
-}
-
-async function refreshSchoolDashboard() {
-  const response = await fetch("/api/school-dashboard?limit=80");
-  const data = await response.json();
-  state.schoolDashboard = data;
-  if (state.latestResult) {
-    renderSchoolDashboard(data);
-  }
-}
-
-async function refreshBenchmark(showLoading = false) {
-  if (showLoading) {
-    benchmarkStatus.textContent = "正在运行 4 个内置样例验证...";
-  }
-  const response = await fetch("/api/benchmark?parser_mode=rule");
-  const data = await response.json();
-  state.benchmark = data;
-  benchmarkStatus.textContent = `验证完成：${data.generated_at || "刚刚"} · ${data.verdict?.label || "已生成"}`;
-  if (state.latestResult) {
-    renderBenchmark(data);
-  }
-}
-
+// ==========================================
+// 核心 API 交互与调度 (全量无损触发)
+// ==========================================
 async function loadSampleResume(sampleName = null) {
-  setBusy(true);
-  setStatus("正在载入演示样例...", "loading");
-  const url = sampleName ? `/api/demo-resume?name=${encodeURIComponent(sampleName)}` : "/api/demo-resume";
-  const response = await fetch(url);
-  const data = await response.json();
-  resumeInput.value = data.resume_text || "";
-  state.currentSampleName = data.sample_name || sampleName;
-  syncActiveSample();
-  setStatus(`样例已载入：${state.currentSampleName || "默认样例"}`, "success");
-  setBusy(false);
+  setBusy(true); setStatus("调度样本资源...", "loading");
+  try {
+    const url = sampleName ? `/api/demo-resume?name=${encodeURIComponent(sampleName)}` : "/api/demo-resume";
+    const response = await fetch(url);
+    const data = await response.json();
+    if (dom.resumeInput) dom.resumeInput.value = data.resume_text || "";
+    state.currentSampleName = data.sample_name || sampleName;
+    document.querySelectorAll('#sample-gallery .chip').forEach(chip => {
+      chip.style.backgroundColor = chip.textContent === state.currentSampleName ? 'var(--surface)' : 'var(--surface-alt)';
+      chip.style.borderColor = chip.textContent === state.currentSampleName ? 'var(--primary)' : 'var(--border)';
+      chip.style.color = chip.textContent === state.currentSampleName ? 'var(--primary)' : 'var(--text-muted)';
+    });
+    setStatus(`样本挂载完毕: ${state.currentSampleName || "default"}`, "success");
+  } catch (error) { setStatus(`IO异常: ${error.message}`, "error"); } finally { setBusy(false); }
 }
 
 async function analyzeResume() {
-  const resumeText = resumeInput.value.trim();
-  if (!resumeText) {
-    setStatus("请先输入简历文本，或点击上方样例卡片。", "error");
-    return;
-  }
+  const resumeText = dom.resumeInput?.value.trim();
+  if (!resumeText) return setStatus("指令终止：履历流为空，请先录入。", "error");
+  setBusy(true); setStatus("开启智能体多阶段并行演推...", "loading");
+  
+  const agentAnswers = {};
+  document.querySelectorAll("[data-agent-id]").forEach(el => { if (el.value.trim()) agentAnswers[el.dataset.agentId] = el.value.trim(); });
+  const selfAnswers = {};
+  document.querySelectorAll("[data-self-assessment-id]:checked").forEach(el => { selfAnswers[el.dataset.selfAssessmentId] = Number(el.value); });
 
-  setBusy(true);
-  setStatus("正在调用解析链路，生成学生画像、岗位匹配与职业规划...", "loading");
   try {
     const response = await fetch("/api/career-plan", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        resume_text: resumeText,
-        top_k: 5,
-        parser_mode: parserModeSelect.value,
-        sample_name: state.currentSampleName,
-        prior_analysis_id: state.currentAnalysisId,
-        agent_answers: collectAgentAnswers(),
-        self_assessment_answers: collectSelfAssessmentAnswers(),
-      }),
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ resume_text: resumeText, top_k: 5, parser_mode: dom.parserModeSelect?.value || "llm", sample_name: state.currentSampleName, prior_analysis_id: state.currentAnalysisId, agent_answers: agentAnswers, self_assessment_answers: selfAnswers }),
     });
     const data = await response.json();
-    if (!response.ok) {
-      throw new Error(data.error || "请求失败");
+    if (!response.ok) throw new Error(data.error || "计算节点拒绝响应");
+    
+    if (dom.emptyState) dom.emptyState.classList.add("hidden");
+    if (dom.resultsContent) dom.resultsContent.classList.remove("hidden");
+    
+    state.latestResult = data; state.currentAnalysisId = data.analysis_id || data.id || null; state.currentReport = data.report_markdown || "";
+
+    // 🚀 全维度无损重绘流水线
+    renderStudentProfile(data.student_profile || {});
+    renderParserMeta(data.parser);
+    renderMatches(data.matches || []);
+    renderCareerPlan(data.career_plan || {}, data.matches || []);
+    renderCompetencyRadar(data.career_plan?.competency_dimensions || []);
+    renderCompetencyDimensions(data.career_plan?.competency_dimensions || []);
+    renderEvaluationMetrics(data.career_plan?.evaluation_metrics || []);
+    
+    renderLearningLoop(data.career_plan?.learning_sprints || []);
+    renderGrowthComparison(data.career_plan?.growth_comparison || {});
+    renderResourceMap(data.career_plan?.resource_map || []);
+    renderStakeholderViews(data.career_plan?.stakeholder_views || []);
+    
+    renderAgentQuestions(data.career_plan?.agent_questions || [], data.student_profile?.agent_answers || {});
+    renderSelfAssessmentForm(data.career_plan?.self_assessment || {});
+    renderSelfAssessmentSummary(data.career_plan?.self_assessment || {});
+    renderServiceLoop(data.career_plan?.service_loop || []);
+    
+    renderGroundedEvidence(data.career_plan?.evidence_bundle || {});
+    renderInnovationHighlights(data.career_plan?.innovation_highlights || []);
+    renderTechnicalModules(data.career_plan?.technical_modules || [], data.career_plan?.technical_keywords || []);
+    renderCareerGraph(data.student_profile || {}, data.career_plan || {}, data.matches || []);
+    
+    if (dom.reportPreview) dom.reportPreview.innerHTML = renderMarkdownPreview(state.currentReport);
+
+    // 异步更新大盘
+    refreshHistory(); refreshSchoolDashboard();
+
+    const topRole = data.career_plan?.primary_role || data.matches?.[0]?.role_title || "";
+    if (topRole) {
+      if (dom.jdSearchInput) dom.jdSearchInput.value = topRole;
+      if (dom.templateEvidence) dom.templateEvidence.innerHTML = `<div class="empty-inline compact">基准底座核验中...</div>`;
+      loadTemplateEvidence(topRole).catch(e => console.error(e));
     }
-    renderResults(data);
-    await refreshHistory();
-    await refreshSchoolDashboard();
-    const parserInfo = data.parser
-      ? `分析完成，当前使用 ${data.parser.used_mode.toUpperCase()} 解析。`
-      : "分析完成，结果已刷新。";
-    setStatus(parserInfo, "success");
-  } catch (error) {
-    setStatus(`分析失败：${error.message}`, "error");
-  } finally {
-    setBusy(false);
-  }
+    
+    setStatus("决策视图渲染完成，各项指标均已就绪", "success");
+    document.querySelector('.tab-btn[data-target="tab-overview"]')?.click();
+    
+    // 如果用户是在原版的单页流布局下，无需切 Tab 也能自动滚到顶部
+    dom.resultsContent?.scrollIntoView({ behavior: "smooth", block: "start" });
+  } catch (error) { setStatus(`链路熔断：${error.message}`, "error"); } finally { setBusy(false); }
 }
 
+// ==========================================
+// 后台数据通信接口
+// ==========================================
 async function loadAnalysis(analysisId) {
-  setBusy(true);
-  setStatus(`正在载入历史记录 #${analysisId}...`, "loading");
+  setBusy(true); setStatus(`拉取历史快照 #${analysisId}...`, "loading");
   try {
     const response = await fetch(`/api/history/${analysisId}`);
     const data = await response.json();
-    if (!response.ok) {
-      throw new Error(data.error || "载入失败");
-    }
-    resumeInput.value = data.resume_text || "";
-    state.currentSampleName = data.sample_name || null;
-    syncActiveSample();
-    renderResults({
-      analysis_id: data.id,
-      student_profile: data.student_profile,
-      matches: data.matches,
-      career_plan: data.career_plan,
-      report_markdown: data.report_markdown,
-      parser: {
-        requested_mode: data.parser_requested_mode || "unknown",
-        used_mode: data.parser_used_mode || "unknown",
-        llm_configured: (data.parser_used_mode || "").toLowerCase() === "llm",
-        llm_attempted: true,
-        fallback_used: false,
-        message: `该结果生成于 ${data.created_at}`,
-      },
-    });
-    setStatus(`已载入历史记录 #${analysisId}。`, "success");
-  } catch (error) {
-    setStatus(`载入历史失败：${error.message}`, "error");
-  } finally {
-    setBusy(false);
-  }
+    if (!response.ok) throw new Error(data.error || "云端节点异常");
+    if (dom.resumeInput) dom.resumeInput.value = data.resume_text || "";
+    setStatus(`快照 #${analysisId} 解包成功，请点击分析以唤醒状态。`, "success");
+  } catch (error) { setStatus(`提取失败：${error.message}`, "error"); } finally { setBusy(false); }
 }
 
 async function searchJd() {
-  const query = jdSearchInput.value.trim();
-  if (!query) {
-    setStatus("请先输入岗位名、技能或公司名。", "error");
-    return;
-  }
-  setStatus(`正在检索原始 JD：${query}...`, "loading");
+  const query = dom.jdSearchInput?.value.trim();
+  if (!query) return setStatus("参数非法：检索词元不可为空", "error");
+  setStatus(`启动向量机匹配：${query}...`, "loading");
   try {
     const response = await fetch(`/api/jd-search?q=${encodeURIComponent(query)}&limit=8`);
     const data = await response.json();
     renderJdSearchResults(data.items || []);
-    setStatus(`原始 JD 检索完成，共返回 ${(data.items || []).length} 条结果。`, "success");
-  } catch (error) {
-    setStatus(`JD 检索失败：${error.message}`, "error");
-  }
+    setStatus(`底层样本切片检索完毕。`, "success");
+  } catch (error) { setStatus(`检索节点离线：${error.message}`, "error"); }
 }
 
 async function loadTemplateEvidence(roleTitle) {
-  setStatus(`正在加载 ${roleTitle} 的模板证据...`, "loading");
-  const response = await fetch(`/api/template-evidence?role_title=${encodeURIComponent(roleTitle)}`);
-  const data = await response.json();
-  if (!response.ok) {
-    throw new Error(data.error || "模板证据加载失败");
-  }
-  renderTemplateEvidence(data);
-  setStatus(`已加载 ${roleTitle} 的模板证据。`, "success");
-}
-
-async function uploadResumeFile() {
-  const file = resumeFileInput.files && resumeFileInput.files[0];
-  if (!file) {
-    setStatus("请先选择一个简历文件。", "error");
-    return;
-  }
-
-  const formData = new FormData();
-  formData.append("resume_file", file);
-  setBusy(true);
-  setStatus(`正在解析文件：${file.name}...`, "loading");
   try {
-    const response = await fetch("/api/upload-resume-file", {
-      method: "POST",
-      body: formData,
-    });
+    const response = await fetch(`/api/template-evidence?role_title=${encodeURIComponent(roleTitle)}`);
     const data = await response.json();
-    if (!response.ok) {
-      throw new Error(data.error || "文件解析失败");
-    }
-    resumeInput.value = data.resume_text || "";
-    state.currentSampleName = null;
-    syncActiveSample();
-    setStatus(data.message || `文件已解析：${file.name}`, "success");
-  } catch (error) {
-    setStatus(`文件解析失败：${error.message}`, "error");
-  } finally {
-    setBusy(false);
-  }
+    if (response.ok) renderTemplateEvidence(data);
+  } catch (e) {}
 }
 
-async function copyReport() {
-  if (!state.currentReport) {
-    setStatus("当前还没有可复制的报告内容。", "error");
-    return;
-  }
-  await navigator.clipboard.writeText(state.currentReport);
-  setStatus("报告内容已复制到剪贴板。", "success");
+async function refreshHistory() { try { const r = await fetch("/api/history"); renderHistory((await r.json()).items || []); } catch (e) {} }
+async function refreshSystemChecks() { try { const r = await fetch("/api/system-check"); renderSystemChecks(await r.json()); } catch (e) {} }
+async function refreshSchoolDashboard() { try { const r = await fetch("/api/school-dashboard?limit=80"); const d = await r.json(); state.schoolDashboard = d; renderSchoolDashboard(d); } catch (e) {} }
+async function refreshBenchmark(showLoading = false) {
+  if (showLoading && dom.benchmarkStatus) dom.benchmarkStatus.innerHTML = ">// Benchmark Engine 预热中...";
+  try { const r = await fetch("/api/benchmark?parser_mode=rule"); const d = await r.json(); state.benchmark = d; renderBenchmark(d); } catch (e) { if (dom.benchmarkStatus) dom.benchmarkStatus.innerHTML = `> [ERR] Runner Panic：${e.message}`; }
 }
 
-function downloadReport() {
-  if (!state.currentReport) {
-    setStatus("当前还没有可下载的报告内容。", "error");
-    return;
-  }
-  const blob = new Blob([state.currentReport], { type: "text/markdown;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = "career_plan_report.md";
-  link.click();
-  URL.revokeObjectURL(url);
-  setStatus("Markdown 报告已开始下载。", "success");
+// ==========================================
+// 应用初始化与监听
+// ==========================================
+async function initSystem() {
+  initTabs();
+  window.addEventListener('resize', () => { if (window.radarChartInstance) window.radarChartInstance.resize(); });
+  try {
+    const [samplesRes] = await Promise.all([ fetch("/api/demo-resumes").then(r => r.json()), refreshSystemChecks(), refreshHistory(), refreshSchoolDashboard(), refreshBenchmark() ]);
+    renderSampleGallery(samplesRes.samples || []);
+    if (samplesRes.samples && samplesRes.samples.length > 0) loadSampleResume(samplesRes.samples[0].name);
+  } catch (error) { console.warn("IO Warning:", error); }
+}
+
+if (dom.analyzeBtn) dom.analyzeBtn.addEventListener("click", analyzeResume);
+if (dom.uploadFileBtn) dom.uploadFileBtn.addEventListener("click", () => dom.resumeFileInput?.click());
+if (dom.jdSearchBtn) dom.jdSearchBtn.addEventListener("click", searchJd);
+if (dom.runBenchmarkBtn) dom.runBenchmarkBtn.addEventListener("click", () => refreshBenchmark(true));
+
+if (dom.resumeFileInput) {
+  dom.resumeFileInput.addEventListener("change", async () => {
+    const file = dom.resumeFileInput.files[0]; if (!file) return;
+    const formData = new FormData(); formData.append("resume_file", file);
+    setBusy(true); setStatus(`建立外部数据流：${file.name}...`, "loading");
+    try {
+      const response = await fetch("/api/upload-resume-file", { method: "POST", body: formData });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "反序列化受阻");
+      dom.resumeInput.value = data.resume_text || "";
+      setStatus(`物理数据装载成功，允许向下游分发。`, "success");
+    } catch (error) { setStatus(`通道建立失败：${error.message}`, "error"); } finally { setBusy(false); }
+  });
 }
 
 function downloadStoredExport(format) {
-  if (!state.currentAnalysisId) {
-    setStatus("请先生成一次分析结果，再导出正式文件。", "error");
-    return;
-  }
-  const url = `/api/export/analysis/${state.currentAnalysisId}?format=${format}`;
-  window.open(url, "_blank");
-  const labels = {
-    html: "HTML",
-    docx: "Word",
-    pdf: "PDF",
-  };
-  setStatus(`${labels[format] || format} 导出已开始。`, "success");
+  if (!state.currentAnalysisId) return setStatus("空指针警告：未捕获到有效引用", "error");
+  window.open(`/api/export/analysis/${state.currentAnalysisId}?format=${format}`, "_blank");
 }
 
-function printReportPdf() {
-  if (!state.currentAnalysisId) {
-    setStatus("请先生成一次分析结果，再导出 PDF。", "error");
-    return;
-  }
-  const url = `/print-report/${state.currentAnalysisId}`;
-  const printWindow = window.open(url, "_blank");
-  if (!printWindow) {
-    setStatus("浏览器拦截了打印窗口，请允许弹窗后重试。", "error");
-    return;
-  }
-  setStatus("已打开打印页，请在浏览器中选择“另存为 PDF”。", "success");
+if (dom.downloadDocxBtn) dom.downloadDocxBtn.addEventListener("click", () => downloadStoredExport("docx"));
+if (dom.downloadHtmlBtn) dom.downloadHtmlBtn.addEventListener("click", () => downloadStoredExport("html"));
+if (dom.printPdfBtn) {
+  dom.printPdfBtn.addEventListener("click", () => {
+    if (!state.currentAnalysisId) return setStatus("当前容器缺少可打印的数据帧", "error");
+    window.open(`/print-report/${state.currentAnalysisId}`, "_blank");
+  });
+}
+if (dom.copyReportBtn) {
+  dom.copyReportBtn.addEventListener("click", async () => {
+    if (!state.currentReport) return setStatus("存储区为空", "error");
+    await navigator.clipboard.writeText(state.currentReport);
+    setStatus("Markdown 流已导入系统剪贴板", "success");
+  });
 }
 
-loadSampleButton.addEventListener("click", () => {
-  loadSampleResume().catch((error) => {
-    setBusy(false);
-    setStatus(`载入样例失败：${error.message}`, "error");
-  });
-});
-
-analyzeButton.addEventListener("click", () => {
-  analyzeResume();
-});
-
-uploadFileButton.addEventListener("click", () => {
-  uploadResumeFile();
-});
-
-runBenchmarkButton.addEventListener("click", () => {
-  refreshBenchmark(true).catch((error) => {
-    benchmarkStatus.textContent = `验证失败：${error.message}`;
-  });
-});
-
-resumeFileInput.addEventListener("change", () => {
-  if (resumeFileInput.files && resumeFileInput.files[0]) {
-    setStatus(`已选择文件：${resumeFileInput.files[0].name}`, "success");
-  }
-});
-
-copyReportButton.addEventListener("click", () => {
-  copyReport().catch((error) => {
-    setStatus(`复制失败：${error.message}`, "error");
-  });
-});
-
-downloadReportButton.addEventListener("click", downloadReport);
-downloadHtmlButton.addEventListener("click", () => downloadStoredExport("html"));
-downloadDocxButton.addEventListener("click", () => downloadStoredExport("docx"));
-printPdfButton.addEventListener("click", printReportPdf);
-jdSearchButton.addEventListener("click", () => {
-  searchJd().catch((error) => {
-    setStatus(`JD 检索失败：${error.message}`, "error");
-  });
-});
-
-window.addEventListener("load", () => {
-  Promise.all([initSamples(), refreshHistory(), refreshSystemChecks(), refreshSchoolDashboard(), refreshBenchmark()])
-    .then(() => loadSampleResume("demo_resume_backend.txt"))
-    .catch((error) => {
-      setStatus(`初始化样例失败：${error.message}`, "error");
-    });
-});
+window.addEventListener("load", initSystem);

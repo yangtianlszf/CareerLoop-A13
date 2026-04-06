@@ -193,11 +193,32 @@ def _build_gaps(
         gaps.append("缺少关键技能：" + "、".join(missing_skills[:5]))
     if missing_soft_skills:
         gaps.append("职业素养还可加强：" + "、".join(missing_soft_skills[:5]))
-    missing_certificates = sorted(set(job.certificates) - set(student.certificates))
+    
+    # 🌟 修复证书智障匹配：引入向上兼容机制（如 CET-6 覆盖 CET-4）
+    missing_certificates = []
+    student_certs_str = " ".join(student.certificates).lower()
+    
+    for required_cert in job.certificates:
+        req_lower = required_cert.lower()
+        
+        # 1. 如果企业要求四级，但学生画像里有六级，则算作满足要求，跳过
+        if "四级" in req_lower and "六级" in student_certs_str:
+            continue
+            
+        # 2. 如果企业要求软考初级，学生有中级/高级，跳过（可在此扩展更多规则）
+        if "初级" in req_lower and ("中级" in student_certs_str or "高级" in student_certs_str):
+            continue
+
+        # 如果确实没有，且不满足覆盖条件，再加入缺失名单
+        if required_cert not in student.certificates:
+            missing_certificates.append(required_cert)
+
     if missing_certificates:
         gaps.append("证书储备不足：" + "、".join(missing_certificates))
+        
     if student.missing_sections:
         gaps.append("简历信息不完整：" + "、".join(student.missing_sections[:4]))
+        
     return gaps
 
 

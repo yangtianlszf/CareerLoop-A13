@@ -834,8 +834,6 @@ def build_career_plan(
         overview += f" 结合智能体补充问答，系统会继续用 {focus_role} 作为下一轮对齐目标。"
 
     risks = list(primary["gaps"])
-    if student.missing_sections:
-        risks.append("简历信息仍不完整：" + "、".join(student.missing_sections))
 
     short_goal = student.agent_answers.get("thirty_day_goal") or "做出一个可展示的求职作品"
     

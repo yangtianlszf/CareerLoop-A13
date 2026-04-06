@@ -3,643 +3,295 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>A13 职业规划智能体</title>
+    <title>职徒未来 - 职业导航引擎</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
-    <div class="page-shell">
-      <header class="site-hero">
-        <div class="hero-content panel dark-panel">
-          <p class="eyebrow">A13 Career Intelligence Studio</p>
-          <h1>把学生简历变成一套证据驱动、可解释、可复测的职业决策系统</h1>
-          <p class="hero-text">
-            用官方 JD、岗位模板、结构化画像和多阶段工作流，把“适合什么岗位、为什么适合、接下来怎么补”讲成一条可追溯的证据链。
-          </p>
+    <div class="noise-overlay"></div>
+    <div class="ambient-glow"></div>
 
-          <div class="hero-actions">
-            <a class="hero-anchor" href="#control-panel">开始演示</a>
-            <a class="hero-anchor muted" href="#evidence-center">查看官方数据证据</a>
+    <header class="top-nav">
+      <div class="brand">
+        <svg class="brand-logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+          <path d="M2 17l10 5 10-5"></path>
+          <path d="M2 12l10 5 10-5"></path>
+        </svg>
+        <h1>职徒未来</h1>
+      </div>
+      <div class="nav-actions">
+        <button class="icon-btn" title="系统通知">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+        </button>
+        <div class="user-profile">
+          <div class="avatar">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+          </div>
+          <span class="user-name">访客用户</span>
+        </div>
+      </div>
+    </header>
+
+    <div class="app-layout">
+      <aside class="sidebar">
+        <div class="card form-card">
+          <div class="card-header">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+            <h3>导入学生履历</h3>
+          </div>
+          <textarea id="resume-input" placeholder="输入或粘贴简历文本、自我介绍及项目经历..."></textarea>
+          
+          <div class="upload-group" style="margin-top: 16px;">
+            <input type="file" id="resume-file-input" accept=".txt,.pdf,.docx,.doc" class="hidden-input" />
+            <button id="upload-file-btn" class="btn btn-dashed full-width">选择本地文件</button>
           </div>
 
-          <div class="hero-flow">
-            <div class="flow-chip">
-              <span>01</span>
-              <strong>输入简历</strong>
-            </div>
-            <div class="flow-chip">
-              <span>02</span>
-              <strong>生成画像</strong>
-            </div>
-            <div class="flow-chip">
-              <span>03</span>
-              <strong>匹配岗位</strong>
-            </div>
-            <div class="flow-chip">
-              <span>04</span>
-              <strong>输出规划</strong>
-            </div>
+          <div class="settings-group">
+            <label for="parser-mode-select">解析引擎</label>
+            <select id="parser-mode-select">
+              <option value="llm">大模型深度解析</option>
+              <option value="rule">本地规则解析 (降级)</option>
+            </select>
           </div>
+
+          <button id="analyze-btn" class="btn btn-solid full-width btn-large" style="margin-top: 24px;">执行全案分析</button>
+          
+          <button id="print-pdf-btn" class="btn btn-outline full-width" style="margin-top: 12px;">
+            <svg style="width: 16px; height: 16px; vertical-align: middle; margin-right: 6px; margin-top: -2px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+            导出 PDF 规划报告
+          </button>
         </div>
 
-        <div class="hero-metrics">
-          <div class="metric-card panel">
-            <span class="metric-label">真实岗位样本</span>
-            <strong>9958</strong>
-            <p>来自官方 A13 数据，支持原始 JD 检索与模板证据回看。</p>
-          </div>
-          <div class="metric-card panel">
-            <span class="metric-label">系统解析模式</span>
-            <strong>LLM + Rule</strong>
-            <p>网络正常时走大模型，异常时自动回退，适合现场答辩。</p>
-          </div>
-          <div class="metric-card panel accent-card">
-            <span class="metric-label">技术主线</span>
-            <strong>Evidence + Explainable + HITL</strong>
-            <p>证据驱动生成、可解释匹配与人机协同闭环共同支撑高校就业服务场景。</p>
-          </div>
+        <div id="status-panel" class="status-panel">
+          <div class="status-indicator"></div>
+          <span id="status-text">系统处于空闲状态，等待输入...</span>
         </div>
-      </header>
+      </aside>
 
-      <main class="workspace">
-        <aside id="control-panel" class="control-panel panel">
-          <div class="section-head">
-            <div>
-              <p class="section-kicker">Control Center</p>
-              <h2>演示控制台</h2>
+      <main class="main-content">
+        <div id="empty-state" class="empty-state">
+          <div class="empty-graphic"></div>
+          <h2>就绪</h2>
+          <p>请在左侧导入履历，系统将进行多维度岗位匹配与路径演进。</p>
+        </div>
+
+        <div id="results-content" class="results-container hidden">
+          <nav class="tabs">
+            <button class="tab-btn active" data-target="tab-overview">
+              <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
+              诊断总览
+            </button>
+            <button class="tab-btn" data-target="tab-plan">
+              <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+              演进路径
+            </button>
+            <button class="tab-btn" data-target="tab-agent">
+              <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+              深度诊断
+            </button>
+            <button class="tab-btn" data-target="tab-evidence">
+              <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              数据溯源
+            </button>
+            <button class="tab-btn" data-target="tab-dashboard">
+              <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+              运行看板
+            </button>
+          </nav>
+
+          <div id="tab-overview" class="tab-pane active">
+            <div class="grid-2">
+              <div class="card highlight-card">
+                <div class="card-header"><h4>首选建议岗位</h4></div>
+                <h2 id="primary-role" class="role-title">--</h2>
+                <div class="score-display">
+                  <span id="primary-score-badge" class="score-number">0</span>
+                  <span class="score-pill">适配度指数</span>
+                </div>
+                <div class="backup-info">
+                  <span class="mini-label">横向拓展区间</span> 
+                  <span id="backup-roles" class="text-body">--</span>
+                </div>
+              </div>
+              
+              <div class="card">
+                <div class="card-header"><h4>能力图谱分析</h4></div>
+                <div id="radar-chart" style="width: 100%; height: 260px;"></div>
+                <div id="competency-dimensions" class="hidden"></div>
+              </div>
             </div>
-            <p>先在这里准备输入，再用右侧结果区按“结论、证据、报告”的顺序讲解。</p>
+
+            <div class="card mt-4">
+              <div class="card-header"><h4>分析简报</h4></div>
+              <p id="plan-overview" class="text-reading">--</p>
+            </div>
+
+            <div class="grid-2 mt-4">
+              <div class="card section-positive">
+                <h4 class="title-positive">核心竞争力</h4>
+                <ul id="strengths-list" class="feature-list"></ul>
+              </div>
+              <div class="card section-negative">
+                <h4 class="title-negative">关键要素缺失</h4>
+                <ul id="risks-list" class="feature-list"></ul>
+              </div>
+            </div>
+
+            <div class="card mt-4">
+              <div class="card-header"><h4>系统置信度评估</h4></div>
+              <div id="evaluation-metrics" class="metrics-grid"></div>
+            </div>
           </div>
 
-          <div id="status-panel" class="status-panel">
-            <div class="status-dot"></div>
-            <div class="status-copy">
-              <span class="status-label">运行状态</span>
-              <p id="status-text" class="status-text">等待输入</p>
+          <div id="tab-plan" class="tab-pane">
+            <div class="grid-2">
+              <div class="card">
+                <div class="card-header"><h4>行动时间线</h4></div>
+                <div class="timeline">
+                  <div class="timeline-item">
+                    <div class="timeline-marker">阶段一 (30天)</div>
+                    <div class="timeline-content">
+                      <ul id="action-plan-30" class="feature-list"></ul>
+                    </div>
+                  </div>
+                  <div class="timeline-item">
+                    <div class="timeline-marker">阶段二 (90天)</div>
+                    <div class="timeline-content">
+                      <ul id="action-plan-90" class="feature-list"></ul>
+                    </div>
+                  </div>
+                  <div class="timeline-item">
+                    <div class="timeline-marker">远期 (180天)</div>
+                    <div class="timeline-content">
+                      <ul id="action-plan-180" class="feature-list"></ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="stack-layout">
+                <div class="card">
+                  <div class="card-header"><h4>动态实战指导</h4></div>
+                  <ul id="recommended-projects" class="feature-list"></ul>
+                </div>
+                <div class="card">
+                  <div class="card-header"><h4>专项补强节点</h4></div>
+                  <div id="learning-sprints" class="sprints-grid"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="grid-2 mt-4">
+              <div class="card">
+                <div class="card-header"><h4>纵向深造路径</h4></div>
+                <ul id="growth-path-list" class="feature-list"></ul>
+              </div>
+              <div class="card">
+                <div class="card-header"><h4>横向迁移路径</h4></div>
+                <ul id="transition-path-list" class="feature-list"></ul>
+              </div>
+            </div>
+            
+            <div class="card mt-4">
+              <div class="card-header"><h4>落地资源库</h4></div>
+              <div id="resource-map" class="resource-grid"></div>
             </div>
           </div>
 
-          <section class="control-block">
-            <div class="block-head">
-              <div>
-                <h3>答辩快捷样例</h3>
-                <p>用不同学生类型快速切换演示场景。</p>
+          <div id="tab-agent" class="tab-pane">
+            <div class="grid-2">
+              <div class="card">
+                <div class="card-header"><h4>情境补充与对齐</h4></div>
+                <p class="text-muted mb-2">为提升规划精度，请补充以下缺失的背景信息：</p>
+                <form id="agent-question-list" class="agent-form"></form>
               </div>
-              <button id="load-sample-btn" class="button tertiary">载入默认样例</button>
-            </div>
-            <div id="sample-gallery" class="sample-gallery"></div>
-          </section>
 
-          <section class="control-block">
-            <div class="block-head">
-              <div>
-                <h3>上传本地简历</h3>
-                <p>推荐 `docx / txt / md`，现场更稳。</p>
-              </div>
-            </div>
-            <div class="upload-box">
-              <input id="resume-file-input" class="file-input" type="file" accept=".txt,.md,.docx,.pdf" />
-              <button id="upload-file-btn" class="button secondary">解析本地简历文件</button>
-            </div>
-          </section>
-
-          <section class="control-block">
-            <div class="block-head">
-              <div>
-                <h3>简历输入</h3>
-                <p>支持直接粘贴简历、自我介绍、项目经历和竞赛经历。</p>
-              </div>
-            </div>
-            <textarea
-              id="resume-input"
-              class="resume-input"
-              spellcheck="false"
-              placeholder="在这里粘贴学生简历、自我介绍或项目经历文本..."
-            ></textarea>
-          </section>
-
-          <section class="control-block">
-            <div class="mode-grid">
-              <label class="select-field">
-                <span>解析模式</span>
-                <select id="parser-mode-select">
-                  <option value="auto">auto：优先 LLM，失败自动回退规则</option>
-                  <option value="llm">llm：强制走大模型解析</option>
-                  <option value="rule">rule：只走规则解析</option>
-                </select>
-              </label>
-              <div class="helper-card">
-                <span class="helper-title">演示建议</span>
-                <p>答辩默认用 `auto`。如果现场网络不稳，切 `rule` 作为兜底方案。</p>
+              <div class="card">
+                <div class="card-header"><h4>专业能力摸底</h4></div>
+                <p class="text-muted mb-2">客观评估该岗位核心职责的真实掌握情况：</p>
+                <form id="self-assessment-form" class="agent-form"></form>
+                <div id="self-assessment-summary" class="assessment-summary mt-3"></div>
               </div>
             </div>
 
-            <div class="action-cluster">
-              <button id="analyze-btn" class="button primary wide">生成职业规划</button>
+            <div class="card mt-4">
+              <div class="card-header"><h4>验证与考核任务</h4></div>
+              <ul id="assessment-tasks" class="feature-list"></ul>
             </div>
-          </section>
-
-          <section class="control-block soft-block">
-            <div class="block-head">
-              <div>
-                <h3>智能体补充问答</h3>
-                <p>首次分析后，这里会主动追问最多 3 个关键问题。补充后再次分析，会自动形成成长对比。</p>
-              </div>
+            
+            <div class="card mt-4">
+              <div class="card-header"><h4>服务生命周期</h4></div>
+              <div id="service-loop" class="loop-grid"></div>
             </div>
-            <div id="agent-question-list" class="agent-question-list">
-              <div class="empty-inline compact">完成首次分析后，系统会在这里生成针对性的追问。</div>
-            </div>
-          </section>
-
-          <section class="control-block soft-block">
-            <div class="block-head">
-              <div>
-                <h3>岗位自测入口</h3>
-                <p>完成首次分析后，系统会生成与主岗位绑定的 3 道轻量自测题。自测结果会纳入下一次规划。</p>
-              </div>
-            </div>
-            <div id="self-assessment-form" class="self-assessment-form">
-              <div class="empty-inline compact">主推荐岗位生成后，这里会出现岗位自测题。</div>
-            </div>
-          </section>
-
-          <section class="control-block soft-block">
-            <div class="block-head">
-              <div>
-                <h3>环境自检</h3>
-                <p>先确认模型、数据、数据库和 PDF 解析依赖。</p>
-              </div>
-            </div>
-            <div id="system-check-list" class="system-check-list"></div>
-          </section>
-
-          <section class="control-block soft-block">
-            <div class="block-head">
-              <div>
-                <h3>最近分析记录</h3>
-                <p>答辩时可以直接回放上一次最好的结果。</p>
-              </div>
-            </div>
-            <div id="history-list" class="history-list"></div>
-          </section>
-
-          <section class="control-block soft-block">
-            <div class="block-head">
-              <div>
-                <h3>内置验证中心</h3>
-                <p>用典型样例快速验证推荐稳定性、解释覆盖和报告交付性。</p>
-              </div>
-              <button id="run-benchmark-btn" class="button tertiary">运行验证</button>
-            </div>
-            <div id="benchmark-status" class="benchmark-status">等待运行内置样例验证。</div>
-          </section>
-        </aside>
-
-        <section class="story-panel">
-          <div id="empty-state" class="empty-state panel">
-            <p class="section-kicker">Ready To Demo</p>
-            <h2>右侧会按“决策总览 → 匹配证据 → 成长路径 → 数据来源 → 正式报告”展示分析结果</h2>
-            <p>先从左侧选择样例或上传简历，然后点击“生成职业规划”。</p>
           </div>
 
-          <div id="results-content" class="results-content hidden">
-            <section class="overview-board panel dark-panel">
-              <div class="overview-main">
-                <p class="section-kicker light">Decision Overview</p>
-                <div class="overview-title-row">
-                  <div>
-                    <span class="mini-label light">主推荐岗位</span>
-                    <h2 id="primary-role">等待生成</h2>
-                  </div>
-                  <div id="primary-score-badge" class="score-badge large">0 分</div>
-                </div>
-                <p id="career-overview" class="overview-text"></p>
+          <div id="tab-evidence" class="tab-pane">
+            <div class="card info-card mb-4">
+              <div class="card-header"><h4>检索状态摘要</h4></div>
+              <p id="evidence-summary" class="font-bold"></p>
+              <div id="matched-terms" class="chip-group mt-2"></div>
+            </div>
 
-                <div class="overview-tag-panels">
-                  <div class="overview-tag-card">
-                    <span class="summary-label light">备选方向</span>
-                    <div id="backup-roles" class="tag-list"></div>
-                  </div>
-                  <div class="overview-tag-card">
-                    <span class="summary-label light">转岗路径</span>
-                    <div id="transition-paths" class="tag-list"></div>
-                  </div>
-                </div>
+            <div class="grid-2">
+              <div class="card">
+                <div class="card-header"><h4>原始样本切片</h4></div>
+                <div id="evidence-snippets" class="snippet-list"></div>
               </div>
-
-              <div class="overview-side">
-                <div class="mini-stat">
-                  <span>输出重点</span>
-                  <strong>先讲结论</strong>
-                  <p>这一区只回答评委最关心的三个问题：推荐谁、为什么、接下来怎么做。</p>
-                </div>
-                <div id="parser-meta" class="parser-meta"></div>
+              <div class="card">
+                <div class="card-header"><h4>标准基线参照</h4></div>
+                <div id="template-evidence" class="snippet-list"></div>
               </div>
-            </section>
+            </div>
 
-            <section class="insight-layout">
-              <article class="panel insight-card spotlight-card">
-                <div class="card-head">
-                  <div>
-                    <p class="section-kicker">Student Baseline</p>
-                    <h3>学生画像</h3>
-                  </div>
-                </div>
-                <div id="student-meta" class="meta-list"></div>
-                <div class="score-strip">
-                  <div>
-                    <span class="score-label">画像完整度</span>
-                    <strong id="completeness-score">0</strong>
-                  </div>
-                  <div>
-                    <span class="score-label">就业竞争力</span>
-                    <strong id="competitiveness-score">0</strong>
-                  </div>
-                </div>
-              </article>
-
-              <article class="panel insight-card">
-                <div class="card-head">
-                  <div>
-                    <p class="section-kicker">Capability Tags</p>
-                    <h3>能力标签</h3>
-                  </div>
-                </div>
-                <div class="capability-block">
-                  <span class="summary-label">专业技能</span>
-                  <div id="skills-tags" class="tag-list"></div>
-                </div>
-                <div class="capability-block">
-                  <span class="summary-label">职业素养</span>
-                  <div id="soft-skills-tags" class="tag-list subtle"></div>
-                </div>
-              </article>
-            </section>
-
-            <section class="story-section">
-              <div class="section-head">
-                <div>
-                  <p class="section-kicker">Matching Evidence</p>
-                  <h3>岗位匹配看板</h3>
-                </div>
-                <p>每张卡片都同时给出得分、解释、亮点、差距和原始 JD 证据入口。</p>
+            <div class="card mt-4">
+              <div class="card-header"><h4>本地岗位库核查</h4></div>
+              <div class="search-bar" style="display:flex; gap:12px;">
+                <input type="text" id="jd-search-input" placeholder="输入关键字 (例：Java、硬件测试...)" class="input-field" style="flex:1;" />
+                <button id="jd-search-btn" class="btn btn-outline">执行检索</button>
               </div>
-              <div id="match-cards" class="match-cards"></div>
-            </section>
-
-            <section class="story-section">
-              <div class="section-head">
-                <div>
-                  <p class="section-kicker">Grounded Retrieval</p>
-                  <h3>RAG 证据链</h3>
-                </div>
-                <p>系统会先围绕主推荐岗位做分块检索和重排，再把高相关官方证据片段带入规划与报告。</p>
-              </div>
-              <div class="insight-layout">
-                <article class="panel insight-card">
-                  <div class="card-head">
-                    <div>
-                      <h3>检索摘要</h3>
-                      <p id="grounded-summary">生成分析后，这里会显示证据链摘要。</p>
-                    </div>
-                  </div>
-                  <div class="capability-block">
-                    <span class="summary-label">检索关键词</span>
-                    <div id="grounded-query" class="tag-list"></div>
-                  </div>
-                </article>
-                <article class="panel insight-card">
-                  <div class="card-head">
-                    <div>
-                      <h3>证据片段</h3>
-                      <p>每条片段都给出引用编号、命中词和来源信息。</p>
-                    </div>
-                  </div>
-                  <div id="grounded-evidence-list" class="jd-results"></div>
-                </article>
-              </div>
-            </section>
-
-            <section class="insight-layout wide-balance">
-              <article class="panel pathway-card">
-                <div class="card-head">
-                  <div>
-                    <p class="section-kicker">Growth Narrative</p>
-                    <h3>主职业路径</h3>
-                  </div>
-                </div>
-                <div id="growth-path" class="path-list"></div>
-              </article>
-
-              <article class="panel action-card">
-                <div class="card-head">
-                  <div>
-                    <p class="section-kicker">Action Plan</p>
-                    <h3>阶段行动计划</h3>
-                  </div>
-                </div>
-                <div class="timeline-grid">
-                  <div class="timeline-block">
-                    <h4>30 天</h4>
-                    <ul id="plan-30"></ul>
-                  </div>
-                  <div class="timeline-block">
-                    <h4>90 天</h4>
-                    <ul id="plan-90"></ul>
-                  </div>
-                  <div class="timeline-block">
-                    <h4>180 天</h4>
-                    <ul id="plan-180"></ul>
-                  </div>
-                </div>
-              </article>
-            </section>
-
-            <section class="insight-layout wide-balance">
-              <article class="panel action-card">
-                <div class="card-head">
-                  <div>
-                    <p class="section-kicker">Training Loop</p>
-                    <h3>训练闭环</h3>
-                  </div>
-                </div>
-                <div id="learning-sprints" class="sprint-list"></div>
-                <div class="capability-block">
-                  <span class="summary-label">下一次复测目标</span>
-                  <ul id="review-targets" class="review-target-list"></ul>
-                </div>
-              </article>
-
-              <article class="panel pathway-card">
-                <div class="card-head">
-                  <div>
-                    <p class="section-kicker">Growth Replay</p>
-                    <h3>成长对比</h3>
-                  </div>
-                </div>
-                <div id="growth-comparison" class="comparison-panel"></div>
-              </article>
-            </section>
-
-            <section class="insight-layout">
-              <article class="panel insight-card">
-                <div class="card-head">
-                  <div>
-                    <p class="section-kicker">Competency Model</p>
-                    <h3>胜任力维度</h3>
-                  </div>
-                </div>
-                <div id="competency-radar" class="competency-radar"></div>
-                <div id="competency-dimensions" class="metric-grid"></div>
-              </article>
-
-              <article class="panel insight-card">
-                <div class="card-head">
-                  <div>
-                    <p class="section-kicker">Service Loop</p>
-                    <h3>成长闭环阶段</h3>
-                  </div>
-                </div>
-                <div id="service-loop" class="service-loop"></div>
-                <div class="capability-block">
-                  <span class="summary-label">岗位自测任务</span>
-                  <ul id="assessment-tasks" class="review-target-list"></ul>
-                </div>
-              </article>
-            </section>
-
-            <section class="insight-layout">
-              <article class="panel insight-card">
-                <div class="card-head">
-                  <div>
-                    <p class="section-kicker">Resource Map</p>
-                    <h3>资源映射中心</h3>
-                  </div>
-                </div>
-                <div id="resource-map" class="resource-grid"></div>
-              </article>
-
-              <article class="panel insight-card">
-                <div class="card-head">
-                  <div>
-                    <p class="section-kicker">Assessment Replay</p>
-                    <h3>岗位自测结果</h3>
-                  </div>
-                </div>
-                <div id="self-assessment-summary" class="comparison-panel"></div>
-              </article>
-            </section>
-
-            <section class="story-section">
-              <div class="section-head">
-                <div>
-                  <p class="section-kicker">School Ops</p>
-                  <h3>学校运营看板</h3>
-                </div>
-                <p>用历史分析数据模拟辅导员与就业中心侧的运营观察视角。</p>
-              </div>
-              <div id="school-summary-cards" class="school-card-grid"></div>
-              <div class="insight-layout">
-                <article class="panel insight-card">
-                  <div class="card-head">
-                    <div>
-                      <h3>主岗位与专业分布</h3>
-                      <p>从历史分析中提取当前样本的就业倾向。</p>
-                    </div>
-                  </div>
-                  <div id="school-distribution" class="school-distribution"></div>
-                </article>
-                <article class="panel insight-card">
-                  <div class="card-head">
-                    <div>
-                      <h3>重点跟进名单</h3>
-                      <p>用于辅导员快速识别需要优先帮扶的学生。</p>
-                    </div>
-                  </div>
-                  <div id="school-follow-up" class="school-follow-up"></div>
-                </article>
-              </div>
-              <div class="insight-layout">
-                <article class="panel insight-card">
-                  <div class="card-head">
-                    <div>
-                      <h3>服务分层与定向推岗</h3>
-                      <p>把学生分层为直推、转化、帮扶三类，并给出区域/专业定向推岗建议。</p>
-                    </div>
-                  </div>
-                  <div id="school-service-segments" class="school-card-grid"></div>
-                  <div id="school-push-recommendations" class="school-distribution"></div>
-                </article>
-                <article class="panel insight-card">
-                  <div class="card-head">
-                    <div>
-                      <h3>治理与抽检看板</h3>
-                      <p>围绕证据命中率、规则回退与重点记录，形成老师可抽检的治理视角。</p>
-                    </div>
-                  </div>
-                  <div id="school-governance-metrics" class="metric-grid"></div>
-                  <div id="school-audit-queue" class="school-follow-up"></div>
-                </article>
-              </div>
-            </section>
-
-            <section class="insight-layout">
-              <article class="panel insight-card">
-                <div class="card-head">
-                  <div>
-                    <p class="section-kicker">Stakeholder Views</p>
-                    <h3>多角色价值</h3>
-                  </div>
-                </div>
-                <div id="stakeholder-views" class="stakeholder-grid"></div>
-              </article>
-
-              <article class="panel insight-card">
-                <div class="card-head">
-                  <div>
-                    <p class="section-kicker">Evaluation Snapshot</p>
-                    <h3>评测快照</h3>
-                  </div>
-                </div>
-                <div id="evaluation-metrics" class="metric-grid"></div>
-              </article>
-            </section>
-
-            <section class="story-section">
-              <div class="section-head">
-                <div>
-                  <p class="section-kicker">Validation Center</p>
-                  <h3>内置样例验证</h3>
-                </div>
-                <p>把“系统能跑”变成“系统已经做过样例验证”。</p>
-              </div>
-              <div id="benchmark-summary-cards" class="school-card-grid"></div>
-              <div id="benchmark-verdict" class="benchmark-verdict panel">等待运行内置样例验证。</div>
-              <div id="benchmark-cases" class="stakeholder-grid"></div>
-            </section>
-
-            <section class="insight-layout">
-              <article class="panel insight-card">
-                <div class="card-head">
-                  <div>
-                    <p class="section-kicker">Strengths & Risks</p>
-                    <h3>优势与风险</h3>
-                  </div>
-                </div>
-                <div class="capability-block">
-                  <span class="summary-label">当前优势</span>
-                  <div id="career-strengths" class="tag-list"></div>
-                </div>
-                <div class="capability-block">
-                  <span class="summary-label">主要风险</span>
-                  <div id="career-risks" class="tag-list subtle"></div>
-                </div>
-              </article>
-
-              <article class="panel insight-card">
-                <div class="card-head">
-                  <div>
-                    <p class="section-kicker">Recommended Projects</p>
-                    <h3>推荐补强项目</h3>
-                  </div>
-                </div>
-                <ul id="recommended-projects" class="project-list"></ul>
-              </article>
-            </section>
-
-            <section class="story-section">
-              <div class="section-head">
-                <div>
-                  <p class="section-kicker">Technical Narrative</p>
-                  <h3>安全前沿技术表达</h3>
-                </div>
-                <p>这些技术词都能落回系统真实能力，不依赖高风险训练叙事。</p>
-              </div>
-              <div id="technical-modules" class="innovation-grid"></div>
-            </section>
-
-            <section class="story-section">
-              <div class="section-head">
-                <div>
-                  <p class="section-kicker">Innovation Anchor</p>
-                  <h3>创新锚点</h3>
-                </div>
-                <p id="product-signature">用一句话讲清这套系统最不一样的地方。</p>
-              </div>
-              <div id="innovation-highlights" class="innovation-grid"></div>
-            </section>
-
-            <section class="story-section">
-              <div class="section-head">
-                <div>
-                  <p class="section-kicker">Career Graph</p>
-                  <h3>职业图谱可视化</h3>
-                </div>
-                <p>把学生当前位置、主推荐岗位、成长路径和备选方向组织成一张可讲解的路线图。</p>
-              </div>
-              <div id="career-graph" class="career-graph panel"></div>
-            </section>
-
-            <section id="evidence-center" class="story-section">
-              <div class="section-head">
-                <div>
-                  <p class="section-kicker">Evidence Center</p>
-                  <h3>官方数据证据中心</h3>
-                </div>
-                <p>这一块专门回答“你们到底有没有真的用官方数据”。</p>
-              </div>
-
-              <div class="evidence-layout">
-                <article class="panel evidence-card">
-                  <div class="card-head">
-                    <div>
-                      <h3>官方 JD 检索</h3>
-                      <p>输入岗位名、技能词或公司名，回看原始样本。</p>
-                    </div>
-                  </div>
-                  <div class="search-row">
-                    <input
-                      id="jd-search-input"
-                      class="search-input"
-                      type="text"
-                      placeholder="输入岗位名、技能或公司名，例如 Java、前端、测试"
-                    />
-                    <button id="jd-search-btn" class="button secondary">搜索 JD</button>
-                  </div>
-                  <div id="jd-search-results" class="jd-results"></div>
-                </article>
-
-                <article class="panel evidence-card">
-                  <div class="card-head">
-                    <div>
-                      <h3>模板证据回看</h3>
-                      <p>查看推荐岗位背后的模板来源和代表性 JD 样本。</p>
-                    </div>
-                  </div>
-                  <div id="template-evidence" class="template-evidence empty-inline">
-                    点击岗位卡片里的“查看原始 JD”后，这里会展示对应的模板证据。
-                  </div>
-                </article>
-              </div>
-            </section>
-
-            <section class="story-section">
-              <div class="section-head report-head">
-                <div>
-                  <p class="section-kicker">Formal Deliverable</p>
-                  <h3>职业规划报告</h3>
-                </div>
-                <div class="button-row compact">
-                  <button id="copy-report-btn" class="button tertiary">复制报告</button>
-                  <button id="download-report-btn" class="button secondary">下载 Markdown</button>
-                  <button id="download-html-btn" class="button secondary">下载 HTML</button>
-                  <button id="download-docx-btn" class="button secondary">下载 Word</button>
-                  <button id="print-pdf-btn" class="button primary">导出 PDF</button>
-                </div>
-              </div>
-              <div id="report-preview" class="report-preview panel"></div>
-            </section>
+              <div id="jd-search-results" class="search-results mt-3"></div>
+            </div>
           </div>
-        </section>
+
+          <div id="tab-dashboard" class="tab-pane">
+            <div class="grid-2">
+              <div class="card">
+                <div class="card-header"><h4>全局宏观态势</h4></div>
+                <div id="school-dashboard-stats" class="dashboard-stats"></div>
+              </div>
+              <div class="card">
+                <div class="card-header"><h4>历史分析快照</h4></div>
+                <ul id="history-list" class="history-list"></ul>
+              </div>
+            </div>
+
+            <div class="grid-2 mt-4">
+              <div class="card">
+                <div class="card-header"><h4>系统健康度</h4></div>
+                <ul id="system-check-list" class="check-list"></ul>
+              </div>
+              <div class="card">
+                <div class="card-header"><h4>自动化基准测试</h4></div>
+                <button id="run-benchmark-btn" class="btn btn-dashed full-width mb-2">执行自动化压测验证</button>
+                <div id="benchmark-status" class="terminal-box"></div>
+              </div>
+            </div>
+
+            <div class="grid-2 mt-4">
+              <div class="card">
+                <div class="card-header"><h4>产品设计锚点</h4></div>
+                <div id="innovation-highlights"></div>
+              </div>
+              <div class="card">
+                <div class="card-header"><h4>底层架构组件</h4></div>
+                <div id="technical-keywords" class="chip-group mb-2"></div>
+                <div id="technical-modules"></div>
+              </div>
+            </div>
+          </div>
+
+        </div>
       </main>
     </div>
 
