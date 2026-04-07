@@ -1,17 +1,25 @@
 from __future__ import annotations
 
 import math
+import re
 from typing import List, Tuple
-from openai import OpenAI
 
-from a13_starter.src.settings import get_openai_api_key, get_openai_base_url
+try:
+    from openai import OpenAI
+except ImportError:  # pragma: no cover - optional dependency for semantic matching
+    OpenAI = None
+
+from a13_starter.src.settings import get_openai_api_key, get_openai_base_url, llm_is_configured
 from a13_starter.src.models import JobProfile, MatchBreakdown, MatchResult, StudentProfile
+from a13_starter.src.skill_taxonomy import normalize_skill_alias, normalize_skill_list
 
 
 def _get_embeddings(texts: list[str]) -> list[list[float]]:
     """调用大模型 Embedding API 将文本转化为高维向量"""
     if not texts:
         return []
+    if OpenAI is None or not llm_is_configured():
+        raise RuntimeError("Embedding client is unavailable")
     
     client = OpenAI(
         api_key=get_openai_api_key(),
@@ -38,6 +46,46 @@ def _cosine_similarity(vec1: list[float], vec2: list[float]) -> float:
     return dot_product / (magnitude1 * magnitude2)
 
 
+def _normalize_skill_text(text: str) -> str:
+    return re.sub(r"[^0-9a-zA-Z\u4e00-\u9fff+#.]+", "", text).lower()
+
+
+def _canonicalize_skills_for_matching(skills: list[str]) -> list[tuple[str, str]]:
+    canonical_skills = normalize_skill_list(skills)
+    canonical_lookup = {normalize_skill_alias(skill): skill for skill in skills}
+    pairs: list[tuple[str, str]] = []
+    for canonical in canonical_skills:
+        display = canonical_lookup.get(canonical, canonical)
+        pairs.append((display, _normalize_skill_text(canonical)))
+    return pairs
+
+
+def _rule_based_match_skills(student_skills: list[str], job_skills: list[str]) -> tuple[list[str], list[str]]:
+    if not job_skills:
+        return student_skills, []
+    if not student_skills:
+        return [], job_skills
+
+    normalized_student_skills = _canonicalize_skills_for_matching(student_skills)
+    normalized_job_skills = _canonicalize_skills_for_matching(job_skills)
+
+    shared_skills: list[str] = []
+    missing_skills: list[str] = []
+    for job_skill, job_skill_normalized in normalized_job_skills:
+        matched = any(
+            job_skill_normalized == student_skill_normalized
+            or job_skill_normalized in student_skill_normalized
+            or student_skill_normalized in job_skill_normalized
+            for _, student_skill_normalized in normalized_student_skills
+            if job_skill_normalized and student_skill_normalized
+        )
+        if matched:
+            shared_skills.append(job_skill)
+        else:
+            missing_skills.append(job_skill)
+    return list(dict.fromkeys(shared_skills)), list(dict.fromkeys(missing_skills))
+
+
 def _semantic_match_skills(student_skills: list[str], job_skills: list[str], threshold: float = 0.82) -> tuple[list[str], list[str]]:
     """
     基于语义向量的技能匹配引擎。
@@ -48,19 +96,27 @@ def _semantic_match_skills(student_skills: list[str], job_skills: list[str], thr
     if not student_skills:
         return [], job_skills
 
-    # 批量获取向量
-    student_vecs = _get_embeddings(student_skills)
-    job_vecs = _get_embeddings(job_skills)
+    canonical_student_skills = normalize_skill_list(student_skills)
+    canonical_job_skills = normalize_skill_list(job_skills)
+    if not canonical_student_skills or not canonical_job_skills:
+        return _rule_based_match_skills(student_skills, job_skills)
+
+    try:
+        # 优先使用语义向量匹配；依赖缺失或调用失败时回退到规则匹配，保证服务可用。
+        student_vecs = _get_embeddings(canonical_student_skills)
+        job_vecs = _get_embeddings(canonical_job_skills)
+    except Exception:
+        return _rule_based_match_skills(student_skills, job_skills)
 
     shared_skills = []
     missing_skills = []
 
     # 遍历企业的每一项要求，去学生的技能池里找“最相似”的一项
-    for i, j_skill in enumerate(job_skills):
+    for i, j_skill in enumerate(canonical_job_skills):
         j_vec = job_vecs[i]
         best_match_score = 0.0
         
-        for j, s_skill in enumerate(student_skills):
+        for j, _ in enumerate(canonical_student_skills):
             s_vec = student_vecs[j]
             score = _cosine_similarity(j_vec, s_vec)
             if score > best_match_score:
@@ -68,7 +124,7 @@ def _semantic_match_skills(student_skills: list[str], job_skills: list[str], thr
                 
         # 如果最高相似度超过阈值，认为学生掌握了该技能
         if best_match_score >= threshold:
-            shared_skills.append(j_skill) 
+            shared_skills.append(j_skill)
         else:
             missing_skills.append(j_skill)
 

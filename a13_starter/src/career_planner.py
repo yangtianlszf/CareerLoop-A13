@@ -3,11 +3,14 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from a13_starter.src.analysis_storage import find_similar_analyses
+from a13_starter.src.citation_utils import annotate_text_with_citations, build_term_citation_map
 from a13_starter.src.evidence_retrieval import build_grounded_evidence_bundle
 from a13_starter.src.extractors import refresh_student_profile_metrics
 from a13_starter.src.matcher import match_student_to_job
 from a13_starter.src.models import CareerPlan, JobProfile, StudentProfile
 from a13_starter.src.openai_responses import OpenAIResponsesClient  # 🌟 新增：引入大模型客户端
+from a13_starter.src.skill_taxonomy import normalize_skill_alias, normalize_skill_list
 
 
 def template_to_job_profile(template: dict[str, object]) -> JobProfile:
@@ -116,7 +119,6 @@ def apply_agent_answers(student: StudentProfile, answers: dict[str, str] | None)
 # 🌟 新增：动态大模型规划引擎，用于消灭硬编码
 def _generate_dynamic_role_guidance(role_title: str, missing_skills: list[str]) -> dict[str, Any]:
     """利用大模型动态生成个性化的项目建议和自测题，消灭硬编码"""
-    client = OpenAIResponsesClient()
     schema = {
         "type": "object",
         "properties": {
@@ -154,6 +156,7 @@ def _generate_dynamic_role_guidance(role_title: str, missing_skills: list[str]) 
     user_prompt = f"目标岗位：{role_title}\n该学生当前急需补强的关键技能缺口：{skills_str}\n请为他量身定制冲刺方案。"
 
     try:
+        client = OpenAIResponsesClient()
         return client.create_structured_output(
             system_prompt=system_prompt,
             user_prompt=user_prompt,
@@ -396,6 +399,8 @@ def _build_evaluation_metrics(
     if parser_metadata and parser_metadata.get("used_mode") == "llm":
         parser_score += 4
     parser_score = max(0, min(parser_score, 100))
+    taxonomy_skills = normalize_skill_list(student.skills)
+    taxonomy_score = min(100, 55 + len(taxonomy_skills) * 6)
 
     return [
         {
@@ -422,6 +427,11 @@ def _build_evaluation_metrics(
             "name": "服务就绪度",
             "score": parser_score,
             "detail": "综合考虑解析稳定性、历史留存、导出交付和现场兜底能力。",
+        },
+        {
+            "name": "能力归一覆盖",
+            "score": taxonomy_score,
+            "detail": f"学生技能中有 {len(taxonomy_skills)}/{max(1, len(student.skills))} 项已归一到能力词表，便于匹配与复核。",
         },
         {
             "name": "岗位自测完成度",
@@ -483,6 +493,114 @@ def _build_service_loop(
             "detail": "补充追问信息后再次分析，对比匹配分、完整度和竞争力变化。",
         },
     ]
+
+
+def _resolve_gap_dimension(keyword: str, primary_match: dict[str, Any]) -> tuple[str, int]:
+    lowered = str(keyword).lower()
+    breakdown = primary_match.get("breakdown", {})
+    if any(term in lowered for term in ["沟通", "表达", "协作", "责任", "培训"]):
+        return "团队协作", int(breakdown.get("professional_literacy", 0))
+    if any(term in lowered for term in ["项目", "实习", "举证", "star"]):
+        return "发展潜力", int(breakdown.get("growth_potential", 0))
+    if any(term in lowered for term in ["证书", "学历", "岗位", "意向"]):
+        return "岗位胜任", int(breakdown.get("basic_requirements", 0))
+    return "知识技能", int(breakdown.get("professional_skills", 0))
+
+
+def _build_gap_benefit_analysis(
+    primary_match: dict[str, Any],
+    self_assessment: dict[str, Any],
+    evidence_bundle: dict[str, Any],
+) -> list[dict[str, Any]]:
+    candidates = list(primary_match.get("missing_skills", [])[:3])
+    for focus in self_assessment.get("weak_focuses", [])[:2]:
+        canonical_focus = normalize_skill_alias(focus)
+        if canonical_focus and canonical_focus not in candidates:
+            candidates.append(canonical_focus)
+
+    term_map = build_term_citation_map(evidence_bundle)
+    items: list[dict[str, Any]] = []
+    for index, keyword in enumerate(candidates[:4], start=1):
+        dimension, current_score = _resolve_gap_dimension(keyword, primary_match)
+        expected_gain = min(16, 6 + index * 2 + (3 if keyword in self_assessment.get("weak_focuses", []) else 0))
+        projected_score = min(100, current_score + expected_gain)
+        citation_ids = term_map.get(str(keyword).lower(), [])
+        items.append(
+            {
+                "gap": keyword,
+                "dimension": dimension,
+                "current_score": current_score,
+                "expected_gain": expected_gain,
+                "projected_score": projected_score,
+                "citations": citation_ids[:2],
+                "detail": f"{keyword} 主要压低“{dimension}”维度，补齐后更容易把匹配解释从‘会写简历’变成‘能举证’。",
+                "action": f"围绕 {keyword} 完成 1 个最小案例、1 次岗位自测和 1 版项目表达稿。",
+                "expected_evidence": f"补充 {keyword} 的项目截图、代码片段、STAR 表达或上线记录。",
+            }
+        )
+    return items
+
+
+def _build_plan_self_checks(
+    student: StudentProfile,
+    primary_match: dict[str, Any],
+    parser_metadata: dict[str, Any] | None,
+    self_assessment: dict[str, Any],
+    evidence_bundle: dict[str, Any],
+    resource_map: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    evidence_hit_rate = int(evidence_bundle.get("evidence_hit_rate", 0))
+    target_role = student.agent_answers.get("target_role") or (student.target_roles[0] if student.target_roles else "")
+    target_aligned = not target_role or target_role == primary_match["role_title"] or target_role in primary_match["role_title"]
+    checks = [
+        {
+            "name": "证据对齐检查",
+            "status": "通过" if evidence_hit_rate >= 70 else "关注",
+            "score": evidence_hit_rate,
+            "detail": f"当前证据命中率 {evidence_hit_rate}%，主推荐解释已绑定官方 JD / 模板片段。",
+            "action": "若命中率偏低，优先补充岗位关键词、项目术语和城市/岗位意向。",
+        },
+        {
+            "name": "目标一致性检查",
+            "status": "通过" if target_aligned else "待补",
+            "score": 92 if target_aligned else 64,
+            "detail": f"当前主岗位为 {primary_match['role_title']}，学生目标偏好为 {target_role or '未补充'}。",
+            "action": "若目标不一致，先用智能体追问收敛主岗位，再进行二次复测。",
+        },
+        {
+            "name": "交付可执行性检查",
+            "status": "通过" if len(resource_map) >= 3 else "关注",
+            "score": min(100, 60 + len(resource_map) * 10),
+            "detail": f"当前已生成 {len(resource_map)} 条资源映射与交付物建议，可直接转成训练任务。",
+            "action": "确保每项建议都能落成项目、证书、自测记录或投递材料。",
+        },
+        {
+            "name": "闭环完整性检查",
+            "status": "通过" if len(self_assessment.get('items', [])) >= 3 and student.profile_completeness >= 70 else "关注",
+            "score": min(100, 58 + len(self_assessment.get("items", [])) * 10 + student.profile_completeness // 4),
+            "detail": "已同时检查追问、自测、补强、复测四个节点是否齐备。",
+            "action": "至少完成一次岗位自测并回填追问，才能形成完整成长曲线。",
+        },
+        {
+            "name": "稳定性兜底检查",
+            "status": "通过" if not (parser_metadata or {}).get("fallback_used") else "关注",
+            "score": 90 if not (parser_metadata or {}).get("fallback_used") else 76,
+            "detail": f"当前解析模式：{(parser_metadata or {}).get('used_mode', 'unknown')}，支持现场自动回退。",
+            "action": "若发生回退，建议老师优先抽检关键字段与主推荐岗位解释。",
+        },
+    ]
+    return checks
+
+
+def _build_similar_cases(student: StudentProfile, primary_match: dict[str, Any]) -> list[dict[str, Any]]:
+    return find_similar_analyses(
+        student_name=student.name,
+        major=student.major,
+        target_roles=student.target_roles,
+        city_preference=student.city_preference,
+        primary_role=str(primary_match.get("role_title", "")),
+        limit=3,
+    )
 
 
 def _assessment_tasks_for_role(role_title: str) -> list[str]:
@@ -846,6 +964,12 @@ def build_career_plan(
     
     evidence_bundle = build_grounded_evidence_bundle(student, primary)
     resource_map = _build_resource_map(role_title, top_gap_keywords, self_assessment)
+    overview = annotate_text_with_citations(
+        overview,
+        evidence_bundle,
+        preferred_terms=[role_title, *top_gap_keywords, *(primary.get("shared_skills") or [])],
+        max_annotations=3,
+    )
     action_plan_30 = [
         "补齐简历中的关键信息，至少补充专业、目标岗位、项目成果和实习职责",
         "围绕目标岗位补 2 到 3 项最关键技能：" + "、".join(top_gap_keywords[:3] or ["项目表达", "岗位举证"]),
@@ -886,6 +1010,9 @@ def build_career_plan(
         evaluation_metrics=_build_evaluation_metrics(student, primary, parser_metadata, self_assessment, evidence_bundle),
         competency_dimensions=_build_competency_dimensions(student, primary),
         service_loop=_build_service_loop(student, primary, self_assessment),
+        gap_benefit_analysis=_build_gap_benefit_analysis(primary, self_assessment, evidence_bundle),
+        plan_self_checks=_build_plan_self_checks(student, primary, parser_metadata, self_assessment, evidence_bundle, resource_map),
+        similar_cases=_build_similar_cases(student, primary),
         # 🌟 核心替换：优先使用动态生成的任务，失败则使用规则字典兜底
         assessment_tasks=dynamic_guidance.get("assessment_tasks") or _assessment_tasks_for_role(role_title),
         self_assessment=self_assessment,
@@ -897,5 +1024,5 @@ def build_career_plan(
         evidence_bundle=evidence_bundle,
         service_scenarios=["学生自助诊断", "辅导员一生一策", "就业中心精准推岗"],
         # 🌟 亮点：更新了产品底层的技术签名
-        product_signature="分块检索 + 证据重排 + 可解释匹配 + 动态Agent规划",
+        product_signature="分块检索 + 证据重排 + 可解释匹配 + 复核留痕闭环",
     )

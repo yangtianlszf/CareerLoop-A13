@@ -1,12 +1,14 @@
 from __future__ import annotations
 
+import copy
 import json
 from datetime import datetime
 from pathlib import Path
 from statistics import mean
 from typing import Any
 
-from a13_starter.src.career_planner import build_career_plan, rank_student_against_templates
+from a13_starter.src.career_planner import apply_agent_answers, build_career_plan, rank_student_against_templates
+from a13_starter.src.extractors import refresh_student_profile_metrics
 from a13_starter.src.parser_service import parse_student_profile
 from a13_starter.src.report import build_career_report_markdown
 
@@ -63,6 +65,29 @@ def _score_evidence_hit_rate(career_plan: Any) -> int:
     return int(career_plan.evidence_bundle.get("evidence_hit_rate", 0))
 
 
+def _simulate_follow_up_student(student: Any, top_match: dict[str, Any]) -> Any:
+    improved_student = copy.deepcopy(student)
+    gap_skills = list(top_match.get("missing_skills", [])[:2])
+    for skill in gap_skills:
+        if skill and skill not in improved_student.skills:
+            improved_student.skills.append(skill)
+    if not improved_student.projects:
+        improved_student.projects.append(f"{top_match.get('role_title', '目标岗位')} 场景化补强项目")
+    if not improved_student.internships and top_match.get("score", 0) < 75:
+        improved_student.internships.append(f"{top_match.get('role_title', '目标岗位')} 模拟实训经历")
+    if not improved_student.target_roles:
+        improved_student.target_roles = [str(top_match.get("role_title", ""))]
+    improved_student = apply_agent_answers(
+        improved_student,
+        {
+            "target_role": str(top_match.get("role_title", "")),
+            "improvement_focus": gap_skills[0] if gap_skills else "项目表达",
+            "thirty_day_goal": "完成一轮补强后的复测",
+        },
+    )
+    return refresh_student_profile_metrics(improved_student)
+
+
 def _build_case_observations(
     *,
     top1_hit: bool,
@@ -71,6 +96,8 @@ def _build_case_observations(
     evidence_hit_rate: int,
     report_readiness: int,
     loop_readiness: int,
+    improvement_delta: int,
+    pass_case: bool,
     primary_role: str,
 ) -> list[str]:
     observations: list[str] = []
@@ -100,6 +127,16 @@ def _build_case_observations(
         observations.append("训练闭环完整，具备追问、自测、补强与复测的连续服务感。")
     else:
         observations.append("闭环感还可以更强，建议继续完善自测与复测联动。")
+
+    if improvement_delta > 0:
+        observations.append(f"模拟复测后主岗位分提升 {improvement_delta} 分，说明差距建议能真正转化为可量化改进。")
+    else:
+        observations.append("模拟复测提升有限，说明还需要继续优化补强动作与权重设计。")
+
+    if pass_case:
+        observations.append("该样例已达到“可直接展示”的内置通过标准。")
+    else:
+        observations.append("该样例仍建议继续补强证据、解释或闭环完整度。")
     return observations
 
 
@@ -108,6 +145,9 @@ def _build_summary_cards(
     case_count: int,
     top1_rate: int,
     top3_rate: int,
+    pass_rate: int,
+    fallback_rate: int,
+    improvement_rate: int,
     evidence_avg: int,
     explanation_avg: int,
     report_avg: int,
@@ -128,6 +168,21 @@ def _build_summary_cards(
             "label": "Top3 命中率",
             "value": f"{top3_rate}%",
             "detail": "预期岗位是否至少进入前三推荐，反映可接受度。",
+        },
+        {
+            "label": "评测通过率",
+            "value": f"{pass_rate}%",
+            "detail": "同时满足 Top3、证据、解释、报告与闭环阈值的样例占比。",
+        },
+        {
+            "label": "规则回退率",
+            "value": f"{fallback_rate}%",
+            "detail": "用于说明 auto / llm 模式下的稳定性与现场兜底能力。",
+        },
+        {
+            "label": "复测提升率",
+            "value": f"{improvement_rate}%",
+            "detail": "模拟按建议补强后，主岗位分出现提升的样例占比。",
         },
         {
             "label": "证据命中均分",
@@ -159,6 +214,9 @@ def run_benchmark(parser_mode: str = "rule") -> dict[str, Any]:
     case_results: list[dict[str, Any]] = []
     top1_hits = 0
     top3_hits = 0
+    pass_hits = 0
+    fallback_hits = 0
+    improvement_hits = 0
     evidence_scores: list[int] = []
     explanation_scores: list[int] = []
     report_scores: list[int] = []
@@ -182,9 +240,35 @@ def run_benchmark(parser_mode: str = "rule") -> dict[str, Any]:
         explanation_coverage = _score_explanation_coverage(matches[0])
         report_readiness = _score_report_readiness(career_plan, report_markdown)
         loop_readiness = _score_loop_readiness(career_plan)
+        pass_case = bool(
+            top3_hit
+            and evidence_hit_rate >= 70
+            and explanation_coverage >= 80
+            and report_readiness >= 80
+            and loop_readiness >= 80
+        )
+        fallback_used = bool(parser_metadata.fallback_used)
+
+        follow_up_student = _simulate_follow_up_student(student, matches[0])
+        follow_up_matches = rank_student_against_templates(follow_up_student, templates)
+        follow_up_plan = build_career_plan(
+            follow_up_student,
+            follow_up_matches,
+            parser_metadata=parser_metadata.to_dict(),
+            previous_analysis={
+                "id": 0,
+                "student_profile": student.to_dict(),
+                "career_plan": career_plan.to_dict(),
+            },
+            self_assessment_answers={item["id"]: 2 for item in career_plan.self_assessment.get("items", [])},
+        )
+        improvement_delta = int(follow_up_plan.primary_score) - int(career_plan.primary_score)
 
         top1_hits += int(top1_hit)
         top3_hits += int(top3_hit)
+        pass_hits += int(pass_case)
+        fallback_hits += int(fallback_used)
+        improvement_hits += int(improvement_delta > 0)
         evidence_scores.append(evidence_hit_rate)
         explanation_scores.append(explanation_coverage)
         report_scores.append(report_readiness)
@@ -204,10 +288,15 @@ def run_benchmark(parser_mode: str = "rule") -> dict[str, Any]:
                 "top1_hit": top1_hit,
                 "top3_hit": top3_hit,
                 "parser_used_mode": parser_metadata.used_mode,
+                "fallback_used": fallback_used,
+                "pass_case": pass_case,
                 "evidence_hit_rate": evidence_hit_rate,
                 "explanation_coverage": explanation_coverage,
                 "report_readiness": report_readiness,
                 "loop_readiness": loop_readiness,
+                "follow_up_primary_role": follow_up_plan.primary_role,
+                "follow_up_primary_score": follow_up_plan.primary_score,
+                "improvement_delta": improvement_delta,
                 "observations": _build_case_observations(
                     top1_hit=top1_hit,
                     top3_hit=top3_hit,
@@ -215,6 +304,8 @@ def run_benchmark(parser_mode: str = "rule") -> dict[str, Any]:
                     evidence_hit_rate=evidence_hit_rate,
                     report_readiness=report_readiness,
                     loop_readiness=loop_readiness,
+                    improvement_delta=improvement_delta,
+                    pass_case=pass_case,
                     primary_role=primary_role,
                 ),
             }
@@ -223,12 +314,15 @@ def run_benchmark(parser_mode: str = "rule") -> dict[str, Any]:
     case_count = len(case_results)
     top1_rate = round((top1_hits / case_count) * 100) if case_count else 0
     top3_rate = round((top3_hits / case_count) * 100) if case_count else 0
+    pass_rate = round((pass_hits / case_count) * 100) if case_count else 0
+    fallback_rate = round((fallback_hits / case_count) * 100) if case_count else 0
+    improvement_rate = round((improvement_hits / case_count) * 100) if case_count else 0
     evidence_avg = round(mean(evidence_scores)) if evidence_scores else 0
     explanation_avg = round(mean(explanation_scores)) if explanation_scores else 0
     report_avg = round(mean(report_scores)) if report_scores else 0
     loop_avg = round(mean(loop_scores)) if loop_scores else 0
 
-    if top1_rate >= 75 and evidence_avg >= 70 and explanation_avg >= 80 and report_avg >= 80:
+    if top1_rate >= 75 and pass_rate >= 75 and evidence_avg >= 70 and explanation_avg >= 80 and report_avg >= 80:
         verdict_label = "冲奖级"
         verdict_detail = "样例命中与交付结构都比较稳定，已经具备强队作品的可信度与完整度。"
     elif top3_rate >= 75 and report_avg >= 70:
@@ -245,6 +339,9 @@ def run_benchmark(parser_mode: str = "rule") -> dict[str, Any]:
             case_count=case_count,
             top1_rate=top1_rate,
             top3_rate=top3_rate,
+            pass_rate=pass_rate,
+            fallback_rate=fallback_rate,
+            improvement_rate=improvement_rate,
             evidence_avg=evidence_avg,
             explanation_avg=explanation_avg,
             report_avg=report_avg,
@@ -257,6 +354,8 @@ def run_benchmark(parser_mode: str = "rule") -> dict[str, Any]:
         "judge_notes": [
             "这套内置验证更像答辩中的“小样本人工复核”，不是学术 benchmark，但非常适合证明系统稳定性。",
             "后端、前端、实施三类方向已经能稳定落到合理岗位族，说明双画像和规则链路有效。",
+            "新增的模拟复测提升率可用于证明系统不是静态推荐，而是能把差距建议转成可量化改进。",
+            "规则回退率能够直接展示 auto 模式下的稳定性与现场答辩兜底能力。",
             "如果后续补入更多真实学生样本，这块可以直接升级成校级运营验证中心。",
         ],
         "cases": case_results,

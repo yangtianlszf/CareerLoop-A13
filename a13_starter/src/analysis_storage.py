@@ -37,6 +37,20 @@ def init_storage() -> None:
             )
             """
         )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS analysis_reviews (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                analysis_id INTEGER NOT NULL,
+                created_at TEXT NOT NULL,
+                reviewer_name TEXT NOT NULL,
+                reviewer_role TEXT NOT NULL,
+                decision TEXT NOT NULL,
+                notes TEXT,
+                FOREIGN KEY (analysis_id) REFERENCES analyses(id)
+            )
+            """
+        )
         conn.commit()
 
 
@@ -153,6 +167,97 @@ def get_analysis(analysis_id: int) -> dict[str, Any] | None:
     }
 
 
+def save_review(
+    *,
+    analysis_id: int,
+    reviewer_name: str,
+    reviewer_role: str,
+    decision: str,
+    notes: str,
+) -> int:
+    init_storage()
+    created_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    with _get_connection() as conn:
+        cursor = conn.execute(
+            """
+            INSERT INTO analysis_reviews (
+                analysis_id,
+                created_at,
+                reviewer_name,
+                reviewer_role,
+                decision,
+                notes
+            ) VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (
+                analysis_id,
+                created_at,
+                reviewer_name,
+                reviewer_role,
+                decision,
+                notes,
+            ),
+        )
+        conn.commit()
+        return int(cursor.lastrowid)
+
+
+def list_reviews(*, analysis_id: int | None = None, limit: int = 50) -> list[dict[str, Any]]:
+    init_storage()
+    query = """
+        SELECT
+            r.id,
+            r.analysis_id,
+            r.created_at,
+            r.reviewer_name,
+            r.reviewer_role,
+            r.decision,
+            r.notes,
+            a.student_profile_json,
+            a.career_plan_json
+        FROM analysis_reviews r
+        JOIN analyses a ON a.id = r.analysis_id
+    """
+    params: list[Any] = []
+    if analysis_id is not None:
+        query += " WHERE r.analysis_id = ?"
+        params.append(int(analysis_id))
+    query += " ORDER BY r.id DESC LIMIT ?"
+    params.append(max(1, limit))
+
+    with _get_connection() as conn:
+        rows = conn.execute(query, tuple(params)).fetchall()
+
+    items: list[dict[str, Any]] = []
+    for row in rows:
+        student_profile = json.loads(row["student_profile_json"])
+        career_plan = json.loads(row["career_plan_json"])
+        items.append(
+            {
+                "id": row["id"],
+                "analysis_id": row["analysis_id"],
+                "created_at": row["created_at"],
+                "reviewer_name": row["reviewer_name"],
+                "reviewer_role": row["reviewer_role"],
+                "decision": row["decision"],
+                "notes": row["notes"] or "",
+                "student_name": student_profile.get("name"),
+                "primary_role": career_plan.get("primary_role"),
+                "primary_score": career_plan.get("primary_score"),
+            }
+        )
+    return items
+
+
+def _latest_review_map() -> dict[int, dict[str, Any]]:
+    latest: dict[int, dict[str, Any]] = {}
+    for review in list_reviews(limit=500):
+        analysis_id = int(review["analysis_id"])
+        if analysis_id not in latest:
+            latest[analysis_id] = review
+    return latest
+
+
 def find_previous_analysis(
     *,
     student_name: str | None,
@@ -203,6 +308,93 @@ def find_previous_analysis(
     return None
 
 
+def find_similar_analyses(
+    *,
+    student_name: str | None,
+    major: str | None,
+    target_roles: list[str] | None,
+    city_preference: str | None,
+    primary_role: str | None,
+    limit: int = 3,
+) -> list[dict[str, Any]]:
+    init_storage()
+    with _get_connection() as conn:
+        rows = conn.execute(
+            """
+            SELECT *
+            FROM analyses
+            ORDER BY id DESC
+            LIMIT 80
+            """
+        ).fetchall()
+
+    latest_review_by_analysis = _latest_review_map()
+    target_role_set = {str(item).strip() for item in target_roles or [] if str(item).strip()}
+    results: list[dict[str, Any]] = []
+    for row in rows:
+        student_profile = json.loads(row["student_profile_json"])
+        career_plan = json.loads(row["career_plan_json"])
+        candidate_name = student_profile.get("name")
+        if student_name and candidate_name == student_name:
+            continue
+
+        score = 0
+        reasons: list[str] = []
+        if primary_role and career_plan.get("primary_role") == primary_role:
+            score += 40
+            reasons.append("主推荐岗位一致")
+        if major and student_profile.get("major") == major:
+            score += 26
+            reasons.append("专业背景相近")
+        if city_preference and student_profile.get("city_preference") == city_preference:
+            score += 16
+            reasons.append("城市偏好接近")
+        role_overlap = target_role_set & {
+            str(item).strip() for item in student_profile.get("target_roles", []) if str(item).strip()
+        }
+        if role_overlap:
+            score += 18
+            reasons.append("目标岗位意向重叠")
+
+        skill_overlap = len(
+            {
+                str(item).strip()
+                for item in student_profile.get("skills", [])
+                if str(item).strip()
+            }
+            & {
+                str(item).strip()
+                for item in career_plan.get("evidence_bundle", {}).get("hit_terms", [])
+                if str(item).strip()
+            }
+        )
+        if skill_overlap:
+            score += min(skill_overlap * 3, 12)
+            reasons.append(f"命中 {skill_overlap} 个相近技能词")
+
+        if score <= 0:
+            continue
+
+        latest_review = latest_review_by_analysis.get(int(row["id"]))
+        results.append(
+            {
+                "analysis_id": row["id"],
+                "student_name": candidate_name or "匿名学生",
+                "major": student_profile.get("major") or "专业未填写",
+                "primary_role": career_plan.get("primary_role") or "未生成",
+                "primary_score": career_plan.get("primary_score") or 0,
+                "created_at": row["created_at"],
+                "similarity_score": score,
+                "reasons": reasons,
+                "takeaway": "可参考其项目举证、技能补强顺序和岗位收敛策略。",
+                "review_status": latest_review.get("decision") if latest_review else "未复核",
+            }
+        )
+
+    results.sort(key=lambda item: (item["similarity_score"], item["primary_score"]), reverse=True)
+    return results[: max(1, limit)]
+
+
 def build_school_dashboard(limit: int = 80) -> dict[str, Any]:
     init_storage()
     with _get_connection() as conn:
@@ -216,6 +408,9 @@ def build_school_dashboard(limit: int = 80) -> dict[str, Any]:
             (max(1, limit),),
         ).fetchall()
 
+    latest_review_by_analysis = _latest_review_map()
+    recent_reviews = list_reviews(limit=8)
+
     if not rows:
         return {
             "summary_cards": [],
@@ -223,6 +418,8 @@ def build_school_dashboard(limit: int = 80) -> dict[str, Any]:
             "major_distribution": [],
             "city_distribution": [],
             "follow_up_students": [],
+            "review_metrics": [],
+            "recent_reviews": [],
             "advice": [],
         }
 
@@ -239,6 +436,9 @@ def build_school_dashboard(limit: int = 80) -> dict[str, Any]:
     loop_completion_total = 0
     fallback_count = 0
     llm_count = 0
+    reviewed_count = 0
+    approved_count = 0
+    revise_count = 0
 
     for row in rows:
         student_profile = json.loads(row["student_profile_json"])
@@ -254,6 +454,7 @@ def build_school_dashboard(limit: int = 80) -> dict[str, Any]:
         evaluation_metrics = career_plan.get("evaluation_metrics") or []
         loop_metric = next((item for item in evaluation_metrics if item.get("name") == "闭环完成度"), None)
         loop_completion = int(loop_metric.get("score") or 0) if loop_metric else 0
+        latest_review = latest_review_by_analysis.get(int(row["id"]))
 
         role_counter[primary_role] += 1
         major_counter[major] += 1
@@ -267,6 +468,12 @@ def build_school_dashboard(limit: int = 80) -> dict[str, Any]:
             fallback_count += 1
         if row["parser_used_mode"] == "llm":
             llm_count += 1
+        if latest_review:
+            reviewed_count += 1
+            if latest_review.get("decision") == "通过":
+                approved_count += 1
+            elif latest_review.get("decision") == "需补强":
+                revise_count += 1
 
         if primary_score >= 80:
             score_band_counter["强匹配"] += 1
@@ -285,6 +492,7 @@ def build_school_dashboard(limit: int = 80) -> dict[str, Any]:
                     "completeness": completeness,
                     "competitiveness": competitiveness,
                     "created_at": row["created_at"],
+                    "review_status": latest_review.get("decision") if latest_review else "待复核",
                 }
             )
 
@@ -309,6 +517,7 @@ def build_school_dashboard(limit: int = 80) -> dict[str, Any]:
                     "evidence_hit_rate": evidence_hit_rate,
                     "reasons": audit_reasons,
                     "created_at": row["created_at"],
+                    "review_status": latest_review.get("decision") if latest_review else "待复核",
                 }
             )
 
@@ -387,6 +596,34 @@ def build_school_dashboard(limit: int = 80) -> dict[str, Any]:
             "value": len(audit_queue),
             "detail": "聚合证据命中率偏低、画像不完整或匹配分偏低的记录。",
         },
+        {
+            "label": "已复核记录",
+            "value": reviewed_count,
+            "detail": "反映辅导员或就业老师已完成抽检、通过或退回补强的记录数量。",
+        },
+    ]
+
+    review_metrics = [
+        {
+            "label": "复核覆盖数",
+            "value": reviewed_count,
+            "detail": "已有老师留痕的分析记录数，可用于证明人机协同治理真实存在。",
+        },
+        {
+            "label": "复核通过数",
+            "value": approved_count,
+            "detail": "已确认结果可信、可直接推岗或进入下一轮服务的记录数。",
+        },
+        {
+            "label": "待补强数",
+            "value": revise_count,
+            "detail": "被老师标记为需补充证据、需继续训练或需调整岗位方向的记录数。",
+        },
+        {
+            "label": "待复核数",
+            "value": max(analysis_count - reviewed_count, 0),
+            "detail": "尚未留痕复核的记录，可进入辅导员抽检队列。",
+        },
     ]
 
     return {
@@ -398,6 +635,8 @@ def build_school_dashboard(limit: int = 80) -> dict[str, Any]:
         "follow_up_students": sorted(follow_up_students, key=lambda item: item["primary_score"])[:6],
         "audit_queue": sorted(audit_queue, key=lambda item: (item["primary_score"], item["evidence_hit_rate"]))[:6],
         "governance_metrics": governance_metrics,
+        "review_metrics": review_metrics,
+        "recent_reviews": recent_reviews,
         "service_segments": service_segments,
         "push_recommendations": push_recommendations,
         "advice": advice,

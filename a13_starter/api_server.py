@@ -16,10 +16,13 @@ from a13_starter.src.analysis_storage import (
     find_previous_analysis,
     get_analysis,
     init_storage,
+    list_reviews,
     list_analyses,
+    save_review,
     save_analysis,
 )
 from a13_starter.src.benchmark import run_benchmark
+from a13_starter.src.citation_utils import annotate_text_with_citations
 from a13_starter.src.jd_search import get_template_evidence, search_job_profiles
 from a13_starter.src.matcher import match_student_to_job
 from a13_starter.src.models import JobProfile
@@ -124,6 +127,27 @@ def _normalize_self_assessment(raw_answers: object) -> dict[str, int]:
             continue
         normalized[clean_key] = max(0, min(score, 2))
     return normalized
+
+
+def _attach_evidence_citations(matches: list[dict[str, object]], career_plan: dict[str, object]) -> None:
+    if not matches:
+        return
+    evidence_bundle = career_plan.get("evidence_bundle") if isinstance(career_plan, dict) else {}
+    for index, match in enumerate(matches):
+        if not isinstance(match, dict):
+            continue
+        preferred_terms = [
+            str(match.get("role_title", "")),
+            *[str(item) for item in match.get("shared_skills", [])[:3]],
+            *[str(item) for item in match.get("missing_skills", [])[:2]],
+        ]
+        explanation = annotate_text_with_citations(
+            str(match.get("explanation", "")),
+            evidence_bundle if index == 0 else {},
+            preferred_terms=preferred_terms,
+            max_annotations=3,
+        )
+        match["explanation"] = explanation
 
 
 class A13RequestHandler(BaseHTTPRequestHandler):
@@ -278,6 +302,19 @@ class A13RequestHandler(BaseHTTPRequestHandler):
             self._send_json(HTTPStatus.OK, {"items": list_analyses(limit=30)})
             return
 
+        if path == "/api/reviews":
+            analysis_id = query.get("analysis_id", [None])[0]
+            if analysis_id is None:
+                self._send_json(HTTPStatus.OK, {"items": list_reviews(limit=50)})
+                return
+            try:
+                parsed_id = int(analysis_id)
+            except ValueError:
+                self._send_json(HTTPStatus.BAD_REQUEST, {"error": "Invalid analysis id"})
+                return
+            self._send_json(HTTPStatus.OK, {"items": list_reviews(analysis_id=parsed_id, limit=50)})
+            return
+
         if path == "/api/school-dashboard":
             limit = int(query.get("limit", ["80"])[0])
             self._send_json(HTTPStatus.OK, build_school_dashboard(limit=limit))
@@ -298,6 +335,7 @@ class A13RequestHandler(BaseHTTPRequestHandler):
             if analysis is None:
                 self._send_json(HTTPStatus.NOT_FOUND, {"error": "Analysis not found"})
                 return
+            analysis["reviews"] = list_reviews(analysis_id=analysis_id, limit=20)
             self._send_json(HTTPStatus.OK, analysis)
             return
 
@@ -513,6 +551,7 @@ class A13RequestHandler(BaseHTTPRequestHandler):
                 parser_metadata=parser_metadata.to_dict(),
                 self_assessment_answers=self_assessment_answers,
             )
+            _attach_evidence_citations(matches, career_plan.to_dict())
             report_markdown = build_career_report_markdown(student, matches, career_plan)
             analysis_id = save_analysis(
                 sample_name=sample_name,
@@ -534,6 +573,46 @@ class A13RequestHandler(BaseHTTPRequestHandler):
                     "report_markdown": report_markdown,
                     "parser": parser_metadata.to_dict(),
                     "previous_analysis_id": previous_analysis.get("id") if previous_analysis else None,
+                },
+            )
+            return
+
+        if self.path == "/api/reviews":
+            try:
+                analysis_id = int(body.get("analysis_id", 0))
+            except (TypeError, ValueError):
+                self._send_json(HTTPStatus.BAD_REQUEST, {"error": "analysis_id is required"})
+                return
+            reviewer_name = str(body.get("reviewer_name", "")).strip()
+            reviewer_role = str(body.get("reviewer_role", "")).strip() or "辅导员"
+            decision = str(body.get("decision", "")).strip()
+            notes = str(body.get("notes", "")).strip()
+            if analysis_id <= 0:
+                self._send_json(HTTPStatus.BAD_REQUEST, {"error": "analysis_id is required"})
+                return
+            if not reviewer_name:
+                self._send_json(HTTPStatus.BAD_REQUEST, {"error": "reviewer_name is required"})
+                return
+            if decision not in {"通过", "需补强", "重点跟进"}:
+                self._send_json(HTTPStatus.BAD_REQUEST, {"error": "decision is invalid"})
+                return
+            if get_analysis(analysis_id) is None:
+                self._send_json(HTTPStatus.NOT_FOUND, {"error": "Analysis not found"})
+                return
+
+            review_id = save_review(
+                analysis_id=analysis_id,
+                reviewer_name=reviewer_name,
+                reviewer_role=reviewer_role,
+                decision=decision,
+                notes=notes,
+            )
+            self._send_json(
+                HTTPStatus.OK,
+                {
+                    "review_id": review_id,
+                    "analysis_id": analysis_id,
+                    "items": list_reviews(analysis_id=analysis_id, limit=20),
                 },
             )
             return

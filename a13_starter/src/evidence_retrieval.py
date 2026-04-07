@@ -5,6 +5,7 @@ from typing import Any
 
 from a13_starter.src.jd_search import load_all_job_rows, load_role_templates
 from a13_starter.src.models import StudentProfile
+from a13_starter.src.skill_taxonomy import expand_skill_list, normalize_skill_alias
 
 
 def _dedupe_keep_order(items: list[str]) -> list[str]:
@@ -51,12 +52,12 @@ def _build_query_terms(student: StudentProfile, primary_match: dict[str, Any], t
     terms.append(str(primary_match.get("role_title", "")))
     if template:
         terms.append(str(template.get("source_title", "")))
-        terms.extend(str(item) for item in template.get("core_skills", [])[:5])
-        terms.extend(str(item) for item in template.get("preferred_skills", [])[:3])
+        terms.extend(expand_skill_list(template.get("core_skills", [])[:5], max_per_skill=2))
+        terms.extend(expand_skill_list(template.get("preferred_skills", [])[:3], max_per_skill=2))
     terms.extend(student.target_roles[:2])
-    terms.extend(student.skills[:6])
-    terms.extend(str(item) for item in primary_match.get("shared_skills", [])[:4])
-    terms.extend(str(item) for item in primary_match.get("missing_skills", [])[:3])
+    terms.extend(expand_skill_list(student.skills[:6], max_per_skill=2))
+    terms.extend(expand_skill_list(primary_match.get("shared_skills", [])[:4], max_per_skill=2))
+    terms.extend(expand_skill_list(primary_match.get("missing_skills", [])[:3], max_per_skill=2))
     if student.city_preference:
         terms.append(student.city_preference)
     return _dedupe_keep_order(terms)
@@ -230,8 +231,8 @@ def build_grounded_evidence_bundle(
         [
             role_title,
             source_title,
-            *[str(item) for item in primary_match.get("core_skills", [])[:5]],
-            *[str(item) for item in primary_match.get("shared_skills", [])[:4]],
+            *[normalize_skill_alias(str(item)) for item in primary_match.get("core_skills", [])[:5]],
+            *[normalize_skill_alias(str(item)) for item in primary_match.get("shared_skills", [])[:4]],
         ]
     )
     hit_terms = [term for term in target_terms if term in unique_terms]

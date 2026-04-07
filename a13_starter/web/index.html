@@ -50,8 +50,9 @@
           <div class="settings-group">
             <label for="parser-mode-select">解析引擎</label>
             <select id="parser-mode-select">
-              <option value="llm">大模型深度解析</option>
-              <option value="rule">本地规则解析 (降级)</option>
+              <option value="auto">优先大模型 (降级兜底)</option>
+              <option value="llm">强制大模型深度解析</option>
+              <option value="rule">本地规则解析 (断网备用)</option>
             </select>
           </div>
 
@@ -142,6 +143,14 @@
               <div class="card-header"><h4>系统置信度评估</h4></div>
               <div id="evaluation-metrics" class="metrics-grid"></div>
             </div>
+
+            <div id="student-meta" class="hidden"></div>
+            <div id="parser-meta" class="hidden"></div>
+            <div id="completeness-score" class="hidden"></div>
+            <div id="competitiveness-score" class="hidden"></div>
+            <div id="skills-tags" class="hidden"></div>
+            <div id="soft-skills-tags" class="hidden"></div>
+            <div id="match-cards" class="hidden"></div>
           </div>
 
           <div id="tab-plan" class="tab-pane">
@@ -175,10 +184,21 @@
                   <div class="card-header"><h4>动态实战指导</h4></div>
                   <ul id="recommended-projects" class="feature-list"></ul>
                 </div>
-                <div class="card">
+                <div class="card mt-4">
                   <div class="card-header"><h4>专项补强节点</h4></div>
                   <div id="learning-sprints" class="sprints-grid"></div>
                 </div>
+              </div>
+            </div>
+
+            <div class="grid-2 mt-4">
+              <div class="card">
+                <div class="card-header"><h4>差距-收益分析</h4></div>
+                <div id="gap-benefit-grid" class="resource-grid"></div>
+              </div>
+              <div class="card">
+                <div class="card-header"><h4>计划自检</h4></div>
+                <div id="plan-self-checks" class="metric-grid"></div>
               </div>
             </div>
 
@@ -197,6 +217,9 @@
               <div class="card-header"><h4>落地资源库</h4></div>
               <div id="resource-map" class="resource-grid"></div>
             </div>
+
+            <div id="growth-path" class="hidden"></div>
+            <div id="transition-paths" class="hidden"></div>
           </div>
 
           <div id="tab-agent" class="tab-pane">
@@ -245,6 +268,12 @@
             </div>
 
             <div class="card mt-4">
+              <div class="card-header"><h4>相似案例参考</h4></div>
+              <p class="text-muted mb-2">基于全库大数据匹配的历史相似画像：</p>
+              <div id="similar-cases" class="stakeholder-grid"></div>
+            </div>
+
+            <div class="card mt-4">
               <div class="card-header"><h4>本地岗位库核查</h4></div>
               <div class="search-bar" style="display:flex; gap:12px;">
                 <input type="text" id="jd-search-input" placeholder="输入关键字 (例：Java、硬件测试...)" class="input-field" style="flex:1;" />
@@ -263,6 +292,55 @@
               <div class="card">
                 <div class="card-header"><h4>历史分析快照</h4></div>
                 <ul id="history-list" class="history-list"></ul>
+              </div>
+            </div>
+
+            <div class="grid-2 mt-4">
+              <div class="card">
+                <div class="card-header"><h4>辅导员复核指标</h4></div>
+                <p class="text-muted mb-2">人机协同治理链路留痕指标：</p>
+                <div id="school-review-metrics" class="metric-grid"></div>
+                <div id="school-recent-reviews" class="history-list mt-4"></div>
+              </div>
+
+              <div class="card">
+                <div class="card-header"><h4>执行抽检复核</h4></div>
+                <p class="text-muted mb-2">对当前规划结果进行人工审批判定：</p>
+                
+                <div class="review-form-grid" style="display:flex; flex-direction:column; gap:12px; background:var(--surface-alt); padding:16px; border-radius:8px; border:1px solid var(--border);">
+                  <p id="current-review-analysis" style="margin:0 0 12px 0; font-size:0.9rem; color:var(--text-main); font-weight:600;">暂无锁定记录</p>
+                  
+                  <div style="display:flex; gap:12px;">
+                    <div style="flex:1;">
+                      <label style="font-size:0.85rem; color:var(--text-muted); display:block; margin-bottom:4px;">复核人</label>
+                      <input id="reviewer-name-input" class="input-field" type="text" placeholder="例：张老师" />
+                    </div>
+                    <div style="flex:1;">
+                      <label style="font-size:0.85rem; color:var(--text-muted); display:block; margin-bottom:4px;">角色身份</label>
+                      <select id="reviewer-role-select" style="width:100%;">
+                        <option value="辅导员">辅导员</option>
+                        <option value="就业中心">就业中心</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style="font-size:0.85rem; color:var(--text-muted); display:block; margin-bottom:4px;">审批结论</label>
+                    <select id="review-decision-select" style="width:100%;">
+                      <option value="通过">✅ 建议通过</option>
+                      <option value="需补强">⚠️ 需打回补强</option>
+                      <option value="重点跟进">🚨 需重点跟进</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style="font-size:0.85rem; color:var(--text-muted); display:block; margin-bottom:4px;">批注与建议</label>
+                    <textarea id="review-notes-input" class="input-field" style="height:80px; resize:none; padding:8px;" placeholder="记录针对性的优化指导..."></textarea>
+                  </div>
+
+                  <button id="submit-review-btn" class="btn btn-outline full-width">确认并提交留痕</button>
+                </div>
+                <div id="review-records" class="history-list mt-4"></div>
               </div>
             </div>
 
@@ -289,6 +367,28 @@
                 <div id="technical-modules"></div>
               </div>
             </div>
+
+            <div class="hidden">
+              <div id="school-summary-cards"></div>
+              <div id="school-distribution"></div>
+              <div id="school-follow-up"></div>
+              <div id="school-service-segments"></div>
+              <div id="school-push-recommendations"></div>
+              <div id="school-governance-metrics"></div>
+              <div id="school-audit-queue"></div>
+              <div id="benchmark-summary-cards"></div>
+              <div id="benchmark-verdict"></div>
+              <div id="benchmark-cases"></div>
+              <div id="career-strengths"></div>
+              <div id="career-risks"></div>
+              <div id="product-signature"></div>
+              <div id="career-graph"></div>
+              <div id="report-preview"></div>
+              <div id="stakeholder-views"></div>
+              <div id="review-targets"></div>
+              <div id="growth-comparison"></div>
+            </div>
+
           </div>
 
         </div>
