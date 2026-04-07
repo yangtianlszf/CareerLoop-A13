@@ -109,6 +109,14 @@
               <p id="plan-overview" class="text-reading">--</p>
             </div>
 
+            <!-- 🌟 P5: AI 评审意见卡片 -->
+            <div id="ai-commentary-card" class="card mt-4 hidden" style="border-color: rgba(15,118,110,0.4); background: linear-gradient(135deg, rgba(15,118,110,0.04), var(--surface));">
+              <div class="card-header">
+                <h4>🤖 AI 评审意见 <span style="font-size: 0.8rem; font-weight: 400; color: var(--text-muted);">（由大模型实时生成）</span></h4>
+              </div>
+              <p id="ai-commentary-text" class="text-reading" style="font-style: italic; line-height: 1.8; color: var(--text-reading);"></p>
+            </div>
+
             <div class="grid-2 mt-4">
               <div class="card section-positive">
                 <h4 class="title-positive">核心竞争力</h4>
@@ -281,7 +289,17 @@
             </div>
 
             <div class="card mt-4">
-              <div class="card-header"><h4>正式诊断报告 (Markdown)</h4></div>
+              <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+                <h4>正式诊断报告 (Markdown)</h4>
+                <div style="display:flex; gap:8px;">
+                  <button id="edit-report-btn" class="btn btn-outline" style="font-size:0.85rem; padding:6px 14px;">✏️ 编辑报告</button>
+                  <button id="save-report-btn" class="btn" style="font-size:0.85rem; padding:6px 14px; display:none;">💾 保存预览</button>
+                  <button id="download-edited-btn" class="btn btn-outline" style="font-size:0.85rem; padding:6px 14px; display:none;">⬇️ 下载编辑版</button>
+                </div>
+              </div>
+              <div id="report-editor-area" style="display:none;">
+                <textarea id="report-editor" style="width:100%; min-height:400px; font-family:monospace; font-size:0.9rem; background:var(--surface-alt); border:1px solid var(--border-strong); border-radius:12px; padding:16px; color:var(--text-main); resize:vertical; box-sizing:border-box; line-height:1.6;"></textarea>
+              </div>
               <div id="report-preview" class="report-preview"></div>
             </div>
 

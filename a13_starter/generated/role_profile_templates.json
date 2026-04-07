@@ -198,7 +198,12 @@
           26
         ]
       ]
-    }
+    },
+    "innovation_ability": "能主动探索技术方案优化，有能力在现有框架基础上提出改进设计",
+    "learning_ability": "能在 1-2 周内自学新技术栈（如 Spring Cloud、Redis）并落地在项目中",
+    "stress_tolerance": "能在多版本并行开发和高频需求变更下保持代码质量和交付节奏",
+    "communication_ability": "能与产品、测试、运维清晰沟通技术方案，参与需求评审",
+    "internship_ability": "具备参与正式项目联调、接口对接和代码评审的工程实践能力"
   },
   {
     "source_title": "C/C++",
@@ -397,7 +402,12 @@
           18
         ]
       ]
-    }
+    },
+    "innovation_ability": "能在底层模块或性能瓶颈处主动提出优化方案，有能力尝试新的数据结构与算法",
+    "learning_ability": "能快速掌握新的系统接口、通信协议或硬件平台并完成适配开发",
+    "stress_tolerance": "能在底层调试和不稳定硬件环境下保持专注，承受反复排查压力",
+    "communication_ability": "能向硬件工程师和测试工程师清晰说明接口设计和调试结论",
+    "internship_ability": "具备参与实际工程项目的调试、移植和验证能力"
   },
   {
     "source_title": "前端开发",
@@ -594,7 +604,12 @@
           8
         ]
       ]
-    }
+    },
+    "innovation_ability": "能在 UI 交互和用户体验层面主动提出改进建议，探索新的组件设计方式",
+    "learning_ability": "能快速上手新前端框架（如 Vue3、React18）并在项目中稳定使用",
+    "stress_tolerance": "能在多浏览器兼容性问题和高频页面迭代下保持交付质量",
+    "communication_ability": "能与产品和设计师对齐交互细节，清晰表达前端技术限制与可行方案",
+    "internship_ability": "具备参与真实项目页面开发、接口联调和上线部署的能力"
   },
   {
     "source_title": "实施工程师",
@@ -791,7 +806,12 @@
           8
         ]
       ]
-    }
+    },
+    "innovation_ability": "能在现场实施过程中主动总结问题规律，优化交付流程和培训方案",
+    "learning_ability": "能快速理解客户业务系统，掌握新系统的部署方式和配置逻辑",
+    "stress_tolerance": "能在高强度出差、紧急上线和客户投诉场景下保持专业和效率",
+    "communication_ability": "能向非技术客户清晰讲解系统操作，化解现场冲突和需求分歧",
+    "internship_ability": "具备参与系统上线、数据迁移和用户培训的现场实操能力"
   },
   {
     "source_title": "技术支持工程师",
@@ -988,7 +1008,12 @@
           9
         ]
       ]
-    }
+    },
+    "innovation_ability": "能从重复问题中提炼规律，主动建立知识库和标准化排障流程",
+    "learning_ability": "能快速学习新产品的技术原理和常见故障处理方法",
+    "stress_tolerance": "能在高频工单和客户紧急求助下保持冷静，稳步定位和解决问题",
+    "communication_ability": "能在电话、现场和远程场景中高效与客户沟通，传达解决方案",
+    "internship_ability": "具备参与实际客户支持工作、独立处理常见故障工单的能力"
   },
   {
     "source_title": "测试工程师",
@@ -1187,7 +1212,12 @@
           10
         ]
       ]
-    }
+    },
+    "innovation_ability": "能主动设计边界测试场景，尝试引入自动化工具提升测试覆盖率",
+    "learning_ability": "能快速学习新业务逻辑和测试工具，在新项目中短期内上手测试工作",
+    "stress_tolerance": "能在版本发布前高强度测试窗口期保持用例质量和缺陷跟踪准确性",
+    "communication_ability": "能与开发清晰描述缺陷复现步骤，与产品对齐验收标准",
+    "internship_ability": "具备参与完整测试闭环（设计、执行、缺陷跟踪、回归）的实际能力"
   },
   {
     "source_title": "软件测试",
@@ -1387,7 +1417,12 @@
           9
         ]
       ]
-    }
+    },
+    "innovation_ability": "能探索并落地 CI/CD 中的自动化测试集成方案，提升测试流水线效率",
+    "learning_ability": "能快速掌握 Selenium、Pytest、JMeter 等自动化工具并应用于项目",
+    "stress_tolerance": "能在发布节点压力下同时覆盖功能测试、回归测试和接口测试任务",
+    "communication_ability": "能以测试报告和缺陷分析的形式向团队清晰汇报质量风险",
+    "internship_ability": "具备完成至少一个完整自动化测试用例集并输出测试报告的能力"
   },
   {
     "source_title": "硬件测试",
@@ -1586,7 +1621,12 @@
           6
         ]
       ]
-    }
+    },
+    "innovation_ability": "能主动设计新的硬件测试方案，尝试提升测试覆盖率和定位效率",
+    "learning_ability": "能快速学习新硬件平台的测试规范和调试工具链",
+    "stress_tolerance": "能在设备不稳定、长时间测试和多批次并行验证环境下保持严谨",
+    "communication_ability": "能与硬件设计工程师有效对接，清晰描述测试结论和失效模式",
+    "internship_ability": "具备在实验室环境中独立完成硬件功能测试和稳定性验证的能力"
   },
   {
     "source_title": "质量管理/测试",
@@ -1769,7 +1809,12 @@
           2
         ]
       ]
-    }
+    },
+    "innovation_ability": "能主动改进质量管理流程，引入数据驱动的质量分析方法",
+    "learning_ability": "能快速学习新的质量标准和管理工具，并推动在团队中落地",
+    "stress_tolerance": "能在质量问题紧急处置和多线并行整改中保持系统化思维",
+    "communication_ability": "能向生产、研发和管理层清晰汇报质量风险和改进建议",
+    "internship_ability": "具备参与质量评审、缺陷闭环跟踪和整改验证的完整实操能力"
   },
   {
     "source_title": "产品专员/助理",
@@ -1964,6 +2009,826 @@
         ],
         [
           "深圳-宝安区",
+          2
+        ]
+      ]
+    },
+    "innovation_ability": "能从用户反馈和数据中发现产品改进机会，主动提出功能迭代方向",
+    "learning_ability": "能快速理解业务背景和用户需求，学习原型设计和数据分析工具",
+    "stress_tolerance": "能在需求频繁变动和跨部门协作压力下保持文档质量和项目推进",
+    "communication_ability": "能向技术团队清晰表达产品需求，向业务团队传达技术约束",
+    "internship_ability": "具备独立完成一份 PRD、原型图或用户调研报告的能力"
+  },
+  {
+    "source_title": "销售工程师",
+    "canonical_title": "售前工程师",
+    "role_family": "销售技术",
+    "dataset_job_count": 147,
+    "summary": "负责客户需求调研、技术方案讲解和售前支持，需要同时具备技术理解能力和商务沟通能力，是技术与销售结合的代表岗位。",
+    "core_skills": [
+      "方案设计",
+      "商务谈判",
+      "需求分析",
+      "PPT",
+      "Excel"
+    ],
+    "preferred_skills": [
+      "CRM",
+      "ERP",
+      "项目管理",
+      "SQL",
+      "Python",
+      "数据分析"
+    ],
+    "soft_skills": [
+      "沟通",
+      "客户关系",
+      "表达能力",
+      "抗压",
+      "学习能力",
+      "责任心",
+      "执行力",
+      "分析能力"
+    ],
+    "certificates": [
+      "英语四级",
+      "普通话证书"
+    ],
+    "education_requirement": "本科",
+    "experience_requirement": "应届可投，强调商务沟通和方案表达能力",
+    "typical_industries": [
+      "工业自动化",
+      "仪器仪表制造",
+      "电气机械/电力设备",
+      "人工智能",
+      "IT服务"
+    ],
+    "typical_cities": [
+      "上海-徐汇区",
+      "深圳-南山区",
+      "北京-朝阳区",
+      "广州-天河区",
+      "杭州-滨江区"
+    ],
+    "sample_salary_ranges": [
+      "9000-18000元",
+      "7000-14000元",
+      "1.5-2.5万",
+      "1-2万",
+      "8000-15000元"
+    ],
+    "vertical_growth_path": [
+      "售前工程师",
+      "高级售前工程师",
+      "解决方案架构师",
+      "销售总监/大客户经理"
+    ],
+    "transition_paths": [
+      "技术支持工程师",
+      "实施工程师",
+      "产品助理"
+    ],
+    "match_weights": {
+      "basic_requirements": 0.2,
+      "professional_skills": 0.3,
+      "professional_literacy": 0.3,
+      "growth_potential": 0.2
+    },
+    "innovation_ability": "能主动研究行业趋势，将新技术方案转化为有说服力的客户价值主张",
+    "learning_ability": "能快速学习新产品知识和行业背景，在短期内输出专业的技术方案",
+    "stress_tolerance": "能在商务谈判压力和客户拒绝情境下保持积极，持续跟进潜在机会",
+    "communication_ability": "能向不同层级的客户（技术/业务/决策层）定制化讲解解决方案",
+    "internship_ability": "具备参与方案整理、客户拜访跟进和演示准备的实际操作能力",
+    "dataset_evidence": {
+      "top_skills": [
+        [
+          "商务谈判",
+          17
+        ],
+        [
+          "方案设计",
+          4
+        ],
+        [
+          "项目管理",
+          4
+        ],
+        [
+          "ERP",
+          3
+        ],
+        [
+          "Excel",
+          2
+        ],
+        [
+          "PPT",
+          2
+        ],
+        [
+          "CRM",
+          2
+        ]
+      ],
+      "top_soft_skills": [
+        [
+          "沟通",
+          80
+        ],
+        [
+          "客户关系",
+          39
+        ],
+        [
+          "抗压",
+          25
+        ],
+        [
+          "表达能力",
+          24
+        ],
+        [
+          "学习能力",
+          22
+        ],
+        [
+          "责任心",
+          20
+        ]
+      ],
+      "top_industries": [
+        [
+          "工业自动化",
+          4
+        ],
+        [
+          "仪器仪表制造",
+          5
+        ],
+        [
+          "电气机械/电力设备",
+          4
+        ]
+      ],
+      "top_cities": [
+        [
+          "上海-徐汇区",
+          5
+        ],
+        [
+          "深圳-南山区",
+          4
+        ],
+        [
+          "北京-朝阳区",
+          3
+        ]
+      ]
+    }
+  },
+  {
+    "source_title": "项目专员/助理",
+    "canonical_title": "项目专员",
+    "role_family": "项目管理",
+    "dataset_job_count": 147,
+    "summary": "负责项目计划跟进、文档整理、跨部门协调和进度汇报，是培养项目管理能力的入门岗位，适合组织协调型学生。",
+    "core_skills": [
+      "项目管理",
+      "Excel",
+      "Word",
+      "PPT"
+    ],
+    "preferred_skills": [
+      "数据库",
+      "ERP",
+      "Visio",
+      "需求分析",
+      "SQL",
+      "Python"
+    ],
+    "soft_skills": [
+      "沟通",
+      "责任心",
+      "执行力",
+      "团队协作",
+      "表达能力",
+      "抗压",
+      "学习能力",
+      "分析能力"
+    ],
+    "certificates": [
+      "英语四级",
+      "PMP（加分项）"
+    ],
+    "education_requirement": "本科",
+    "experience_requirement": "应届优先，有组织协调或项目辅助经历更佳",
+    "typical_industries": [
+      "专业技术服务",
+      "咨询服务",
+      "互联网",
+      "计算机软件",
+      "人力资源服务"
+    ],
+    "typical_cities": [
+      "南京-建邺区",
+      "西安-长安区",
+      "北京-朝阳区",
+      "上海-浦东新区",
+      "杭州-西湖区"
+    ],
+    "sample_salary_ranges": [
+      "6000-7000元·13薪",
+      "5000-8000元",
+      "6000-9000元",
+      "5000-7000元",
+      "7000-10000元"
+    ],
+    "vertical_growth_path": [
+      "项目专员",
+      "项目主管",
+      "项目经理",
+      "高级项目经理/PMP"
+    ],
+    "transition_paths": [
+      "实施工程师",
+      "产品助理",
+      "售前工程师"
+    ],
+    "match_weights": {
+      "basic_requirements": 0.2,
+      "professional_skills": 0.3,
+      "professional_literacy": 0.3,
+      "growth_potential": 0.2
+    },
+    "innovation_ability": "能主动发现项目流程中的低效环节，提出优化建议并推动改进落地",
+    "learning_ability": "能快速适应不同类型项目的工作模式，学习新的项目管理工具和方法",
+    "stress_tolerance": "能在多项目并行和节点压力下保持文档质量和沟通响应速度",
+    "communication_ability": "能在跨部门协调中清晰传递进度风险，推动关键决策快速达成",
+    "internship_ability": "具备协助完整项目周期（启动、执行、收尾）的文档和协调工作能力",
+    "dataset_evidence": {
+      "top_skills": [
+        [
+          "项目管理",
+          32
+        ],
+        [
+          "Excel",
+          20
+        ],
+        [
+          "Word",
+          15
+        ],
+        [
+          "PPT",
+          14
+        ],
+        [
+          "数据库",
+          4
+        ],
+        [
+          "ERP",
+          3
+        ]
+      ],
+      "top_soft_skills": [
+        [
+          "沟通",
+          79
+        ],
+        [
+          "责任心",
+          36
+        ],
+        [
+          "抗压",
+          18
+        ],
+        [
+          "团队协作",
+          17
+        ],
+        [
+          "表达能力",
+          12
+        ],
+        [
+          "学习能力",
+          12
+        ]
+      ],
+      "top_industries": [
+        [
+          "专业技术服务",
+          5
+        ],
+        [
+          "咨询服务",
+          5
+        ],
+        [
+          "互联网",
+          4
+        ]
+      ],
+      "top_cities": [
+        [
+          "南京-建邺区",
+          3
+        ],
+        [
+          "西安-长安区",
+          3
+        ],
+        [
+          "北京-朝阳区",
+          2
+        ]
+      ]
+    }
+  },
+  {
+    "source_title": "项目经理/主管",
+    "canonical_title": "项目经理",
+    "role_family": "项目管理",
+    "dataset_job_count": 82,
+    "summary": "负责项目全生命周期管理、资源协调、风险把控和客户关系维护，是较高层级的综合管理岗位，需要较强的技术理解和组织领导力。",
+    "core_skills": [
+      "项目管理",
+      "需求分析",
+      "方案设计",
+      "PMP",
+      "Excel"
+    ],
+    "preferred_skills": [
+      "AutoCAD",
+      "ERP",
+      "SQL",
+      "商务谈判",
+      "数据分析",
+      "Word"
+    ],
+    "soft_skills": [
+      "沟通",
+      "责任心",
+      "抗压",
+      "团队协作",
+      "客户关系",
+      "表达能力",
+      "执行力",
+      "分析能力"
+    ],
+    "certificates": [
+      "PMP",
+      "英语四级"
+    ],
+    "education_requirement": "本科",
+    "experience_requirement": "通常需要 1-3 年相关经验，应届生可从项目专员晋升",
+    "typical_industries": [
+      "计算机软件",
+      "IT服务",
+      "互联网",
+      "工业自动化",
+      "通信/网络设备"
+    ],
+    "typical_cities": [
+      "南京-玄武区",
+      "北京-朝阳区",
+      "上海-浦东新区",
+      "深圳-南山区",
+      "杭州-滨江区"
+    ],
+    "sample_salary_ranges": [
+      "6000-12000元·13薪",
+      "7000-14000元",
+      "1-1.2万",
+      "1.2-2万",
+      "8000-15000元"
+    ],
+    "vertical_growth_path": [
+      "项目专员",
+      "项目经理",
+      "高级项目经理",
+      "项目总监/PMO负责人"
+    ],
+    "transition_paths": [
+      "产品助理",
+      "实施工程师",
+      "售前工程师"
+    ],
+    "match_weights": {
+      "basic_requirements": 0.25,
+      "professional_skills": 0.3,
+      "professional_literacy": 0.25,
+      "growth_potential": 0.2
+    },
+    "innovation_ability": "能在项目执行中探索更高效的管理方法论，推动团队能力和流程持续提升",
+    "learning_ability": "能快速理解行业背景和客户需求，学习领域知识以支持技术方案决策",
+    "stress_tolerance": "能在多方利益博弈和进度偏差场景下保持清晰决策和专业推进",
+    "communication_ability": "能与客户高层、技术团队和内部管理层进行多层次、高效率的沟通",
+    "internship_ability": "具备独立承担项目某一阶段的计划制定、进度管控和汇报交付能力",
+    "dataset_evidence": {
+      "top_skills": [
+        [
+          "项目管理",
+          35
+        ],
+        [
+          "PMP",
+          5
+        ],
+        [
+          "方案设计",
+          4
+        ],
+        [
+          "需求分析",
+          3
+        ],
+        [
+          "Word",
+          3
+        ],
+        [
+          "Excel",
+          2
+        ]
+      ],
+      "top_soft_skills": [
+        [
+          "沟通",
+          48
+        ],
+        [
+          "责任心",
+          17
+        ],
+        [
+          "抗压",
+          14
+        ],
+        [
+          "团队协作",
+          11
+        ],
+        [
+          "客户关系",
+          9
+        ],
+        [
+          "表达能力",
+          8
+        ]
+      ],
+      "top_industries": [
+        [
+          "计算机软件",
+          3
+        ],
+        [
+          "IT服务",
+          3
+        ],
+        [
+          "互联网",
+          2
+        ]
+      ],
+      "top_cities": [
+        [
+          "南京-玄武区",
+          2
+        ],
+        [
+          "北京-朝阳区",
+          2
+        ],
+        [
+          "上海-浦东新区",
+          1
+        ]
+      ]
+    }
+  },
+  {
+    "source_title": "软件测试",
+    "canonical_title": "测试开发工程师",
+    "role_family": "测试开发",
+    "dataset_job_count": 456,
+    "summary": "具备开发能力的测试专家，能构建自动化测试框架、持续集成平台和测试工具，是测试与研发双向贯通的高价值岗位。",
+    "core_skills": [
+      "Python",
+      "Java",
+      "Selenium",
+      "自动化测试",
+      "SQL",
+      "Linux",
+      "Jenkins"
+    ],
+    "preferred_skills": [
+      "Docker",
+      "Git",
+      "接口测试",
+      "性能测试",
+      "Postman",
+      "JMeter",
+      "pytest",
+      "Spring Boot"
+    ],
+    "soft_skills": [
+      "沟通",
+      "责任心",
+      "学习能力",
+      "团队协作",
+      "分析能力",
+      "表达能力",
+      "执行力",
+      "抗压"
+    ],
+    "certificates": [
+      "英语四级",
+      "软件测试相关认证"
+    ],
+    "education_requirement": "本科",
+    "experience_requirement": "应届优先，有自动化测试项目或 CI 搭建经验更佳",
+    "typical_industries": [
+      "计算机软件",
+      "互联网",
+      "IT服务",
+      "企业服务",
+      "人工智能"
+    ],
+    "typical_cities": [
+      "北京-海淀区",
+      "上海-浦东新区",
+      "深圳-南山区",
+      "杭州-滨江区",
+      "成都-武侯区"
+    ],
+    "sample_salary_ranges": [
+      "1-1.5万",
+      "1.2-2万",
+      "8000-12000元",
+      "1-1.8万·13薪",
+      "1.5-2.5万"
+    ],
+    "vertical_growth_path": [
+      "软件测试工程师",
+      "自动化测试工程师",
+      "测试开发工程师",
+      "测试架构师/质量平台负责人"
+    ],
+    "transition_paths": [
+      "Java开发工程师",
+      "软件测试工程师",
+      "质量工程师"
+    ],
+    "match_weights": {
+      "basic_requirements": 0.2,
+      "professional_skills": 0.4,
+      "professional_literacy": 0.2,
+      "growth_potential": 0.2
+    },
+    "innovation_ability": "能主动探索测试工具链和测试平台建设，将手工测试系统性地转为自动化",
+    "learning_ability": "能快速学习新的测试框架和 CI/CD 工具，并在项目中实践落地",
+    "stress_tolerance": "能在多项目并行发布和高频回归测试需求下保持自动化覆盖和质量稳定",
+    "communication_ability": "能向研发团队清晰说明自动化覆盖策略，与产品对齐测试范围",
+    "internship_ability": "具备搭建基础自动化测试用例集、对接 CI 流水线并输出测试报告的能力",
+    "dataset_evidence": {
+      "top_skills": [
+        [
+          "测试用例",
+          227
+        ],
+        [
+          "自动化测试",
+          102
+        ],
+        [
+          "Python",
+          87
+        ],
+        [
+          "Selenium",
+          50
+        ],
+        [
+          "Java",
+          43
+        ],
+        [
+          "Linux",
+          36
+        ],
+        [
+          "性能测试",
+          38
+        ]
+      ],
+      "top_soft_skills": [
+        [
+          "沟通",
+          154
+        ],
+        [
+          "责任心",
+          55
+        ],
+        [
+          "学习能力",
+          46
+        ],
+        [
+          "团队协作",
+          41
+        ],
+        [
+          "分析能力",
+          14
+        ]
+      ],
+      "top_industries": [
+        [
+          "计算机软件",
+          256
+        ],
+        [
+          "企业服务",
+          69
+        ],
+        [
+          "互联网",
+          56
+        ]
+      ],
+      "top_cities": [
+        [
+          "北京-海淀区",
+          19
+        ],
+        [
+          "深圳-龙岗区",
+          18
+        ],
+        [
+          "西安-雁塔区",
+          21
+        ]
+      ]
+    }
+  },
+  {
+    "source_title": "产品专员/助理",
+    "canonical_title": "运营专员",
+    "role_family": "运营",
+    "dataset_job_count": 147,
+    "summary": "负责产品运营、内容策划、数据分析和用户增长，是互联网和电商行业的常见入门岗位，适合善于分析和内容创作的学生。",
+    "core_skills": [
+      "数据分析",
+      "Excel",
+      "PPT",
+      "内容运营",
+      "用户运营"
+    ],
+    "preferred_skills": [
+      "Python",
+      "SQL",
+      "Photoshop",
+      "社区运营",
+      "SEO",
+      "短视频运营",
+      "项目管理"
+    ],
+    "soft_skills": [
+      "沟通",
+      "创新",
+      "学习能力",
+      "分析能力",
+      "执行力",
+      "责任心",
+      "表达能力",
+      "团队协作"
+    ],
+    "certificates": [
+      "英语四级",
+      "数据分析相关证书"
+    ],
+    "education_requirement": "本科",
+    "experience_requirement": "应届优先，有运营实习或自媒体经历更佳",
+    "typical_industries": [
+      "互联网",
+      "电子商务",
+      "游戏",
+      "社交媒体",
+      "快速消费品"
+    ],
+    "typical_cities": [
+      "北京-朝阳区",
+      "上海-静安区",
+      "深圳-南山区",
+      "杭州-余杭区",
+      "广州-天河区"
+    ],
+    "sample_salary_ranges": [
+      "5000-8000元",
+      "6000-9000元",
+      "7000-10000元",
+      "4000-7000元",
+      "6000-10000元"
+    ],
+    "vertical_growth_path": [
+      "运营助理",
+      "运营专员",
+      "高级运营专员",
+      "运营经理"
+    ],
+    "transition_paths": [
+      "产品助理",
+      "项目专员",
+      "内容策划"
+    ],
+    "match_weights": {
+      "basic_requirements": 0.2,
+      "professional_skills": 0.3,
+      "professional_literacy": 0.3,
+      "growth_potential": 0.2
+    },
+    "innovation_ability": "能主动策划创意活动和内容方向，用新思路驱动用户增长和留存提升",
+    "learning_ability": "能快速学习平台规则、数据工具和行业趋势，适应快节奏迭代",
+    "stress_tolerance": "能在活动高峰期和数据指标压力下保持创作质量和执行效率",
+    "communication_ability": "能与设计、研发、市场团队高效协作，清晰传达运营需求和活动规则",
+    "internship_ability": "具备独立策划一次运营活动或完成一份用户数据分析报告的能力",
+    "dataset_evidence": {
+      "top_skills": [
+        [
+          "数据分析",
+          14
+        ],
+        [
+          "项目管理",
+          3
+        ],
+        [
+          "Excel",
+          5
+        ],
+        [
+          "PPT",
+          4
+        ],
+        [
+          "SQL",
+          2
+        ]
+      ],
+      "top_soft_skills": [
+        [
+          "沟通",
+          35
+        ],
+        [
+          "责任心",
+          15
+        ],
+        [
+          "分析能力",
+          9
+        ],
+        [
+          "学习能力",
+          8
+        ],
+        [
+          "团队协作",
+          8
+        ]
+      ],
+      "top_industries": [
+        [
+          "互联网",
+          4
+        ],
+        [
+          "电子商务",
+          3
+        ],
+        [
+          "游戏",
+          2
+        ]
+      ],
+      "top_cities": [
+        [
+          "北京-朝阳区",
+          3
+        ],
+        [
+          "上海-静安区",
+          2
+        ],
+        [
+          "杭州-余杭区",
           2
         ]
       ]

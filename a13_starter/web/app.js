@@ -1202,7 +1202,12 @@ const dom = {
   currentReviewAnalysis: getEl("current-review-analysis"), reviewerNameInput: getEl("reviewer-name-input"), reviewerRoleSelect: getEl("reviewer-role-select"),
   reviewDecisionSelect: getEl("review-decision-select"), reviewNotesInput: getEl("review-notes-input"), submitReviewBtn: getEl("submit-review-btn"),
   reviewRecords: getEl("review-records"), reportPreview: getEl("report-preview"), printPdfBtn: getEl("print-pdf-btn"),
-  sysStatusBtn: getEl("system-status-btn"), mockNotif: getEl("mock-notification")
+  sysStatusBtn: getEl("system-status-btn"), mockNotif: getEl("mock-notification"),
+  // 🌟 P3: 报告内联编辑
+  editReportBtn: getEl("edit-report-btn"), saveReportBtn: getEl("save-report-btn"),
+  downloadEditedBtn: getEl("download-edited-btn"), reportEditorArea: getEl("report-editor-area"), reportEditor: getEl("report-editor"),
+  // 🌟 P5: AI 评审意见
+  aiCommentaryCard: getEl("ai-commentary-card"), aiCommentaryText: getEl("ai-commentary-text"),
 };
 
 // ==========================================
@@ -1472,6 +1477,21 @@ function renderResults(data) {
   if (data.career_plan?.evidence_bundle) renderGroundedEvidence(data.career_plan.evidence_bundle);
   if (dom.reportPreview) dom.reportPreview.innerHTML = renderMarkdownPreview(state.currentReport);
 
+  // 🌟 P5: 渲染 AI 评审意见
+  const commentary = data.career_plan?.ai_match_commentary;
+  if (commentary && commentary.trim() && dom.aiCommentaryCard && dom.aiCommentaryText) {
+    dom.aiCommentaryText.textContent = commentary.trim();
+    dom.aiCommentaryCard.classList.remove("hidden");
+  } else if (dom.aiCommentaryCard) {
+    dom.aiCommentaryCard.classList.add("hidden");
+  }
+
+  // 🌟 P3: 重置编辑器状态
+  if (dom.reportEditorArea) dom.reportEditorArea.style.display = "none";
+  if (dom.editReportBtn) dom.editReportBtn.style.display = "";
+  if (dom.saveReportBtn) dom.saveReportBtn.style.display = "none";
+  if (dom.downloadEditedBtn) dom.downloadEditedBtn.style.display = "none";
+
   // 切回总览并滚动到顶
   document.querySelector('.tab-btn[data-target="tab-overview"]')?.click();
   dom.resultsContent?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -1544,6 +1564,50 @@ if (dom.uploadFileBtn) dom.uploadFileBtn.addEventListener("click", () => dom.res
 if (dom.resumeFileInput) {
   dom.resumeFileInput.addEventListener("change", () => {
     if (dom.resumeFileInput.files.length > 0) uploadResumeFile();
+  });
+}
+
+// ==========================================
+// 🌟 P3: 报告内联编辑功能
+// ==========================================
+if (dom.editReportBtn) {
+  dom.editReportBtn.addEventListener("click", () => {
+    if (!state.currentReport) return setStatus("还没有报告内容，请先生成分析结果", "error");
+    if (dom.reportEditor) dom.reportEditor.value = state.currentReport;
+    if (dom.reportEditorArea) dom.reportEditorArea.style.display = "block";
+    if (dom.reportPreview) dom.reportPreview.style.display = "none";
+    if (dom.editReportBtn) dom.editReportBtn.style.display = "none";
+    if (dom.saveReportBtn) dom.saveReportBtn.style.display = "";
+    if (dom.downloadEditedBtn) dom.downloadEditedBtn.style.display = "";
+    setStatus("已进入编辑模式，直接修改报告内容后点击保存预览", "success");
+  });
+}
+
+if (dom.saveReportBtn) {
+  dom.saveReportBtn.addEventListener("click", () => {
+    const editedContent = dom.reportEditor?.value || "";
+    state.currentReport = editedContent;
+    if (dom.reportPreview) {
+      dom.reportPreview.innerHTML = renderMarkdownPreview(editedContent);
+      dom.reportPreview.style.display = "";
+    }
+    if (dom.reportEditorArea) dom.reportEditorArea.style.display = "none";
+    if (dom.editReportBtn) dom.editReportBtn.style.display = "";
+    if (dom.saveReportBtn) dom.saveReportBtn.style.display = "none";
+    setStatus("编辑已保存，报告已重新渲染", "success");
+  });
+}
+
+if (dom.downloadEditedBtn) {
+  dom.downloadEditedBtn.addEventListener("click", () => {
+    const content = dom.reportEditor?.value || state.currentReport;
+    if (!content) return setStatus("没有可下载的报告内容", "error");
+    const blob = new Blob([content], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url; link.download = "career_plan_edited.md";
+    link.click(); URL.revokeObjectURL(url);
+    setStatus("已编辑的报告已下载到本地", "success");
   });
 }
 

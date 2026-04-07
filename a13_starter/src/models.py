@@ -127,6 +127,7 @@ class CareerPlan:
     evidence_bundle: dict[str, Any] = field(default_factory=dict)
     service_scenarios: list[str] = field(default_factory=list)
     product_signature: str = ""
+    ai_match_commentary: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

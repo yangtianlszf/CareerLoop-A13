@@ -116,6 +116,35 @@ def apply_agent_answers(student: StudentProfile, answers: dict[str, str] | None)
     return refresh_student_profile_metrics(student)
 
 
+def _generate_ai_match_commentary(
+    role_title: str,
+    score: int,
+    strengths: list[str],
+    missing_skills: list[str],
+) -> str:
+    """调用大模型为 Top1 匹配岗位生成 2-3 句 AI 评审意见，增强 LLM 存在感"""
+    system_prompt = (
+        "你是一位专业的职业规划评审专家。请根据学生与目标岗位的匹配情况，"
+        "用 2-3 句话写出简洁、专业的 AI 评审意见。语气肯定而务实，"
+        "要指出当前优势并点明最关键的提升方向，不要说废话，不要重复数字。"
+    )
+    strengths_str = "、".join(strengths[:2]) if strengths else "有一定基础能力"
+    gaps_str = "、".join(missing_skills[:2]) if missing_skills else "综合能力有待打磨"
+    user_prompt = (
+        f"目标岗位：{role_title}，当前匹配分：{score} 分。\n"
+        f"已验证优势：{strengths_str}。\n"
+        f"关键差距：{gaps_str}。\n"
+        f"请给出你的 AI 评审意见（2-3 句话）。"
+    )
+    try:
+        client = OpenAIResponsesClient()
+        result = client.chat(system_prompt=system_prompt, user_prompt=user_prompt)
+        return str(result).strip() if result else ""
+    except Exception as e:
+        print(f"AI 评审意见生成失败，将跳过显示: {e}")
+        return ""
+
+
 # 🌟 新增：动态大模型规划引擎，用于消灭硬编码
 def _generate_dynamic_role_guidance(role_title: str, missing_skills: list[str]) -> dict[str, Any]:
     """利用大模型动态生成个性化的项目建议和自测题，消灭硬编码"""
@@ -187,6 +216,10 @@ def _project_suggestions_for_role(role_title: str) -> list[str]:
             "基于接口文档写自动化测试脚本",
             "整理一份完整的测试计划、测试用例和缺陷报告",
         ],
+        "测试开发工程师": [
+            "搭建一套 Python + Selenium/Pytest 的自动化测试框架，并接入 Jenkins CI",
+            "输出完整的测试报告和接口自动化覆盖率数据",
+        ],
         "实施工程师": [
             "做一份系统部署与用户培训手册",
             "补一份上线问题排查清单和交付演示文档",
@@ -210,6 +243,22 @@ def _project_suggestions_for_role(role_title: str) -> list[str]:
         "产品助理": [
             "做一套 PRD、原型图和需求优先级说明",
             "补一份用户访谈或问卷分析摘要",
+        ],
+        "售前工程师": [
+            "做一份面向客户的技术解决方案 PPT 和演示材料",
+            "整理一个客户需求调研报告和对应的方案建议书",
+        ],
+        "项目专员": [
+            "做一份完整的项目计划表（含里程碑、风险和资源分配）",
+            "整理一份跨部门协调会议纪要和行动项跟踪表",
+        ],
+        "项目经理": [
+            "完成一个包含需求分析、进度管理和风险控制的完整项目复盘报告",
+            "准备一份用于答辩或交付的项目总结 PPT，突出成果和经验沉淀",
+        ],
+        "运营专员": [
+            "策划并模拟执行一次用户活动，输出活动方案、执行记录和数据复盘",
+            "做一份基于真实数据的用户行为分析报告，给出运营建议",
         ],
     }
     return role_map.get(
@@ -621,6 +670,26 @@ def _assessment_tasks_for_role(role_title: str) -> list[str]:
             "完成 8 道系统部署、排障、培训交付场景题自测。",
             "准备一份上线部署流程和问题处理清单口述版。",
         ],
+        "售前工程师": [
+            "完成 8 道客户需求调研、方案设计和商务沟通场景题自测。",
+            "准备一份完整的解决方案 PPT 讲解稿，含需求分析、方案亮点和落地建议。",
+        ],
+        "项目专员": [
+            "完成 8 道项目计划制定、风险跟踪和跨部门沟通场景题自测。",
+            "准备一份项目计划表和会议纪要模板，并练习 3 分钟口头汇报。",
+        ],
+        "项目经理": [
+            "完成 10 道项目立项、进度管理、风险控制和干系人沟通场景题自测。",
+            "针对一个完整项目准备 STAR 法复盘讲稿，说清楚范围、计划、执行和结果。",
+        ],
+        "测试开发工程师": [
+            "完成 10 道 Python / Pytest / Selenium / CI 流水线场景题自测。",
+            "准备一个自动化测试框架搭建或 CI/CD 接入案例的讲解稿。",
+        ],
+        "运营专员": [
+            "完成 8 道用户增长、活动策划、数据分析和内容运营场景题自测。",
+            "准备一份活动方案或数据复盘报告，并练习向评委讲清楚运营目标和结果。",
+        ],
     }
     return role_map.get(
         role_title,
@@ -652,6 +721,31 @@ def _self_assessment_questions_for_role(role_title: str) -> list[dict[str, str]]
             {"id": "deployment", "prompt": "你现在独立完成系统部署、配置和基础排障的把握程度如何？", "focus": "部署实施"},
             {"id": "delivery", "prompt": "面对客户培训或交付场景，你的把握程度如何？", "focus": "交付表达"},
             {"id": "project_pitch", "prompt": "你能否讲清一个实施/交付案例中的问题与解决过程？", "focus": "项目表达"},
+        ],
+        "售前工程师": [
+            {"id": "solution_design", "prompt": "你现在独立完成客户需求调研和技术方案设计的把握程度如何？", "focus": "方案设计"},
+            {"id": "presentation", "prompt": "你能否在 10 分钟内用 PPT 向客户清晰介绍一套解决方案？", "focus": "演示表达"},
+            {"id": "project_pitch", "prompt": "你能否讲清一个客户沟通或方案交付案例中的挑战与结果？", "focus": "项目表达"},
+        ],
+        "项目专员": [
+            {"id": "plan_management", "prompt": "你现在独立制定项目计划表（含里程碑和风险）的把握程度如何？", "focus": "计划管理"},
+            {"id": "coordination", "prompt": "你能否组织一次跨部门协调会议并输出行动项跟踪表？", "focus": "跨部门协调"},
+            {"id": "project_pitch", "prompt": "你能否清楚描述一次你参与过的项目协调经历和最终成果？", "focus": "项目表达"},
+        ],
+        "项目经理": [
+            {"id": "scope_management", "prompt": "你现在独立完成需求范围定义、WBS 拆解和进度基线制定的把握程度如何？", "focus": "范围管理"},
+            {"id": "risk_control", "prompt": "你能否识别项目中的关键风险并给出应对措施？", "focus": "风险控制"},
+            {"id": "project_pitch", "prompt": "你能否在 5 分钟内讲清一个完整项目的目标、执行过程和最终交付成果？", "focus": "项目表达"},
+        ],
+        "测试开发工程师": [
+            {"id": "framework_design", "prompt": "你现在独立搭建 Python + Pytest 自动化测试框架的把握程度如何？", "focus": "框架搭建"},
+            {"id": "ci_integration", "prompt": "你能否将自动化测试脚本接入 Jenkins 并实现定时触发？", "focus": "CI 集成"},
+            {"id": "project_pitch", "prompt": "你能否讲清一个自动化测试项目的覆盖率、执行效率和发现的缺陷？", "focus": "项目表达"},
+        ],
+        "运营专员": [
+            {"id": "campaign_planning", "prompt": "你现在独立策划一次用户活动（含目标、方案、节奏和预算）的把握程度如何？", "focus": "活动策划"},
+            {"id": "data_analysis", "prompt": "你能否根据运营数据撰写一份用户行为分析报告并给出建议？", "focus": "数据分析"},
+            {"id": "project_pitch", "prompt": "你能否清楚讲述一次运营活动的目标、执行过程和复盘结论？", "focus": "项目表达"},
         ],
     }
     return role_map.get(
@@ -943,6 +1037,14 @@ def build_career_plan(
     # 🌟 核心接入点：触发大模型动态生成专属项目与考核计划
     dynamic_guidance = _generate_dynamic_role_guidance(role_title, top_gap_keywords)
 
+    # 🌟 P5：生成 AI 匹配评审意见（有 LLM key 时调用，失败则静默跳过）
+    ai_match_commentary = _generate_ai_match_commentary(
+        role_title=role_title,
+        score=int(primary["score"]),
+        strengths=list(primary.get("strengths", [])),
+        missing_skills=list(primary.get("missing_skills", [])),
+    )
+
     focus_role = student.agent_answers.get("target_role") or role_title
     overview = (
         f"{student.name} 当前最适合优先冲刺 {role_title}，"
@@ -1025,4 +1127,5 @@ def build_career_plan(
         service_scenarios=["学生自助诊断", "辅导员一生一策", "就业中心精准推岗"],
         # 🌟 亮点：更新了产品底层的技术签名
         product_signature="分块检索 + 证据重排 + 可解释匹配 + 复核留痕闭环",
+        ai_match_commentary=ai_match_commentary,
     )

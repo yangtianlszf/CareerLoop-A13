@@ -175,3 +175,35 @@ class OpenAIResponsesClient:
                 return parsed
 
         raise OpenAIResponsesError(f"Model returned non-JSON structured output: {output_text}")
+
+    def chat(self, *, system_prompt: str, user_prompt: str) -> str:
+        """调用模型进行普通对话，返回纯文本响应（用于生成非结构化内容）"""
+        payload = {
+            "model": self.model,
+            "input": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            "store": False,
+        }
+        request = urllib.request.Request(
+            f"{self.base_url}/responses",
+            data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {self.api_key}",
+            },
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=self.timeout_seconds) as response:
+                body = json.loads(response.read().decode("utf-8"))
+        except urllib.error.HTTPError as error:
+            try:
+                error_body = error.read().decode("utf-8")
+            except Exception:
+                error_body = str(error)
+            raise OpenAIResponsesError(f"LLM API error: {error.code} {error_body}") from error
+        except urllib.error.URLError as error:
+            raise OpenAIResponsesError(f"LLM API connection error: {error}") from error
+        return self._extract_output_text(body)

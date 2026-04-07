@@ -30,5 +30,29 @@
     "focus": "验证系统在信息不充分、方向相对模糊时是否仍能给出可接受推荐。",
     "expected_primary_roles": ["实施工程师", "Java开发工程师"],
     "expected_top3_roles": ["实施工程师", "技术支持工程师", "Java开发工程师"]
+  },
+  {
+    "id": "data-analyst-student",
+    "label": "数据分析样例",
+    "sample_name": "demo_resume_data_analyst.txt",
+    "focus": "验证系统能否把 Python/SQL 数据方向学生识别到数据分析师岗位，验证新增岗位模板的匹配能力。",
+    "expected_primary_roles": ["数据分析师"],
+    "expected_top3_roles": ["数据分析师", "Python开发工程师", "运营专员"]
+  },
+  {
+    "id": "operations-student",
+    "label": "运营专员样例",
+    "sample_name": "demo_resume_operations.txt",
+    "focus": "验证系统能否把新媒体/内容运营方向学生识别到运营类岗位，验证新增软技能维度的覆盖能力。",
+    "expected_primary_roles": ["运营专员"],
+    "expected_top3_roles": ["运营专员", "产品助理", "项目专员"]
+  },
+  {
+    "id": "testdev-student",
+    "label": "测试开发样例",
+    "sample_name": "demo_resume_testdev.txt",
+    "focus": "验证系统能否区分测试开发（含 CI/自动化框架）与普通软件测试岗位，验证测试开发工程师模板的精度。",
+    "expected_primary_roles": ["测试开发工程师"],
+    "expected_top3_roles": ["测试开发工程师", "软件测试工程师", "测试工程师"]
   }
 ]
