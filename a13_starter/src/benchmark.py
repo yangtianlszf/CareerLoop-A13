@@ -212,6 +212,7 @@ def run_benchmark(parser_mode: str = "rule") -> dict[str, Any]:
     cases = _load_json(BENCHMARK_CASES_PATH)
 
     case_results: list[dict[str, Any]] = []
+    skipped_cases: list[dict[str, str]] = []
     top1_hits = 0
     top3_hits = 0
     pass_hits = 0
@@ -224,6 +225,45 @@ def run_benchmark(parser_mode: str = "rule") -> dict[str, Any]:
 
     for case in cases:
         sample_path = PROJECT_ROOT / "a13_starter" / "samples" / str(case["sample_name"])
+        if not sample_path.exists():
+            skipped_cases.append(
+                {
+                    "id": str(case.get("id", "")),
+                    "label": str(case.get("label", case.get("sample_name", "未命名样例"))),
+                    "sample_name": str(case.get("sample_name", "")),
+                }
+            )
+            case_results.append(
+                {
+                    "id": case["id"],
+                    "label": case["label"],
+                    "sample_name": case["sample_name"],
+                    "focus": case["focus"],
+                    "expected_primary_roles": list(case.get("expected_primary_roles", [])),
+                    "expected_top3_roles": list(case.get("expected_top3_roles", case.get("expected_primary_roles", []))),
+                    "primary_role": "未执行",
+                    "primary_score": 0,
+                    "top_roles": [],
+                    "top1_hit": False,
+                    "top3_hit": False,
+                    "parser_used_mode": parser_mode,
+                    "fallback_used": False,
+                    "pass_case": False,
+                    "skipped": True,
+                    "evidence_hit_rate": 0,
+                    "explanation_coverage": 0,
+                    "report_readiness": 0,
+                    "loop_readiness": 0,
+                    "follow_up_primary_role": "未执行",
+                    "follow_up_primary_score": 0,
+                    "improvement_delta": 0,
+                    "observations": [
+                        f"样例文件缺失：{case['sample_name']}。",
+                        "本条 benchmark 已自动跳过，不影响服务主链路与其余样例的可运行性验证。",
+                    ],
+                }
+            )
+            continue
         resume_text = sample_path.read_text(encoding="utf-8")
         student, parser_metadata = parse_student_profile(resume_text, parser_mode=parser_mode)
         matches = rank_student_against_templates(student, templates)
@@ -290,6 +330,7 @@ def run_benchmark(parser_mode: str = "rule") -> dict[str, Any]:
                 "parser_used_mode": parser_metadata.used_mode,
                 "fallback_used": fallback_used,
                 "pass_case": pass_case,
+                "skipped": False,
                 "evidence_hit_rate": evidence_hit_rate,
                 "explanation_coverage": explanation_coverage,
                 "report_readiness": report_readiness,
@@ -311,7 +352,8 @@ def run_benchmark(parser_mode: str = "rule") -> dict[str, Any]:
             }
         )
 
-    case_count = len(case_results)
+    executed_cases = [item for item in case_results if not item.get("skipped")]
+    case_count = len(executed_cases)
     top1_rate = round((top1_hits / case_count) * 100) if case_count else 0
     top3_rate = round((top3_hits / case_count) * 100) if case_count else 0
     pass_rate = round((pass_hits / case_count) * 100) if case_count else 0
@@ -322,7 +364,10 @@ def run_benchmark(parser_mode: str = "rule") -> dict[str, Any]:
     report_avg = round(mean(report_scores)) if report_scores else 0
     loop_avg = round(mean(loop_scores)) if loop_scores else 0
 
-    if top1_rate >= 75 and pass_rate >= 75 and evidence_avg >= 70 and explanation_avg >= 80 and report_avg >= 80:
+    if not case_count:
+        verdict_label = "待补样例"
+        verdict_detail = "当前 benchmark 没有可执行样例，建议先补齐样例文件后再运行完整验证。"
+    elif top1_rate >= 75 and pass_rate >= 75 and evidence_avg >= 70 and explanation_avg >= 80 and report_avg >= 80:
         verdict_label = "冲奖级"
         verdict_detail = "样例命中与交付结构都比较稳定，已经具备强队作品的可信度与完整度。"
     elif top3_rate >= 75 and report_avg >= 70:
@@ -335,6 +380,9 @@ def run_benchmark(parser_mode: str = "rule") -> dict[str, Any]:
     return {
         "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "parser_mode": parser_mode,
+        "requested_case_count": len(cases),
+        "executed_case_count": case_count,
+        "skipped_case_count": len(skipped_cases),
         "summary_cards": _build_summary_cards(
             case_count=case_count,
             top1_rate=top1_rate,
@@ -357,6 +405,15 @@ def run_benchmark(parser_mode: str = "rule") -> dict[str, Any]:
             "新增的模拟复测提升率可用于证明系统不是静态推荐，而是能把差距建议转成可量化改进。",
             "规则回退率能够直接展示 auto 模式下的稳定性与现场答辩兜底能力。",
             "如果后续补入更多真实学生样本，这块可以直接升级成校级运营验证中心。",
-        ],
+        ]
+        + (
+            [
+                "检测到部分 benchmark 样例文件缺失，系统已自动跳过这些样例，不影响主服务可运行性。",
+                "当前缺失样例："
+                + "、".join(item["sample_name"] for item in skipped_cases),
+            ]
+            if skipped_cases
+            else []
+        ),
         "cases": case_results,
     }
