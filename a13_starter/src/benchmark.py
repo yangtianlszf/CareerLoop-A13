@@ -3,17 +3,17 @@ from __future__ import annotations
 import copy
 import json
 from datetime import datetime
-from pathlib import Path
 from statistics import mean
 from typing import Any
 
 from a13_starter.src.career_planner import apply_agent_answers, build_career_plan, rank_student_against_templates
 from a13_starter.src.extractors import refresh_student_profile_metrics
 from a13_starter.src.parser_service import parse_student_profile
+from a13_starter.src.paths import resolve_project_root
 from a13_starter.src.report import build_career_report_markdown
 
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
+PROJECT_ROOT = resolve_project_root(__file__, 2)
 BENCHMARK_CASES_PATH = PROJECT_ROOT / "a13_starter" / "samples" / "benchmark_cases.json"
 TEMPLATES_PATH = PROJECT_ROOT / "a13_starter" / "generated" / "role_profile_templates.json"
 

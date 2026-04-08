@@ -31,9 +31,10 @@ from a13_starter.src.report_exports import build_export_bundle, markdown_to_html
 from a13_starter.src.report import build_career_report_markdown
 from a13_starter.src.resume_file_parser import ResumeFileParseError, parse_resume_file
 from a13_starter.src.system_checks import run_environment_checks
+from a13_starter.src.paths import resolve_project_root
 
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+PROJECT_ROOT = resolve_project_root(__file__, 1)
 TEMPLATES_PATH = PROJECT_ROOT / "a13_starter" / "generated" / "role_profile_templates.json"
 WEB_DIR = PROJECT_ROOT / "a13_starter" / "web"
 SAMPLE_RESUME_PATH = PROJECT_ROOT / "a13_starter" / "samples" / "student_resume.txt"

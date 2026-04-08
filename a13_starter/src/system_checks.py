@@ -2,15 +2,15 @@ from __future__ import annotations
 
 import sqlite3
 import sys
-from pathlib import Path
 from typing import Any
 
 from a13_starter.src.analysis_storage import DB_PATH, init_storage
 from a13_starter.src.jd_search import JD_XLS_PATH, ROLE_TEMPLATES_PATH
+from a13_starter.src.paths import resolve_project_root
 from a13_starter.src.settings import get_llm_provider, llm_is_configured
 
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
+PROJECT_ROOT = resolve_project_root(__file__, 2)
 JOB_PROFILES_PATH = PROJECT_ROOT / "a13_starter" / "generated" / "job_profiles.jsonl"
 
 

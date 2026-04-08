@@ -12,6 +12,7 @@ except Exception:  # pragma: no cover - optional dependency fallback
     xlrd = None
 
 from a13_starter.src.extractors import build_job_profile
+from a13_starter.src.paths import resolve_project_root
 
 
 EXPECTED_HEADERS = [
@@ -42,7 +43,7 @@ def _normalize_cell(value: object) -> str:
     return text.strip()
 
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
+PROJECT_ROOT = resolve_project_root(__file__, 2)
 GENERATED_DIR = PROJECT_ROOT / "a13_starter" / "generated"
 JOB_PROFILES_PATH = GENERATED_DIR / "job_profiles.jsonl"
 JD_ROWS_PATH = GENERATED_DIR / "jd_rows.json"
@@ -53,6 +54,13 @@ def _sheet_headers(sheet: Any) -> list[str]:
 
 
 def load_job_rows(xls_path: str | Path) -> list[dict[str, str]]:
+    xls_file = Path(xls_path)
+    if not xls_file.exists():
+        cached_rows = _load_cached_job_rows()
+        if cached_rows:
+            return cached_rows
+        raise RuntimeError(f"岗位数据文件不存在：{xls_file}")
+
     if xlrd is None:
         cached_rows = _load_cached_job_rows()
         if cached_rows:
@@ -62,7 +70,7 @@ def load_job_rows(xls_path: str | Path) -> list[dict[str, str]]:
             "请先安装 xlrd，或保留 generated/job_profiles.jsonl 与 generated/jd_rows.json。"
         )
 
-    workbook = xlrd.open_workbook(str(xls_path))
+    workbook = xlrd.open_workbook(str(xls_file))
     sheet = workbook.sheet_by_index(0)
     headers = _sheet_headers(sheet)
     rows: list[dict[str, str]] = []

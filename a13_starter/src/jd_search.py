@@ -2,23 +2,24 @@ from __future__ import annotations
 
 import json
 from functools import lru_cache
-from pathlib import Path
 from typing import Any
 
 from a13_starter.src.dataset import build_job_text_from_row, load_job_rows
 from a13_starter.src.extractors import build_job_profile
+from a13_starter.src.paths import resolve_project_root
 
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
+PROJECT_ROOT = resolve_project_root(__file__, 2)
 JD_XLS_PATH = PROJECT_ROOT / "A13_官方资料" / "A13-JD采样数据.xls"
 ROLE_TEMPLATES_PATH = PROJECT_ROOT / "a13_starter" / "generated" / "role_profile_templates.json"
 
 
 @lru_cache(maxsize=1)
 def load_all_job_rows() -> list[dict[str, str]]:
-    if not JD_XLS_PATH.exists():
+    try:
+        return load_job_rows(JD_XLS_PATH)
+    except Exception:
         return []
-    return load_job_rows(JD_XLS_PATH)
 
 
 @lru_cache(maxsize=1)

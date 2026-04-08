@@ -4,12 +4,14 @@ import json
 import sqlite3
 from collections import Counter
 from datetime import datetime
-from pathlib import Path
 from typing import Any
 
+from a13_starter.src.paths import resolve_project_root, resolve_runtime_root
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-DB_PATH = PROJECT_ROOT / "a13_starter" / "generated" / "analysis_history.db"
+
+PROJECT_ROOT = resolve_project_root(__file__, 2)
+RUNTIME_ROOT = resolve_runtime_root(PROJECT_ROOT)
+DB_PATH = RUNTIME_ROOT / "a13_starter" / "generated" / "analysis_history.db"
 
 
 def _get_connection() -> sqlite3.Connection:
