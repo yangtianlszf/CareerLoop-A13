@@ -210,15 +210,16 @@ select:focus { border-color: var(--primary); outline: none; }
 /* ==========================================
    内部排版细节
 ========================================== */
-.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; }
+.stack-layout { display: grid; gap: 24px; align-items: start; }
 .mt-4 { margin-top: 24px; } .mb-2 { margin-bottom: 12px; } .mb-4 { margin-bottom: 24px; }
 .text-reading { color: var(--text-reading); font-size: 1rem; line-height: 1.7; }
 .text-body { color: var(--text-main); font-size: 0.95rem; }
 
 /* 🌟 高颜值 80分 渐变排版 */
-.highlight-card { display: flex; flex-direction: column; justify-content: flex-start; text-align: left; }
-.role-title { font-family: var(--font-serif); font-size: 2.2rem; color: var(--primary); margin: 8px 0 24px 0; font-weight: 700; line-height: 1.2; }
-.score-display { display: flex; align-items: center; gap: 16px; margin-bottom: auto; }
+.highlight-card { display: flex; flex-direction: column; justify-content: flex-start; text-align: left; align-self: stretch; min-height: 0; height: 100%; }
+.role-title { font-family: var(--font-serif); font-size: 2.2rem; color: var(--primary); margin: 8px 0 24px 0; font-weight: 700; line-height: 1.2; word-break: break-word; }
+.score-display { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
 .score-number { 
   font-size: 4.5rem; font-family: var(--font-serif); font-weight: 800; line-height: 1; 
   background: linear-gradient(135deg, var(--primary), #4ade80); 
@@ -240,10 +241,47 @@ select:focus { border-color: var(--primary); outline: none; }
 
 /* 时间轴 */
 @keyframes timelinePulse { 0% { box-shadow: 0 0 0 0 rgba(15, 118, 110, 0.4); } 70% { box-shadow: 0 0 0 8px rgba(15, 118, 110, 0); } 100% { box-shadow: 0 0 0 0 rgba(15, 118, 110, 0); } }
-.timeline { border-left: 1px solid var(--border-strong); padding-left: 24px; margin-left: 8px; position: relative; }
-.timeline-item { margin-bottom: 32px; position: relative; }
-.timeline-marker { position: absolute; left: -25px; top: 0; background: var(--surface); color: var(--text-main); padding: 2px 0; font-size: 0.85rem; font-weight: 600; transform: translateX(-100%); }
-.timeline-item::before { content: ""; position: absolute; left: -29px; top: 6px; width: 9px; height: 9px; border-radius: 50%; background: var(--bg-color); border: 2px solid var(--primary); animation: timelinePulse 2.5s infinite; }
+.timeline { display: grid; gap: 20px; position: relative; }
+.timeline-item {
+  position: relative;
+  display: grid;
+  grid-template-columns: 132px 1fr;
+  gap: 18px;
+  align-items: start;
+  margin: 0;
+}
+.timeline-item::after {
+  content: "";
+  position: absolute;
+  left: 146px;
+  top: 10px;
+  bottom: -22px;
+  width: 1px;
+  background: var(--border-strong);
+}
+.timeline-item:last-child::after { display: none; }
+.timeline-marker {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 36px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-main);
+  font-size: 0.85rem;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  box-sizing: border-box;
+  white-space: nowrap;
+}
+.timeline-content {
+  position: relative;
+  padding-left: 22px;
+  min-width: 0;
+}
+.timeline-item::before { content: ""; position: absolute; left: 142px; top: 10px; width: 9px; height: 9px; border-radius: 50%; background: var(--bg-color); border: 2px solid var(--primary); animation: timelinePulse 2.5s infinite; z-index: 1; }
 .timeline-item:nth-child(2)::before { animation-delay: 0.5s; }
 .timeline-item:nth-child(3)::before { animation-delay: 1s; }
 
@@ -292,3 +330,266 @@ select:focus { border-color: var(--primary); outline: none; }
 
 /* SVG 雷达图保护 (必不可少) */
 #radar-chart { min-height: 260px; width: 100%; }
+#career-graph { width: 100%; overflow-x: auto; }
+#career-graph svg { display: block; max-width: 100%; }
+#tab-overview > .grid-2,
+#tab-plan > .grid-2,
+#tab-agent > .grid-2,
+#tab-evidence > .grid-2,
+#tab-dashboard > .grid-2 {
+  align-items: stretch;
+}
+
+#tab-overview > .grid-2 > .card,
+#tab-plan > .grid-2 > .card,
+#tab-agent > .grid-2 > .card,
+#tab-evidence > .grid-2 > .card,
+#tab-dashboard > .grid-2 > .card {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+}
+
+#tab-plan > .grid-2 > .stack-layout,
+#tab-agent > .grid-2 > .stack-layout,
+#tab-evidence > .grid-2 > .stack-layout,
+#tab-dashboard > .grid-2 > .stack-layout {
+  display: grid;
+  gap: 24px;
+  min-height: 0;
+  height: 100%;
+}
+
+#tab-plan > .grid-2:first-of-type > .stack-layout {
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+}
+
+#tab-plan > .grid-2 > .stack-layout > .card,
+#tab-agent > .grid-2 > .stack-layout > .card,
+#tab-evidence > .grid-2 > .stack-layout > .card,
+#tab-dashboard > .grid-2 > .stack-layout > .card {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+}
+
+#tab-overview > .grid-2:first-of-type {
+  align-items: stretch;
+}
+
+#tab-overview > .grid-2:first-of-type > .card {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+#tab-overview .highlight-card .backup-info {
+  margin-top: auto;
+}
+
+#tab-overview > .grid-2:first-of-type > .highlight-card {
+  align-self: stretch;
+}
+
+#tab-overview > .grid-2:first-of-type > .card > .card-header,
+#tab-plan > .grid-2 > .card > .card-header,
+#tab-agent > .grid-2 > .card > .card-header,
+#tab-evidence > .grid-2 > .card > .card-header,
+#tab-dashboard > .grid-2 > .card > .card-header {
+  flex-shrink: 0;
+}
+
+#radar-chart,
+#benchmark-status,
+#benchmark-summary-cards,
+#benchmark-verdict {
+  flex-shrink: 0;
+}
+
+#competency-dimensions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  max-height: 280px;
+  overflow-y: auto;
+  padding-right: 4px;
+  min-height: 0;
+}
+
+#competency-dimensions > div {
+  margin-top: 0 !important;
+}
+
+#competency-dimensions::-webkit-scrollbar {
+  width: 8px;
+}
+
+#competency-dimensions::-webkit-scrollbar-thumb {
+  background: rgba(120, 113, 108, 0.24);
+  border-radius: 999px;
+}
+
+#school-dashboard-stats {
+  height: 100%;
+  grid-auto-rows: minmax(0, 1fr);
+  align-content: stretch;
+  overflow-y: auto;
+  max-height: 560px;
+  min-height: 0;
+  padding-right: 6px;
+}
+
+#school-dashboard-stats > .card {
+  height: 100%;
+}
+
+#learning-sprints,
+#gap-benefit-grid,
+#plan-self-checks,
+#resource-map,
+#system-check-list,
+#self-assessment-form,
+#self-assessment-summary,
+#stakeholder-views,
+#service-loop,
+#evidence-snippets,
+#template-evidence,
+#similar-cases,
+#jd-search-results,
+#technical-modules,
+#school-distribution,
+#school-service-segments,
+#school-follow-up,
+#school-push-recommendations,
+#history-list,
+#school-recent-reviews,
+#review-records,
+#school-audit-queue,
+#benchmark-cases {
+  max-height: 460px;
+  overflow-y: auto;
+  padding-right: 6px;
+  min-height: 0;
+}
+
+#school-dashboard-stats::-webkit-scrollbar,
+#learning-sprints::-webkit-scrollbar,
+#gap-benefit-grid::-webkit-scrollbar,
+#plan-self-checks::-webkit-scrollbar,
+#resource-map::-webkit-scrollbar,
+#system-check-list::-webkit-scrollbar,
+#self-assessment-form::-webkit-scrollbar,
+#self-assessment-summary::-webkit-scrollbar,
+#stakeholder-views::-webkit-scrollbar,
+#service-loop::-webkit-scrollbar,
+#evidence-snippets::-webkit-scrollbar,
+#template-evidence::-webkit-scrollbar,
+#similar-cases::-webkit-scrollbar,
+#jd-search-results::-webkit-scrollbar,
+#technical-modules::-webkit-scrollbar,
+#school-distribution::-webkit-scrollbar,
+#school-service-segments::-webkit-scrollbar,
+#school-follow-up::-webkit-scrollbar,
+#school-push-recommendations::-webkit-scrollbar,
+#history-list::-webkit-scrollbar,
+#school-recent-reviews::-webkit-scrollbar,
+#review-records::-webkit-scrollbar,
+#school-audit-queue::-webkit-scrollbar,
+#benchmark-cases::-webkit-scrollbar {
+  width: 8px;
+}
+
+#school-dashboard-stats::-webkit-scrollbar-thumb,
+#learning-sprints::-webkit-scrollbar-thumb,
+#gap-benefit-grid::-webkit-scrollbar-thumb,
+#plan-self-checks::-webkit-scrollbar-thumb,
+#resource-map::-webkit-scrollbar-thumb,
+#system-check-list::-webkit-scrollbar-thumb,
+#self-assessment-form::-webkit-scrollbar-thumb,
+#self-assessment-summary::-webkit-scrollbar-thumb,
+#stakeholder-views::-webkit-scrollbar-thumb,
+#service-loop::-webkit-scrollbar-thumb,
+#evidence-snippets::-webkit-scrollbar-thumb,
+#template-evidence::-webkit-scrollbar-thumb,
+#similar-cases::-webkit-scrollbar-thumb,
+#jd-search-results::-webkit-scrollbar-thumb,
+#technical-modules::-webkit-scrollbar-thumb,
+#school-distribution::-webkit-scrollbar-thumb,
+#school-service-segments::-webkit-scrollbar-thumb,
+#school-follow-up::-webkit-scrollbar-thumb,
+#school-push-recommendations::-webkit-scrollbar-thumb,
+#history-list::-webkit-scrollbar-thumb,
+#school-recent-reviews::-webkit-scrollbar-thumb,
+#review-records::-webkit-scrollbar-thumb,
+#school-audit-queue::-webkit-scrollbar-thumb,
+#benchmark-cases::-webkit-scrollbar-thumb {
+  background: rgba(120, 113, 108, 0.24);
+  border-radius: 999px;
+}
+
+@media (max-width: 860px) {
+  .grid-2 {
+    grid-template-columns: 1fr;
+  }
+
+  #competency-dimensions {
+    grid-template-columns: 1fr;
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
+  }
+
+  .timeline-item {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .timeline-item::before,
+  .timeline-item::after {
+    display: none;
+  }
+
+  .timeline-content {
+    padding-left: 0;
+  }
+
+  .timeline-marker {
+    width: fit-content;
+    max-width: 100%;
+  }
+
+  #school-dashboard-stats,
+  #learning-sprints,
+  #gap-benefit-grid,
+  #plan-self-checks,
+  #resource-map,
+  #system-check-list,
+  #self-assessment-form,
+  #self-assessment-summary,
+  #stakeholder-views,
+  #service-loop,
+  #evidence-snippets,
+  #template-evidence,
+  #similar-cases,
+  #jd-search-results,
+  #technical-modules,
+  #school-distribution,
+  #school-service-segments,
+  #school-follow-up,
+  #school-push-recommendations,
+  #history-list,
+  #school-recent-reviews,
+  #review-records,
+  #school-audit-queue,
+  #benchmark-cases {
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
+  }
+
+  #tab-plan > .grid-2:first-of-type > .stack-layout {
+    grid-template-rows: auto;
+  }
+}

@@ -271,14 +271,57 @@
             </div>
 
             <div class="grid-2 mt-4">
-              <div class="card">
-                <div class="card-header"><h4>系统健康度</h4></div><ul id="system-check-list" class="check-list"></ul>
-                <div class="card-header mt-4"><h4>技术底层组件</h4></div><div id="technical-keywords" class="chip-group mb-2"></div><div id="technical-modules"></div>
+              <div class="stack-layout">
+                <div class="card">
+                  <div class="card-header"><h4>系统健康度</h4></div>
+                  <ul id="system-check-list" class="check-list"></ul>
+                </div>
+                <div class="card">
+                  <div class="card-header"><h4>技术底层组件</h4></div>
+                  <div id="technical-keywords" class="chip-group mb-2"></div>
+                  <div id="technical-modules"></div>
+                </div>
               </div>
               <div class="card">
                 <div class="card-header"><h4>自动化基准测试</h4></div>
                 <button id="run-benchmark-btn" class="btn btn-dashed full-width mb-2">执行自动化压测验证</button>
                 <div id="benchmark-status" class="terminal-box"></div>
+                <div id="benchmark-summary-cards" class="mt-4"></div>
+                <div id="benchmark-verdict" class="mt-4"></div>
+                <div id="benchmark-cases" class="mt-4"></div>
+              </div>
+            </div>
+
+            <div class="grid-2 mt-4">
+              <div class="card">
+                <div class="card-header"><h4>结构分布与服务分层</h4></div>
+                <div class="grid-2" style="gap:16px;">
+                  <div>
+                    <p class="text-muted mb-2">主岗位 / 专业 / 城市分布</p>
+                    <div id="school-distribution"></div>
+                  </div>
+                  <div>
+                    <p class="text-muted mb-2">服务分层</p>
+                    <div id="school-service-segments"></div>
+                  </div>
+                </div>
+              </div>
+              <div class="card">
+                <div class="card-header"><h4>重点跟进与推岗建议</h4></div>
+                <div id="school-follow-up"></div>
+                <div class="card-header mt-4"><h4>定向推岗建议</h4></div>
+                <div id="school-push-recommendations"></div>
+              </div>
+            </div>
+
+            <div class="grid-2 mt-4">
+              <div class="card">
+                <div class="card-header"><h4>治理指标</h4></div>
+                <div id="school-governance-metrics" class="metric-grid"></div>
+              </div>
+              <div class="card">
+                <div class="card-header"><h4>抽检队列</h4></div>
+                <div id="school-audit-queue" class="history-list"></div>
               </div>
             </div>
 
@@ -304,9 +347,7 @@
             </div>
 
             <div class="hidden">
-              <div id="school-summary-cards"></div><div id="school-distribution"></div><div id="school-follow-up"></div><div id="school-service-segments"></div>
-              <div id="school-push-recommendations"></div><div id="school-governance-metrics"></div><div id="school-audit-queue"></div><div id="benchmark-summary-cards"></div>
-              <div id="benchmark-verdict"></div><div id="benchmark-cases"></div><div id="career-strengths"></div><div id="career-risks"></div>
+              <div id="school-summary-cards"></div><div id="career-strengths"></div><div id="career-risks"></div>
               <div id="growth-comparison"></div>
             </div>
           </div>

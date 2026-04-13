@@ -1189,7 +1189,7 @@ const dom = {
   growthPathList: getEl("growth-path-list"), transitionPathList: getEl("transition-path-list"), resourceMap: getEl("resource-map"),
   gapBenefitGrid: getEl("gap-benefit-grid"), planSelfChecks: getEl("plan-self-checks"), careerGraph: getEl("career-graph"),
   agentQuestionList: getEl("agent-question-list"), selfAssessmentForm: getEl("self-assessment-form"), selfAssessmentSummary: getEl("self-assessment-summary"),
-  serviceLoop: getEl("service-loop"), assessmentTasks: getEl("assessment-tasks"), reviewTargets: getEl("review-targets"),
+  serviceLoop: getEl("service-loop"), stakeholderViews: getEl("stakeholder-views"), assessmentTasks: getEl("assessment-tasks"), reviewTargets: getEl("review-targets"),
   evidenceSummary: getEl("evidence-summary"), matchedTerms: getEl("matched-terms"), evidenceSnippets: getEl("evidence-snippets"),
   templateEvidence: getEl("template-evidence"), jdSearchInput: getEl("jd-search-input"), jdSearchBtn: getEl("jd-search-btn"),
   jdSearchResults: getEl("jd-search-results"), similarCases: getEl("similar-cases"), historyList: getEl("history-list"),
@@ -1273,6 +1273,66 @@ function fillList(container, items) {
   source.forEach((item) => { const li = document.createElement("li"); li.textContent = item; container.appendChild(li); });
 }
 
+function renderEmptyState(container, label) {
+  if (!container) return;
+  container.innerHTML = `<div class="empty-inline compact">${escapeHtml(label)}</div>`;
+}
+
+function renderMetricCards(container, items, emptyLabel = "暂无数据") {
+  if (!container) return;
+  container.innerHTML = "";
+  if (!items || items.length === 0) {
+    renderEmptyState(container, emptyLabel);
+    return;
+  }
+  container.style.display = "grid";
+  container.style.gridTemplateColumns = "repeat(auto-fit, minmax(180px, 1fr))";
+  container.style.gap = "16px";
+  items.forEach((item) => {
+    container.innerHTML += `
+      <div class="card" style="background:var(--surface-alt); padding:18px; border-radius:16px;">
+        <div style="font-size:0.85rem; color:var(--text-muted); margin-bottom:10px; font-weight:600;">${escapeHtml(item.label || item.name || "指标")}</div>
+        <div style="font-size:1.9rem; font-family:var(--font-serif); color:var(--primary); line-height:1;">${escapeHtml(item.value ?? item.count ?? 0)}</div>
+        ${item.detail ? `<p style="font-size:0.82rem; color:var(--text-muted); margin:10px 0 0 0; line-height:1.6;">${escapeHtml(item.detail)}</p>` : ""}
+      </div>`;
+  });
+}
+
+function renderSimpleDistribution(container, sections, emptyLabel = "暂无分布数据") {
+  if (!container) return;
+  container.innerHTML = "";
+  const usableSections = (sections || []).filter((section) => (section.items || []).length);
+  if (!usableSections.length) {
+    renderEmptyState(container, emptyLabel);
+    return;
+  }
+  usableSections.forEach((section) => {
+    container.innerHTML += `
+      <div class="card" style="padding:18px; border-radius:16px; background:var(--surface-alt); margin-bottom:14px;">
+        <h5 style="margin:0 0 12px 0; color:var(--text-main); font-size:1rem;">${escapeHtml(section.title)}</h5>
+        ${(section.items || []).map((item) => `
+          <div style="display:flex; justify-content:space-between; gap:12px; padding:10px 0; border-bottom:1px dashed var(--border);">
+            <span style="color:var(--text-muted); font-size:0.92rem;">${escapeHtml(item.name || item.label || "分类")}</span>
+            <strong style="color:var(--text-main);">${escapeHtml(item.count ?? item.value ?? 0)}</strong>
+          </div>`).join("")}
+      </div>`;
+  });
+}
+
+function renderRecordList(container, items, builder, emptyLabel) {
+  if (!container) return;
+  container.innerHTML = "";
+  if (!items || items.length === 0) {
+    renderEmptyState(container, emptyLabel);
+    return;
+  }
+  items.forEach((item) => {
+    container.innerHTML += builder(item);
+  });
+}
+
+function syncActiveSample() {}
+
 // ==========================================
 // 3. 各模块子渲染函数
 // ==========================================
@@ -1304,6 +1364,26 @@ function renderCareerPlan(plan, matches) {
       dom.growthPathList.innerHTML += `<div style="display:flex; align-items:center; gap:16px; padding:12px 16px; background:var(--surface-alt); border:1px solid var(--border); border-radius:12px; margin-bottom:10px;"><span style="display:flex; align-items:center; justify-content:center; width:36px; height:36px; border-radius:10px; background:rgba(15, 118, 110, 0.1); color:var(--primary); font-weight:800; font-size:0.85rem;">0${index + 1}</span><strong style="color:var(--text-main); font-size:1rem;">${escapeHtml(item)}</strong></div>`;
     });
   }
+}
+
+function renderCompetencyDimensions(items) {
+  if (!dom.competencyDimensions) return;
+  dom.competencyDimensions.innerHTML = "";
+  if (!items || items.length === 0) {
+    dom.competencyDimensions.classList.add("hidden");
+    return;
+  }
+  dom.competencyDimensions.classList.remove("hidden");
+  items.forEach((item) => {
+    dom.competencyDimensions.innerHTML += `
+      <div style="background:var(--surface-alt); padding:16px; border-radius:12px; border:1px solid var(--border); margin-top:10px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:6px;">
+          <strong style="color:var(--text-main); font-size:0.95rem;">${escapeHtml(item.name || "维度")}</strong>
+          <strong style="color:var(--primary); font-family:var(--font-serif); font-size:1.1rem;">${escapeHtml(item.score ?? 0)}</strong>
+        </div>
+        <p style="margin:0; font-size:0.84rem; color:var(--text-muted); line-height:1.6;">${escapeHtml(item.note || item.detail || "")}</p>
+      </div>`;
+  });
 }
 
 function renderCompetencyRadar(items) {
@@ -1401,6 +1481,133 @@ function renderLearningLoop(items) {
   });
 }
 
+function renderAgentQuestions(questions, existingAnswers = {}) {
+  if (!dom.agentQuestionList) return;
+  dom.agentQuestionList.innerHTML = "";
+  if (!questions || questions.length === 0) {
+    renderEmptyState(dom.agentQuestionList, "情境对齐完毕，暂无追问。");
+    return;
+  }
+  questions.forEach((question) => {
+    const preset = existingAnswers?.[question.id] || question.suggested_answer || "";
+    dom.agentQuestionList.innerHTML += `
+      <div class="form-group" style="margin-bottom:16px; background:var(--surface-alt); padding:18px; border-radius:16px; border:1px solid var(--border);">
+        <label style="display:block; margin-bottom:8px; font-weight:600; color:var(--text-main);">${escapeHtml(question.question || "补充问题")}</label>
+        <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:14px; line-height:1.6;">${escapeHtml(question.rationale || "补充此信息以提升规划精度。")}</p>
+        <input type="text" class="input-field" data-agent-id="${escapeHtml(question.id || "")}" placeholder="${escapeHtml(question.placeholder || "请输入补充信息")}" value="${escapeHtml(preset)}" />
+      </div>`;
+  });
+}
+
+function renderSelfAssessmentForm(selfAssessment) {
+  if (!dom.selfAssessmentForm) return;
+  dom.selfAssessmentForm.innerHTML = "";
+  const items = selfAssessment?.items || [];
+  if (!items.length) {
+    renderEmptyState(dom.selfAssessmentForm, "待确立基准岗位后生成专业量表。");
+    return;
+  }
+  items.forEach((item, index) => {
+    const currentValue = item.score === null || item.score === undefined ? null : Number(item.score);
+    const fieldName = `assessment-${item.id}-${index}`;
+    dom.selfAssessmentForm.innerHTML += `
+      <div class="form-group" style="background:var(--surface-alt); border:1px solid var(--border); padding:18px; border-radius:16px; margin-bottom:16px;">
+        <label style="display:block; margin-bottom:8px; font-weight:600; color:var(--text-reading);">${escapeHtml(item.prompt || "题目")}</label>
+        <p style="font-size:0.85rem; color:var(--primary); margin-bottom:14px;">考察点：${escapeHtml(item.focus || "岗位基础能力")}</p>
+        <div style="display:flex; flex-wrap:wrap; gap:18px;">
+          <label style="cursor:pointer; display:flex; align-items:center; gap:6px;"><input type="radio" name="${fieldName}" data-self-assessment-id="${escapeHtml(item.id || "")}" value="0" ${currentValue === 0 ? "checked" : ""}> <span style="color:var(--text-muted); font-size:0.9rem;">待补强</span></label>
+          <label style="cursor:pointer; display:flex; align-items:center; gap:6px;"><input type="radio" name="${fieldName}" data-self-assessment-id="${escapeHtml(item.id || "")}" value="1" ${currentValue === 1 ? "checked" : ""}> <span style="color:var(--text-muted); font-size:0.9rem;">已入门</span></label>
+          <label style="cursor:pointer; display:flex; align-items:center; gap:6px;"><input type="radio" name="${fieldName}" data-self-assessment-id="${escapeHtml(item.id || "")}" value="2" ${currentValue === 2 ? "checked" : ""}> <span style="color:var(--text-muted); font-size:0.9rem;">可实战</span></label>
+        </div>
+      </div>`;
+  });
+}
+
+function renderSelfAssessmentSummary(data) {
+  if (!dom.selfAssessmentSummary) return;
+  dom.selfAssessmentSummary.innerHTML = "";
+  if (!data || !(data.items || []).length) {
+    renderEmptyState(dom.selfAssessmentSummary, "完成岗位自测后展示摸底结论。");
+    return;
+  }
+  dom.selfAssessmentSummary.innerHTML = `
+    <div style="padding:20px; border-radius:16px; background:linear-gradient(180deg, rgba(15,118,110,0.05), var(--surface-alt)); border:1px solid var(--border);">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; gap:12px;">
+        <strong style="font-size:1.05rem; color:var(--text-main);">${escapeHtml(data.title || "岗位自测")}</strong>
+        <span class="tag" style="background:var(--primary); color:white; border:none; margin:0; font-weight:600;">${escapeHtml(data.score ?? 0)} 分</span>
+      </div>
+      <p style="font-size:0.95rem; color:var(--text-reading); margin-bottom:16px;">${escapeHtml(data.summary || "暂无结论")}</p>
+      <div class="chip-group">${(data.items || []).map((item) => `<span class="tag" style="background:var(--surface); border-color:var(--border-strong);">${escapeHtml(item.focus || item.prompt || "考察点")}：${escapeHtml(item.level || "待补强")}</span>`).join("")}</div>
+    </div>`;
+}
+
+function buildLiveSelfAssessmentState(baseAssessment) {
+  const assessment = JSON.parse(JSON.stringify(baseAssessment || {}));
+  const items = assessment.items || [];
+  if (!items.length) return assessment;
+  const levelMap = {
+    0: "待补强",
+    1: "已入门",
+    2: "可实战",
+  };
+  let answeredCount = 0;
+  let scoreSum = 0;
+  const weakFocuses = [];
+  items.forEach((item) => {
+    const checked = dom.selfAssessmentForm?.querySelector(`[data-self-assessment-id="${item.id}"]:checked`);
+    if (!checked) {
+      item.score = null;
+      item.level = "未作答";
+      return;
+    }
+    const value = Number(checked.value);
+    item.score = value;
+    item.level = levelMap[value] || "未作答";
+    answeredCount += 1;
+    scoreSum += value;
+    if (value === 0 && item.focus) weakFocuses.push(item.focus);
+  });
+  const percent = answeredCount ? Math.round((scoreSum / (answeredCount * 2)) * 100) : 0;
+  assessment.score = percent;
+  assessment.weak_focuses = weakFocuses;
+  if (!answeredCount) {
+    assessment.summary = "建议先完成岗位自测，验证推荐结果和能力证据。";
+  } else if (answeredCount < items.length) {
+    assessment.summary = `已完成 ${answeredCount}/${items.length} 项自测，建议继续补完剩余题目以获得更稳定的岗位判断。`;
+  } else if (weakFocuses.length) {
+    assessment.summary = `当前已完成全部自测，优先补强：${weakFocuses.join("、")}。`;
+  } else {
+    assessment.summary = "当前自测结果较好，可以进入项目举证与复测阶段。";
+  }
+  return assessment;
+}
+
+function refreshLiveSelfAssessmentSummary() {
+  const baseAssessment = state.latestResult?.career_plan?.self_assessment;
+  if (!baseAssessment) return;
+  const liveAssessment = buildLiveSelfAssessmentState(baseAssessment);
+  renderSelfAssessmentSummary(liveAssessment);
+}
+
+function renderServiceLoop(items) {
+  if (!dom.serviceLoop) return;
+  dom.serviceLoop.innerHTML = "";
+  if (!items || items.length === 0) {
+    renderEmptyState(dom.serviceLoop, "暂无生命周期数据。");
+    return;
+  }
+  items.forEach((item, index) => {
+    dom.serviceLoop.innerHTML += `
+      <div style="display:flex; align-items:flex-start; gap:16px; background:var(--surface-alt); padding:16px; border-radius:16px; border:1px solid var(--border); margin-bottom:14px;">
+        <div style="width:32px; height:32px; flex-shrink:0; border-radius:50%; border:1px solid var(--primary); color:var(--primary); display:flex; align-items:center; justify-content:center; font-size:0.9rem; font-weight:700;">0${index + 1}</div>
+        <div>
+          <strong style="display:block; margin-bottom:8px; color:var(--text-main); font-size:1.03rem;">${escapeHtml(item.stage || "阶段")} <span class="tag" style="margin-left:8px; font-weight:normal; background:var(--surface);">${escapeHtml(item.status || "")}</span></strong>
+          <p style="margin:0; font-size:0.92rem; color:var(--text-muted); line-height:1.7;">${escapeHtml(item.detail || "")}</p>
+        </div>
+      </div>`;
+  });
+}
+
 function renderResourceMap(items) {
   if (!dom.resourceMap) return; dom.resourceMap.innerHTML = "";
   if (!items || items.length === 0) { dom.resourceMap.innerHTML = `<div class="empty-inline compact">暂无落地资源映射。</div>`; return; }
@@ -1456,6 +1663,317 @@ function renderGroundedEvidence(bundle) {
   });
 }
 
+function renderTemplateEvidence(data) {
+  if (!dom.templateEvidence) return;
+  dom.templateEvidence.innerHTML = "";
+  if (!data) {
+    renderEmptyState(dom.templateEvidence, "请先生成分析结果，再查看主岗位基线样本。");
+    return;
+  }
+  const representativeJobs = data.representative_jobs || [];
+  dom.templateEvidence.innerHTML = `
+    <div style="margin-bottom:20px; padding-bottom:14px; border-bottom:1px dashed var(--border-strong);">
+      <h5 style="margin:0 0 8px 0; color:var(--primary); font-size:1.15rem;">${escapeHtml(data.role_title || "岗位模板")}</h5>
+      <p style="font-size:0.85rem; color:var(--text-muted); margin:0;">源岗位名：${escapeHtml(data.source_title || data.role_title || "")}｜覆盖底层样本数：${escapeHtml(data.dataset_job_count ?? 0)}</p>
+      <div class="chip-group" style="margin-top:12px;">${(data.dataset_evidence?.top_skills || []).slice(0, 8).map((item) => `<span class="tag">${escapeHtml(item[0])} · ${escapeHtml(item[1])}</span>`).join("")}</div>
+    </div>
+    ${representativeJobs.length ? representativeJobs.map((item) => `
+      <div class="card" style="margin-bottom:16px; padding:20px; border-radius:12px;">
+        <strong style="color:var(--text-main); display:block; font-size:1.05rem; margin-bottom:8px;">${escapeHtml(item.company_name || "未知企业")}</strong>
+        <p style="font-size:0.85rem; color:var(--text-muted); margin:0 0 12px 0;">${escapeHtml(item.job_title || "")}｜${escapeHtml(item.city || "")}｜${escapeHtml(item.salary_range || "")}</p>
+        <p style="margin:0; font-size:0.95rem; color:var(--text-reading); line-height:1.7;">${escapeHtml(item.job_detail || "暂无详情")}</p>
+      </div>`).join("") : `<div class="empty-inline compact">暂无代表样本。</div>`}
+  `;
+}
+
+function renderJdSearchResults(items) {
+  if (!dom.jdSearchResults) return;
+  dom.jdSearchResults.innerHTML = "";
+  if (!items || items.length === 0) {
+    renderEmptyState(dom.jdSearchResults, "本地库未检索到相关 JD。");
+    return;
+  }
+  items.forEach((item) => {
+    dom.jdSearchResults.innerHTML += `
+      <div class="card" style="margin-bottom:16px; padding:24px; border-radius:16px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; gap:12px;">
+          <strong style="color:var(--text-main); font-size:1.1rem;">${escapeHtml(item.job_title || "岗位")}</strong>
+          <span class="tag" style="background:var(--surface-alt); border-color:var(--primary); color:var(--primary); margin:0;">匹配度 ${escapeHtml(item.score ?? 0)}</span>
+        </div>
+        <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:16px;">${escapeHtml(item.company_name || "未知企业")}｜${escapeHtml(item.city || "未知城市")}｜${escapeHtml(item.salary_range || "薪资未知")}</p>
+        <p style="font-size:0.95rem; margin:0; color:var(--text-reading); line-height:1.7;">${escapeHtml(item.job_detail || "暂无岗位详情")}</p>
+      </div>`;
+  });
+}
+
+function renderStakeholderViews(items) {
+  if (!dom.stakeholderViews) return;
+  dom.stakeholderViews.innerHTML = "";
+  if (!items || items.length === 0) {
+    renderEmptyState(dom.stakeholderViews, "当前还没有多角色视角。");
+    return;
+  }
+  items.forEach((item) => {
+    dom.stakeholderViews.innerHTML += `
+      <div class="card" style="padding:20px; border-radius:16px; background:var(--surface-alt); margin-bottom:14px;">
+        <span class="mini-label" style="color:var(--primary);">${escapeHtml(item.role || "角色")}</span>
+        <h4 style="margin:8px 0 12px 0; font-size:1.05rem; color:var(--text-main);">${escapeHtml(item.headline || "摘要")}</h4>
+        <ul class="feature-list" style="font-size:0.9rem; padding-left:18px;">${(item.items || []).map((line) => `<li>${escapeHtml(line)}</li>`).join("")}</ul>
+      </div>`;
+  });
+}
+
+function renderTechnicalModules(items, keywords = []) {
+  if (dom.technicalKeywords) fillTagList(dom.technicalKeywords, keywords || [], "等待生成技术关键词");
+  if (!dom.technicalModules) return;
+  dom.technicalModules.innerHTML = "";
+  if (!items || items.length === 0) {
+    renderEmptyState(dom.technicalModules, "当前还没有技术模块说明。");
+    return;
+  }
+  items.forEach((item) => {
+    dom.technicalModules.innerHTML += `
+      <div style="margin-bottom:18px; padding-bottom:14px; border-bottom:1px dashed var(--border-strong);">
+        <strong style="color:var(--text-main); font-size:1.02rem;">${escapeHtml(item.name || item.title || "模块")}</strong>
+        ${item.tag ? `<span class="tag" style="margin-left:8px; background:transparent; border-color:var(--border-strong);">${escapeHtml(item.tag)}</span>` : ""}
+        <p style="margin:10px 0 0 0; font-size:0.94rem; color:var(--text-reading); line-height:1.6;">${escapeHtml(item.detail || "")}</p>
+      </div>`;
+  });
+}
+
+function renderInnovationHighlights(items) {
+  if (!dom.innovationHighlights) return;
+  dom.innovationHighlights.innerHTML = "";
+  if (!items || items.length === 0) {
+    renderEmptyState(dom.innovationHighlights, "当前还没有创新亮点摘要。");
+    return;
+  }
+  items.forEach((item) => {
+    dom.innovationHighlights.innerHTML += `
+      <div class="card" style="margin-bottom:16px; background:var(--surface-alt); padding:20px; border-radius:16px;">
+        <div style="display:flex; align-items:center; gap:12px; margin-bottom:10px; flex-wrap:wrap;">
+          <strong style="color:var(--text-main); font-size:1.05rem;">${escapeHtml(item.title || "亮点")}</strong>
+          ${item.tag ? `<span class="tag" style="background:rgba(15,118,110,0.1); color:var(--primary); border:none; margin:0;">${escapeHtml(item.tag)}</span>` : ""}
+        </div>
+        <p style="margin:0; font-size:0.95rem; color:var(--text-reading); line-height:1.7;">${escapeHtml(item.detail || "")}</p>
+      </div>`;
+  });
+}
+
+function renderCareerGraph(student, plan, matches) {
+  if (!dom.careerGraph) return;
+  const primary = plan?.primary_role || matches?.[0]?.role_title || "主岗位";
+  const backups = (plan?.backup_roles || []).slice(0, 2);
+  const path = (plan?.primary_growth_path || []).slice(0, 4);
+  const height = 340;
+  const nodeWidth = 150;
+  const nodeHeight = 56;
+  const centerY = 148;
+  const upperY = 86;
+  const lowerY = 228;
+  const nodes = [
+    { id: "student", label: student?.name || "学生", x: 74, y: centerY, tone: "teal", meta: "当前画像" },
+    { id: "primary", label: primary, x: 286, y: centerY, tone: "accent", meta: "主推枢纽" },
+  ];
+  path.slice(1, 4).forEach((item, index) => nodes.push({ id: `path-${index}`, label: item, x: 510 + index * 160, y: upperY, tone: "teal", meta: "纵向演进" }));
+  backups.forEach((item, index) => nodes.push({ id: `backup-${index}`, label: item, x: 510 + index * 160, y: lowerY, tone: "muted", meta: "横向转移" }));
+  const nodeMap = new Map(nodes.map((node) => [node.id, node]));
+  const centerYOf = (node) => node.y + nodeHeight / 2;
+  const rightEdge = (node) => node.x + nodeWidth;
+  const leftEdge = (node) => node.x;
+  const lines = [];
+  const connect = (fromId, toId, tone, mode = "horizontal") => {
+    const from = nodeMap.get(fromId);
+    const to = nodeMap.get(toId);
+    if (!from || !to) return;
+    if (mode === "diagonal") {
+      lines.push({ x1: rightEdge(from) - 8, y1: centerYOf(from), x2: leftEdge(to) + 8, y2: centerYOf(to), tone });
+      return;
+    }
+    lines.push({ x1: rightEdge(from), y1: centerYOf(from), x2: leftEdge(to), y2: centerYOf(to), tone });
+  };
+  connect("student", "primary", "accent");
+  if (nodeMap.has("path-0")) {
+    connect("primary", "path-0", "teal", "diagonal");
+    for (let index = 0; index < 2; index += 1) {
+      if (nodeMap.has(`path-${index}`) && nodeMap.has(`path-${index + 1}`)) {
+        connect(`path-${index}`, `path-${index + 1}`, "teal");
+      }
+    }
+  }
+  if (nodeMap.has("backup-0")) {
+    connect("primary", "backup-0", "muted", "diagonal");
+    if (nodeMap.has("backup-1")) connect("backup-0", "backup-1", "muted");
+  }
+  const colorMap = { accent: "#d97706", teal: "#0f766e", muted: "#78716c" };
+  const width = Math.max(940, ...nodes.map((node) => node.x + nodeWidth)) + 56;
+  dom.careerGraph.innerHTML = `
+    <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMinYMin meet" style="width:100%; height:auto; background:var(--surface-alt); border-radius:16px; border:1px solid var(--border);">
+      ${lines.map((line) => `<line x1="${line.x1}" y1="${line.y1}" x2="${line.x2}" y2="${line.y2}" stroke="${colorMap[line.tone]}" stroke-width="3" stroke-linecap="round" opacity="0.6"></line>`).join("")}
+      ${nodes.map((node) => `
+        <g transform="translate(${node.x}, ${node.y})">
+          <rect rx="28" ry="28" width="${nodeWidth}" height="${nodeHeight}" fill="#ffffff" stroke="${colorMap[node.tone]}" stroke-width="2"></rect>
+          <text x="${nodeWidth / 2}" y="22" fill="#78716c" font-size="11" text-anchor="middle">${escapeHtml(node.meta)}</text>
+          <text x="${nodeWidth / 2}" y="40" fill="#292524" font-size="14" font-weight="700" text-anchor="middle">${escapeHtml(node.label)}</text>
+        </g>`).join("")}
+    </svg>`;
+}
+
+function renderHistory(items) {
+  renderRecordList(
+    dom.historyList,
+    items,
+    (item) => `
+      <button class="btn btn-outline full-width history-card" data-history-id="${escapeHtml(item.id)}" style="text-align:left; margin-bottom:12px; padding:16px; border-radius:16px;">
+        <strong style="color:var(--primary); font-size:1.05rem;">#${escapeHtml(item.id)}</strong>
+        <span style="color:var(--text-main); margin-left:8px; font-weight:600;">${escapeHtml(item.student_name || "学生")} → ${escapeHtml(item.primary_role || "未生成")}</span>
+        <small style="color:var(--text-muted); display:block; margin-top:8px;">${escapeHtml(item.created_at || "")}｜${escapeHtml(item.parser_used_mode || "")}</small>
+      </button>`,
+    "暂无归档快照。"
+  );
+  dom.historyList?.querySelectorAll("[data-history-id]").forEach((button) => {
+    button.addEventListener("click", () => loadAnalysis(button.dataset.historyId));
+  });
+}
+
+function renderSystemChecks(payload) {
+  if (!dom.systemCheckList) return;
+  dom.systemCheckList.innerHTML = "";
+  const checks = payload?.checks || [];
+  if (!checks.length) {
+    renderEmptyState(dom.systemCheckList, "当前还没有系统健康数据。");
+    return;
+  }
+  checks.forEach((check) => {
+    const color = check.status === "ok" ? "var(--primary)" : (check.status === "warn" ? "var(--accent)" : "#b91c1c");
+    dom.systemCheckList.innerHTML += `
+      <li style="margin-bottom:12px; font-size:0.95rem; list-style:none; display:flex; align-items:flex-start; gap:12px; background:var(--surface-alt); padding:12px 16px; border-radius:12px; border:1px solid var(--border);">
+        <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:${color}; margin-top:6px;"></span>
+        <div>
+          <strong style="display:block; color:var(--text-main); margin-bottom:4px;">${escapeHtml(check.name || "检查项")}</strong>
+          <span style="color:var(--text-muted);">${escapeHtml(check.detail || "")}</span>
+        </div>
+      </li>`;
+  });
+}
+
+function renderReviewRecords(items) {
+  renderRecordList(
+    dom.reviewRecords,
+    items,
+    (item) => `
+      <div class="card" style="padding:16px; border-radius:12px; margin-bottom:12px; border-left:4px solid var(--primary);">
+        <strong style="display:block; font-size:1.05rem; color:var(--text-main); margin-bottom:6px;">${escapeHtml(item.reviewer_name || "老师")} · ${escapeHtml(item.decision || "待定")}</strong>
+        <p style="font-size:0.85rem; color:var(--text-muted); margin:0 0 8px 0;">${escapeHtml(item.reviewer_role || "辅导员")}｜${escapeHtml(item.created_at || "")}</p>
+        <p style="font-size:0.95rem; color:var(--text-reading); background:var(--surface-alt); padding:10px; border-radius:8px; margin:0;">${escapeHtml(item.notes || "未填写复核备注")}</p>
+      </div>`,
+    "当前分析还没有老师复核记录。"
+  );
+}
+
+function renderSchoolDashboard(data) {
+  renderMetricCards(dom.schoolDashboardStats, data?.summary_cards || [], "生成分析后形成学校运营看板。");
+  renderSimpleDistribution(dom.schoolDistribution, [
+    { title: "主岗位 Top5", items: data?.top_roles || [] },
+    { title: "专业分布 Top5", items: data?.major_distribution || [] },
+    { title: "城市偏好 Top5", items: data?.city_distribution || [] },
+  ], "暂无结构分布数据。");
+  renderMetricCards(dom.schoolServiceSegments, data?.service_segments || [], "暂无服务分层数据。");
+  renderMetricCards(dom.schoolReviewMetrics, data?.review_metrics || [], "暂无复核指标。");
+  renderMetricCards(dom.schoolGovernanceMetrics, data?.governance_metrics || [], "暂无治理指标。");
+
+  renderRecordList(
+    dom.schoolRecentReviews,
+    data?.recent_reviews || [],
+    (item) => `
+      <div class="card" style="padding:14px 16px; border-radius:12px; margin-bottom:12px; background:var(--surface-alt);">
+        <strong style="display:block; color:var(--text-main); margin-bottom:6px;">${escapeHtml(item.student_name || "学生")} · ${escapeHtml(item.decision || "待定")}</strong>
+        <p style="margin:0; font-size:0.85rem; color:var(--text-muted);">${escapeHtml(item.reviewer_name || "老师")}｜${escapeHtml(item.created_at || "")}</p>
+      </div>`,
+    "暂无复核留痕。"
+  );
+
+  renderRecordList(
+    dom.schoolFollowUp,
+    data?.follow_up_students || [],
+    (item) => `
+      <div class="card" style="padding:16px; border-radius:12px; margin-bottom:12px; background:var(--surface-alt);">
+        <strong style="display:block; color:var(--text-main); margin-bottom:8px;">${escapeHtml(item.name || "学生")} · ${escapeHtml(item.primary_role || "未生成")}</strong>
+        <p style="margin:0; font-size:0.85rem; color:var(--text-muted);">${escapeHtml(item.major || "专业未填写")}｜主岗分 ${escapeHtml(item.primary_score ?? 0)}｜完整度 ${escapeHtml(item.completeness ?? 0)}｜${escapeHtml(item.review_status || "待复核")}</p>
+      </div>`,
+    "暂无重点跟进学生。"
+  );
+
+  renderRecordList(
+    dom.schoolPushRecommendations,
+    data?.push_recommendations || [],
+    (item) => `
+      <div class="card" style="padding:16px; border-radius:12px; margin-bottom:12px;">
+        <div style="display:flex; justify-content:space-between; gap:12px; margin-bottom:8px;">
+          <strong style="color:var(--text-main);">${escapeHtml(item.title || "推岗建议")}</strong>
+          <span class="tag" style="margin:0;">${escapeHtml(item.type || "建议")} · ${escapeHtml(item.count ?? 0)}</span>
+        </div>
+        <p style="margin:0; font-size:0.88rem; color:var(--text-muted); line-height:1.6;">${escapeHtml(item.detail || "")}</p>
+      </div>`,
+    "暂无推岗建议。"
+  );
+
+  renderRecordList(
+    dom.schoolAuditQueue,
+    data?.audit_queue || [],
+    (item) => `
+      <div class="card" style="padding:16px; border-radius:12px; margin-bottom:12px; background:var(--surface-alt);">
+        <strong style="display:block; color:var(--text-main); margin-bottom:8px;">${escapeHtml(item.name || "学生")} · ${escapeHtml(item.primary_role || "未生成")}</strong>
+        <p style="margin:0 0 8px 0; font-size:0.85rem; color:var(--text-muted);">${escapeHtml(item.major || "专业未填写")}｜${escapeHtml(item.city || "城市未填写")}｜主岗分 ${escapeHtml(item.primary_score ?? 0)}</p>
+        <p style="margin:0; font-size:0.88rem; color:var(--accent); line-height:1.6;">原因：${escapeHtml((item.reasons || []).join("、") || "无")}</p>
+      </div>`,
+    "暂无待抽检记录。"
+  );
+}
+
+function renderBenchmark(data) {
+  if (dom.benchmarkSummaryCards) dom.benchmarkSummaryCards.innerHTML = "";
+  if (dom.benchmarkVerdict) dom.benchmarkVerdict.innerHTML = "";
+  if (dom.benchmarkCases) dom.benchmarkCases.innerHTML = "";
+  if (!data || !(data.summary_cards || []).length) {
+    if (dom.benchmarkStatus) dom.benchmarkStatus.innerHTML = ">// 等待运行内置样例压测...";
+    if (dom.benchmarkSummaryCards) renderEmptyState(dom.benchmarkSummaryCards, "运行验证后展示核心指标。");
+    return;
+  }
+  if (dom.benchmarkStatus) {
+    dom.benchmarkStatus.innerHTML = `<span style="color:#a7f3d0;">$ [SUCCESS]</span> ${escapeHtml(data.verdict?.label || "验证完成")}<br/>parser_mode=${escapeHtml(data.parser_mode || "rule")} ｜ executed=${escapeHtml(data.executed_case_count ?? 0)} ｜ skipped=${escapeHtml(data.skipped_case_count ?? 0)}`;
+  }
+  renderMetricCards(dom.benchmarkSummaryCards, data.summary_cards || [], "暂无基准测试数据。");
+  if (dom.benchmarkVerdict) {
+    dom.benchmarkVerdict.innerHTML = `
+      <div class="terminal-box" style="height:auto; min-height:0; border-color:rgba(15,118,110,0.4);">
+        <div style="display:flex; justify-content:space-between; gap:12px; margin-bottom:12px;">
+          <span style="color:#a7f3d0;">$ [SUCCESS] 评测跑通</span>
+          <strong style="color:#fff;">${escapeHtml(data.verdict?.label || "待评估")}</strong>
+        </div>
+        <p style="margin:0 0 12px 0; color:#cbd5e1; line-height:1.6;">> ${escapeHtml(data.verdict?.detail || "")}</p>
+        <ul style="padding-left:16px; margin:0; color:#94a3b8;">${(data.judge_notes || []).map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
+      </div>`;
+  }
+  renderRecordList(
+    dom.benchmarkCases,
+    data.cases || [],
+    (item) => `
+      <div class="card" style="padding:20px; border-radius:16px; margin-bottom:16px;">
+        <span class="mini-label" style="display:block; margin-bottom:8px;">${escapeHtml(item.label || "样例")}</span>
+        <h4 style="margin:0 0 12px 0; font-size:1.15rem; color:var(--text-main);">${escapeHtml(item.primary_role || "未生成")} · ${escapeHtml(item.primary_score ?? 0)} 分</h4>
+        <div class="chip-group" style="margin-bottom:14px;">
+          <span class="tag" style="background:${item.top1_hit ? "rgba(4,120,87,0.1)" : "rgba(185,28,28,0.1)"}; color:${item.top1_hit ? "var(--primary)" : "#b91c1c"}; border:none;">Top1 ${item.top1_hit ? "命中" : "未命中"}</span>
+          <span class="tag" style="background:${item.pass_case ? "rgba(4,120,87,0.1)" : "rgba(185,28,28,0.1)"}; color:${item.pass_case ? "var(--primary)" : "#b91c1c"}; border:none;">通过 ${item.pass_case ? "是" : "否"}</span>
+          <span class="tag">证据 ${escapeHtml(item.evidence_hit_rate ?? 0)}</span>
+          <span class="tag">回退 ${item.fallback_used ? "是" : "否"}</span>
+        </div>
+        <ul class="feature-list" style="font-size:0.88rem; padding-left:16px; margin:0;">${(item.observations || []).map((line) => `<li>${escapeHtml(line)}</li>`).join("")}</ul>
+      </div>`,
+    "暂无样例评测结果。"
+  );
+}
+
 // ==========================================
 // 4. 核心主流水线 (The Master Pipeline)
 // ==========================================
@@ -1468,6 +1986,7 @@ function renderResults(data) {
   // 渲染所有受保护的组件
   if (data.career_plan) renderCareerPlan(data.career_plan, data.matches);
   if (data.career_plan?.competency_dimensions) renderCompetencyRadar(data.career_plan.competency_dimensions);
+  renderCompetencyDimensions(data.career_plan?.competency_dimensions || []);
   if (data.career_plan?.evaluation_metrics) renderEvaluationMetrics(data.career_plan.evaluation_metrics);
   if (data.career_plan?.gap_benefit_analysis) renderGapBenefitAnalysis(data.career_plan.gap_benefit_analysis);
   if (data.career_plan?.plan_self_checks) renderPlanSelfChecks(data.career_plan.plan_self_checks);
@@ -1475,7 +1994,20 @@ function renderResults(data) {
   if (data.career_plan?.resource_map) renderResourceMap(data.career_plan.resource_map);
   if (data.career_plan?.similar_cases) renderSimilarCases(data.career_plan.similar_cases);
   if (data.career_plan?.evidence_bundle) renderGroundedEvidence(data.career_plan.evidence_bundle);
+  renderAgentQuestions(data.career_plan?.agent_questions || [], data.student_profile?.agent_answers || {});
+  renderSelfAssessmentForm(data.career_plan?.self_assessment || {});
+  renderSelfAssessmentSummary(data.career_plan?.self_assessment || {});
+  renderServiceLoop(data.career_plan?.service_loop || []);
+  renderStakeholderViews(data.career_plan?.stakeholder_views || []);
+  renderTechnicalModules(data.career_plan?.technical_modules || [], data.career_plan?.technical_keywords || []);
+  renderInnovationHighlights(data.career_plan?.innovation_highlights || []);
+  renderCareerGraph(data.student_profile || {}, data.career_plan || {}, data.matches || []);
   if (dom.reportPreview) dom.reportPreview.innerHTML = renderMarkdownPreview(state.currentReport);
+  if (dom.currentReviewAnalysis) {
+    dom.currentReviewAnalysis.textContent = state.currentAnalysisId
+      ? `当前复核锁定：#${state.currentAnalysisId} · ${(data.student_profile?.name || "学生")} · ${(data.career_plan?.primary_role || "未生成")}`
+      : "暂无锁定记录";
+  }
 
   // 🌟 P5: 渲染 AI 评审意见
   const commentary = data.career_plan?.ai_match_commentary;
@@ -1492,6 +2024,12 @@ function renderResults(data) {
   if (dom.saveReportBtn) dom.saveReportBtn.style.display = "none";
   if (dom.downloadEditedBtn) dom.downloadEditedBtn.style.display = "none";
 
+  const topRole = data.career_plan?.primary_role || data.matches?.[0]?.role_title || "";
+  if (topRole) {
+    if (dom.jdSearchInput) dom.jdSearchInput.value = topRole;
+    loadTemplateEvidence(topRole).catch(() => {});
+  }
+
   // 切回总览并滚动到顶
   document.querySelector('.tab-btn[data-target="tab-overview"]')?.click();
   dom.resultsContent?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -1500,6 +2038,152 @@ function renderResults(data) {
 // ==========================================
 // 5. API 交互与调度
 // ==========================================
+function collectAgentAnswers() {
+  const answers = {};
+  dom.agentQuestionList?.querySelectorAll("[data-agent-id]").forEach((input) => {
+    const key = input.dataset.agentId;
+    const value = input.value?.trim();
+    if (key && value) answers[key] = value;
+  });
+  return answers;
+}
+
+function collectSelfAssessmentAnswers() {
+  const answers = {};
+  dom.selfAssessmentForm?.querySelectorAll("[data-self-assessment-id]:checked").forEach((input) => {
+    const key = input.dataset.selfAssessmentId;
+    const value = Number(input.value);
+    if (key) answers[key] = value;
+  });
+  return answers;
+}
+
+async function refreshHistory() {
+  try {
+    const response = await fetch("/api/history");
+    const data = await response.json();
+    renderHistory(data.items || []);
+  } catch (error) {
+    renderEmptyState(dom.historyList, "历史分析快照加载失败。");
+  }
+}
+
+async function refreshSystemChecks() {
+  try {
+    const response = await fetch("/api/system-check");
+    const data = await response.json();
+    renderSystemChecks(data);
+  } catch (error) {
+    renderEmptyState(dom.systemCheckList, "系统健康检查加载失败。");
+  }
+}
+
+async function refreshSchoolDashboard() {
+  try {
+    const response = await fetch("/api/school-dashboard?limit=80");
+    const data = await response.json();
+    state.schoolDashboard = data;
+    renderSchoolDashboard(data);
+  } catch (error) {
+    renderEmptyState(dom.schoolDashboardStats, "学校运营看板加载失败。");
+  }
+}
+
+async function refreshBenchmark(showLoading = false) {
+  if (showLoading && dom.benchmarkStatus) {
+    dom.benchmarkStatus.innerHTML = ">// Benchmark Engine 预热中...";
+  }
+  try {
+    const mode = dom.parserModeSelect?.value || "auto";
+    const response = await fetch(`/api/benchmark?parser_mode=${encodeURIComponent(mode)}`);
+    const data = await response.json();
+    state.benchmark = data;
+    renderBenchmark(data);
+  } catch (error) {
+    if (dom.benchmarkStatus) {
+      dom.benchmarkStatus.innerHTML = `> [ERR] Runner Panic：${escapeHtml(error.message)}`;
+    }
+  }
+}
+
+async function loadReviews(analysisId) {
+  if (!analysisId) {
+    state.analysisReviews = [];
+    renderReviewRecords([]);
+    return;
+  }
+  try {
+    const response = await fetch(`/api/reviews?analysis_id=${encodeURIComponent(analysisId)}`);
+    const data = await response.json();
+    state.analysisReviews = data.items || [];
+    renderReviewRecords(state.analysisReviews);
+  } catch (error) {
+    renderReviewRecords([]);
+  }
+}
+
+async function loadAnalysis(analysisId) {
+  if (!analysisId) return;
+  setBusy(true);
+  setStatus(`拉取历史快照 #${analysisId}...`, "loading");
+  try {
+    const response = await fetch(`/api/history/${encodeURIComponent(analysisId)}`);
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "历史分析加载失败");
+    if (dom.resumeInput) dom.resumeInput.value = data.resume_text || "";
+    state.currentSampleName = data.sample_name || null;
+    renderResults({
+      analysis_id: data.id,
+      student_profile: data.student_profile,
+      matches: data.matches,
+      career_plan: data.career_plan,
+      report_markdown: data.report_markdown,
+      reviews: data.reviews || [],
+      parser: {
+        requested_mode: data.parser_requested_mode || "unknown",
+        used_mode: data.parser_used_mode || "unknown",
+        fallback_used: false,
+        message: `复原于 ${data.created_at}`,
+      },
+    });
+    await loadReviews(data.id);
+    setStatus(`快照 #${analysisId} 已恢复。`, "success");
+  } catch (error) {
+    setStatus(`历史提取失败：${error.message}`, "error");
+  } finally {
+    setBusy(false);
+  }
+}
+
+async function searchJd() {
+  const query = dom.jdSearchInput?.value.trim();
+  if (!query) return setStatus("参数非法：检索词不能为空。", "error");
+  setStatus(`启动岗位库检索：${query}...`, "loading");
+  try {
+    const response = await fetch(`/api/jd-search?q=${encodeURIComponent(query)}&limit=8`);
+    const data = await response.json();
+    renderJdSearchResults(data.items || []);
+    setStatus("岗位库检索完成。", "success");
+  } catch (error) {
+    setStatus(`检索失败：${error.message}`, "error");
+  }
+}
+
+async function loadTemplateEvidence(roleTitle) {
+  if (!roleTitle) {
+    renderTemplateEvidence(null);
+    return;
+  }
+  try {
+    const response = await fetch(`/api/template-evidence?role_title=${encodeURIComponent(roleTitle)}`);
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "模板证据加载失败");
+    renderTemplateEvidence(data);
+  } catch (error) {
+    renderEmptyState(dom.templateEvidence, "基线样本加载失败。");
+  }
+}
+
 async function loadSampleResume(sampleName = null) {
   setBusy(true); setStatus("读取样本数据...", "loading");
   try {
@@ -1523,13 +2207,15 @@ async function analyzeResume() {
       body: JSON.stringify({
         resume_text: resumeText, top_k: 5, parser_mode: dom.parserModeSelect?.value || "auto",
         sample_name: state.currentSampleName, prior_analysis_id: state.currentAnalysisId,
-        agent_answers: {}, self_assessment_answers: {},
+        agent_answers: collectAgentAnswers(), self_assessment_answers: collectSelfAssessmentAnswers(),
       }),
     });
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "计算节点拒绝响应");
     renderResults(data);
-    setStatus("决策视图已生成", "success");
+    await loadReviews(data.analysis_id);
+    await Promise.all([refreshHistory(), refreshSchoolDashboard()]);
+    setStatus(data.parser ? `分析完成，底层驱动：${String(data.parser.used_mode || "").toUpperCase()}` : "决策视图已生成", "success");
   } catch (error) { setStatus(`分析链路异常：${error.message}`, "error"); } finally { setBusy(false); }
 }
 
@@ -1544,8 +2230,41 @@ async function uploadResumeFile() {
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "反序列化受阻");
     if (dom.resumeInput) dom.resumeInput.value = data.resume_text || "";
+    state.currentSampleName = null;
     setStatus(data.message || `物理数据装载成功。`, "success");
   } catch (error) { setStatus(`通道建立失败：${error.message}`, "error"); } finally { setBusy(false); }
+}
+
+async function submitReview() {
+  if (!state.currentAnalysisId) return setStatus("请先生成或加载一条分析结果再提交复核。", "error");
+  const reviewerName = dom.reviewerNameInput?.value.trim();
+  if (!reviewerName) return setStatus("复核人不能为空。", "error");
+  setBusy(true);
+  setStatus("正在提交治理留痕...", "loading");
+  try {
+    const response = await fetch("/api/reviews", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        analysis_id: state.currentAnalysisId,
+        reviewer_name: reviewerName,
+        reviewer_role: dom.reviewerRoleSelect?.value || "辅导员",
+        decision: dom.reviewDecisionSelect?.value || "通过",
+        notes: dom.reviewNotesInput?.value.trim() || "",
+      }),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "复核提交失败");
+    state.analysisReviews = data.items || [];
+    renderReviewRecords(state.analysisReviews);
+    if (dom.reviewNotesInput) dom.reviewNotesInput.value = "";
+    await refreshSchoolDashboard();
+    setStatus("复核审批已完成留痕。", "success");
+  } catch (error) {
+    setStatus(`治理请求被拒：${error.message}`, "error");
+  } finally {
+    setBusy(false);
+  }
 }
 
 // ==========================================
@@ -1554,16 +2273,31 @@ async function uploadResumeFile() {
 window.addEventListener("load", () => {
   initTabs();
   window.addEventListener('resize', () => { if (window.radarChartInstance) window.radarChartInstance.resize(); });
-  loadSampleResume("demo_resume_backend.txt").catch(() => {});
+  Promise.allSettled([
+    loadSampleResume("demo_resume_backend.txt"),
+    refreshHistory(),
+    refreshSystemChecks(),
+    refreshSchoolDashboard(),
+    refreshBenchmark(),
+  ]).catch(() => {});
 });
 
 if (dom.analyzeBtn) dom.analyzeBtn.addEventListener("click", analyzeResume);
+if (dom.jdSearchBtn) dom.jdSearchBtn.addEventListener("click", searchJd);
+if (dom.runBenchmarkBtn) dom.runBenchmarkBtn.addEventListener("click", () => refreshBenchmark(true));
+if (dom.submitReviewBtn) dom.submitReviewBtn.addEventListener("click", submitReview);
 
 // 🌟 修复 2：按钮触发点击文件库，文件变化触发上传
 if (dom.uploadFileBtn) dom.uploadFileBtn.addEventListener("click", () => dom.resumeFileInput?.click());
 if (dom.resumeFileInput) {
   dom.resumeFileInput.addEventListener("change", () => {
     if (dom.resumeFileInput.files.length > 0) uploadResumeFile();
+  });
+}
+
+if (dom.selfAssessmentForm) {
+  dom.selfAssessmentForm.addEventListener("change", () => {
+    refreshLiveSelfAssessmentSummary();
   });
 }
 
