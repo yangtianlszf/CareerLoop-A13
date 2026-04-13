@@ -443,7 +443,16 @@ class A13RequestHandler(BaseHTTPRequestHandler):
             self._send_json(HTTPStatus.BAD_REQUEST, {"error": "Invalid JSON"})
             return
 
-        self._handle_json_post(body)
+        try:
+            self._handle_json_post(body)
+        except Exception as error:
+            self._send_json(
+                HTTPStatus.INTERNAL_SERVER_ERROR,
+                {
+                    "error": str(error),
+                    "path": self.path,
+                },
+            )
 
     def _handle_json_post(self, body: dict[str, object]) -> None:
         if self.path == "/api/student-profile":

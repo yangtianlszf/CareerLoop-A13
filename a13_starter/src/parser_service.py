@@ -37,8 +37,22 @@ def parse_student_profile(raw_text: str, parser_mode: str = "auto"):
         return build_student_profile(raw_text), ParserMetadata(mode, "rule", configured, False, False, None)
 
     if mode == "llm":
-        profile = build_student_profile_llm(raw_text)
-        return profile, ParserMetadata(mode, "llm", configured, True, False, None)
+        if not configured:
+            profile = build_student_profile(raw_text)
+            return profile, ParserMetadata(
+                mode,
+                "rule",
+                configured,
+                False,
+                True,
+                "LLM 模式未配置 API key，已自动回退到规则解析。",
+            )
+        try:
+            profile = build_student_profile_llm(raw_text)
+            return profile, ParserMetadata(mode, "llm", configured, True, False, None)
+        except OpenAIResponsesError as error:
+            profile = build_student_profile(raw_text)
+            return profile, ParserMetadata(mode, "rule", configured, True, True, str(error))
 
     if configured:
         try:
@@ -67,8 +81,22 @@ def parse_job_profile(raw_text: str, parser_mode: str = "auto"):
         return build_job_profile(raw_text), ParserMetadata(mode, "rule", configured, False, False, None)
 
     if mode == "llm":
-        profile = build_job_profile_llm(raw_text)
-        return profile, ParserMetadata(mode, "llm", configured, True, False, None)
+        if not configured:
+            profile = build_job_profile(raw_text)
+            return profile, ParserMetadata(
+                mode,
+                "rule",
+                configured,
+                False,
+                True,
+                "LLM 模式未配置 API key，已自动回退到规则解析。",
+            )
+        try:
+            profile = build_job_profile_llm(raw_text)
+            return profile, ParserMetadata(mode, "llm", configured, True, False, None)
+        except OpenAIResponsesError as error:
+            profile = build_job_profile(raw_text)
+            return profile, ParserMetadata(mode, "rule", configured, True, True, str(error))
 
     if configured:
         try:
