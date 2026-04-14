@@ -130,3 +130,53 @@ ROLE_TEMPLATE_SPECS = {
         "transition_paths": ["前端开发工程师", "实施工程师", "项目经理"],
     },
 }
+
+
+SUPPLEMENTAL_ROLE_TEMPLATES = [
+    {
+        "source_title": "数据分析师",
+        "canonical_title": "数据分析师",
+        "role_family": "数据",
+        "dataset_job_count": 0,
+        "summary": "围绕业务指标拆解、数据清洗、报表分析和结论输出开展工作，适合具备 Python/SQL 和分析表达能力的学生。",
+        "core_skills": ["Python", "SQL", "Excel", "数据分析", "PPT"],
+        "preferred_skills": ["MySQL", "需求分析", "机器学习", "项目管理", "沟通"],
+        "soft_skills": ["分析能力", "沟通", "表达能力", "学习能力", "执行力", "团队协作"],
+        "certificates": ["英语四级", "计算机二级"],
+        "education_requirement": "本科",
+        "experience_requirement": "应届优先，有数据分析项目、商业分析竞赛或可视化报告经历更佳",
+        "typical_industries": ["互联网", "电子商务", "企业服务", "金融科技", "零售"],
+        "typical_cities": ["上海-浦东新区", "杭州-余杭区", "深圳-南山区", "北京-海淀区", "成都-高新区"],
+        "sample_salary_ranges": ["7000-10000元", "8000-12000元", "1-1.5万", "9000-14000元"],
+        "vertical_growth_path": ["初级数据分析师", "数据分析师", "高级数据分析师", "数据产品经理"],
+        "transition_paths": ["Python开发工程师", "运营专员", "产品助理"],
+        "match_weights": {
+            "basic_requirements": 0.2,
+            "professional_skills": 0.4,
+            "professional_literacy": 0.2,
+            "growth_potential": 0.2,
+        },
+        "dataset_evidence": {
+            "top_skills": [["Python", 0], ["SQL", 0], ["Excel", 0], ["数据分析", 0], ["PPT", 0]],
+            "top_soft_skills": [["分析能力", 0], ["沟通", 0], ["表达能力", 0], ["学习能力", 0]],
+            "top_industries": [["互联网", 0], ["电子商务", 0], ["企业服务", 0]],
+            "top_cities": [["上海-浦东新区", 0], ["杭州-余杭区", 0], ["深圳-南山区", 0]],
+        },
+        "innovation_ability": "能从数据波动中主动提出假设，并设计分析框架验证业务问题",
+        "learning_ability": "能快速学习新业务指标口径和分析工具，在短周期内形成分析结论",
+        "stress_tolerance": "能在业务方高频追数和紧急汇报场景下保持分析口径一致和输出质量",
+        "communication_ability": "能把复杂数据结果转译为业务同学能理解的结论和行动建议",
+        "internship_ability": "具备完成数据清洗、指标分析、可视化汇报和复盘建议的基础实践能力",
+    }
+]
+
+
+def ensure_role_templates(templates: list[dict[str, object]]) -> list[dict[str, object]]:
+    normalized = [dict(item) for item in templates if isinstance(item, dict)]
+    existing_titles = {str(item.get("canonical_title", "")).strip() for item in normalized}
+    for template in SUPPLEMENTAL_ROLE_TEMPLATES:
+        title = str(template.get("canonical_title", "")).strip()
+        if title and title not in existing_titles:
+            normalized.append(dict(template))
+            existing_titles.add(title)
+    return normalized

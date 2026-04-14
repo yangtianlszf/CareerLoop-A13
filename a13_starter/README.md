@@ -102,16 +102,21 @@ http://127.0.0.1:8001/
 
 ## 二、推荐演示素材
 
-推荐直接用这 3 份样例简历做展示：
+页面左侧已经内置“答辩样例快切”，当前可直接演示这 7 份样例：
 
 - `a13_starter/samples/demo_resume_backend.txt`
 - `a13_starter/samples/demo_resume_implementation.txt`
 - `a13_starter/samples/demo_resume_frontend.txt`
+- `a13_starter/samples/demo_resume_data_analyst.txt`
+- `a13_starter/samples/demo_resume_operations.txt`
+- `a13_starter/samples/demo_resume_testdev.txt`
+- `a13_starter/samples/student_resume.txt`
 
 建议演示顺序：
 
 1. 先用 `demo_resume_backend.txt` 演示最稳
-2. 再切换 `implementation` 或 `frontend` 展示不同类型学生会得到不同推荐
+2. 再切换 `frontend`、`implementation` 展示不同岗位族的显著差异
+3. 最后用 `data_analyst`、`operations`、`testdev` 展示扩展岗位覆盖和验证中心完整度
 
 ## 三、简历文件上传说明
 
@@ -156,7 +161,7 @@ python -m a13_starter.tools.match_resume_to_templates --parser-mode auto
 python -m a13_starter.tools.run_benchmark --parser-mode rule
 ```
 
-这会输出 4 个典型学生样例的命中率、解释覆盖、报告就绪度和闭环能力评分。
+这会输出 7 个典型学生样例的命中率、解释覆盖、报告就绪度和闭环能力评分。
 
 运行后会生成这些结果文件：
 

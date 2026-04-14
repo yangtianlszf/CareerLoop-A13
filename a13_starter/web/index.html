@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>职徒未来 - 职业导航引擎</title>
+    <title>职徒未来 · 大学生职业规划平台</title>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <link rel="stylesheet" href="/styles.css" />
   </head>
@@ -16,15 +16,8 @@
         <svg class="brand-logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M12 2L2 7l10 5 10-5-10-5z"></path><path d="M2 17l10 5 10-5"></path><path d="M2 12l10 5 10-5"></path>
         </svg>
-        <h1>职徒未来</h1>
-      </div>
-      <div class="nav-actions">
-        <button class="icon-btn" id="mock-notification" title="系统通知">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
-        </button>
-        <div class="system-status" id="system-status-btn">
-          <div class="pulse-dot"></div>
-          <span class="status-text">A13 引擎在线</span>
+        <div class="brand-copy">
+          <h1>职徒未来</h1>
         </div>
       </div>
     </header>
@@ -32,19 +25,25 @@
     <div class="app-layout">
       <aside class="sidebar">
         <div class="card form-card">
+          <div class="workspace-hero compact">
+            <h2 class="workspace-title">上传简历，生成结果</h2>
+            <p class="workspace-summary">主岗、行动和证据自动联动</p>
+          </div>
+
           <div class="card-header">
             <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-            <h3>导入学生履历</h3>
+            <h3>上传简历</h3>
           </div>
           <textarea id="resume-input" placeholder="输入或粘贴简历文本、自我介绍及项目经历..."></textarea>
           
-          <div class="upload-group" style="margin-top: 16px;">
+          <div class="upload-group">
             <input type="file" id="resume-file-input" accept=".txt,.pdf,.docx,.doc" class="hidden-input" />
             <button id="upload-file-btn" class="btn btn-dashed full-width">选择本地文件</button>
+            <p class="field-note">支持本地文件或直接使用样例。</p>
           </div>
 
           <div class="settings-group">
-            <label for="parser-mode-select">解析引擎</label>
+            <label for="parser-mode-select">解析模式</label>
             <select id="parser-mode-select">
               <option value="auto">优先大模型 (降级兜底)</option>
               <option value="llm">强制大模型深度解析</option>
@@ -52,85 +51,166 @@
             </select>
           </div>
 
-          <button id="analyze-btn" class="btn btn-solid full-width btn-large" style="margin-top: 24px;">执行全案分析</button>
-          
-          <button id="print-pdf-btn" class="btn btn-outline full-width" style="margin-top: 12px;">
-            <svg style="width: 16px; height: 16px; vertical-align: middle; margin-right: 6px; margin-top: -2px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
-            导出 PDF 规划报告
-          </button>
-        </div>
+          <div class="sample-strip">
+            <div class="sample-strip-header">
+              <span>使用样例</span>
+            </div>
+            <div id="sample-gallery" class="sample-gallery"></div>
+          </div>
 
-        <div id="status-panel" class="status-panel">
-          <div class="status-indicator"></div>
-          <span id="status-text">系统处于空闲状态，等待输入...</span>
+          <button id="analyze-btn" class="btn btn-solid full-width btn-large action-primary">生成职业规划</button>
+          
+          <button id="print-pdf-btn" class="btn btn-outline full-width action-secondary">
+            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+            导出报告 PDF
+          </button>
+          
+          <div id="status-panel" class="status-panel" aria-live="polite">
+            <div class="status-indicator"></div>
+            <div class="status-copy">
+              <span class="status-label">运行状态</span>
+              <span id="status-text" class="status-text">等待输入</span>
+            </div>
+          </div>
         </div>
       </aside>
 
       <main class="main-content">
         <div id="empty-state" class="empty-state">
-          <div class="empty-graphic"></div>
-          <h2>就绪</h2>
-          <p>请在左侧导入履历，系统将进行多维度岗位匹配与路径演进。</p>
+          <div class="empty-state-panel">
+            <div class="empty-graphic"></div>
+            <h2>上传简历，先看主岗结论</h2>
+            <p>主岗推荐、行动路径、证据基线会同步生成</p>
+            <div class="empty-pill-row">
+              <span class="empty-pill">岗位匹配</span>
+              <span class="empty-pill">行动路径</span>
+              <span class="empty-pill">证据基线</span>
+            </div>
+          </div>
         </div>
 
         <div id="results-content" class="results-container hidden">
           <nav class="tabs">
             <button class="tab-btn active" data-target="tab-overview">诊断总览</button>
-            <button class="tab-btn" data-target="tab-plan">演进路径</button>
-            <button class="tab-btn" data-target="tab-agent">深度诊断</button>
-            <button class="tab-btn" data-target="tab-evidence">数据溯源</button>
-            <button class="tab-btn" data-target="tab-dashboard">运行看板</button>
+            <button class="tab-btn" data-target="tab-plan">行动路径</button>
+            <button class="tab-btn" data-target="tab-agent">能力校准</button>
+            <button class="tab-btn" data-target="tab-evidence">证据基线</button>
+            <button class="tab-btn" data-target="tab-dashboard">运营看板</button>
           </nav>
 
           <div id="tab-overview" class="tab-pane active">
             <div class="grid-2">
               <div class="card highlight-card">
-                <div class="card-header"><h4>首选建议岗位</h4></div>
-                <h2 id="primary-role" class="role-title">--</h2>
-                <div class="score-display">
-                  <span id="primary-score-badge" class="score-number">0</span>
-                  <span class="score-pill">适配度</span>
+                <div class="card-header"><h4>主推荐岗位</h4></div>
+                <div class="primary-role-shell">
+                  <div class="primary-role-top">
+                    <div class="primary-role-main">
+                      <h2 id="primary-role" class="role-title">--</h2>
+                      <p id="primary-role-summary" class="primary-role-summary">等待生成主岗位解读</p>
+                    </div>
+                    <div class="primary-score-card">
+                      <span class="primary-score-label">适配度</span>
+                      <div class="score-display">
+                        <span id="primary-score-badge" class="score-number">0</span>
+                        <span class="score-pill">推荐结果</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="primary-role-metrics">
+                    <div class="primary-role-metric">
+                      <span class="primary-role-metric-label">优势项</span>
+                      <strong id="primary-strength-count" class="primary-role-metric-value">0</strong>
+                    </div>
+                    <div class="primary-role-metric">
+                      <span class="primary-role-metric-label">待补强</span>
+                      <strong id="primary-risk-count" class="primary-role-metric-value">0</strong>
+                    </div>
+                    <div class="primary-role-metric">
+                      <span class="primary-role-metric-label">证据命中</span>
+                      <strong id="primary-evidence-rate" class="primary-role-metric-value">0%</strong>
+                    </div>
+                  </div>
+                  <div id="primary-role-note" class="primary-role-note">优先动作将在生成后同步显示</div>
                 </div>
                 <div class="backup-info">
-                  <span class="mini-label">横向拓展区间</span> 
+                  <span class="mini-label">备选岗位</span> 
                   <span id="backup-roles" class="text-body">--</span>
                 </div>
               </div>
               
               <div class="card">
-                <div class="card-header"><h4>能力图谱分析</h4></div>
-                <div id="radar-chart" style="width: 100%; min-height: 260px;"></div>
+                <div class="card-header"><h4>多候选岗位能力雷达</h4></div>
+                <div id="radar-chart" class="chart-panel"></div>
+                <div id="role-comparison-summary" class="panel-note"></div>
                 <div id="competency-dimensions" class="hidden"></div>
               </div>
             </div>
 
-            <div class="card mt-4">
-              <div class="card-header"><h4>分析简报</h4></div>
-              <p id="plan-overview" class="text-reading">--</p>
-            </div>
-
-            <!-- 🌟 P5: AI 评审意见卡片 -->
-            <div id="ai-commentary-card" class="card mt-4 hidden" style="border-color: rgba(15,118,110,0.4); background: linear-gradient(135deg, rgba(15,118,110,0.04), var(--surface));">
-              <div class="card-header">
-                <h4>🤖 AI 评审意见 <span style="font-size: 0.8rem; font-weight: 400; color: var(--text-muted);">（由大模型实时生成）</span></h4>
-              </div>
-              <p id="ai-commentary-text" class="text-reading" style="font-style: italic; line-height: 1.8; color: var(--text-reading);"></p>
-            </div>
-
             <div class="grid-2 mt-4">
               <div class="card section-positive">
-                <h4 class="title-positive">核心竞争力</h4>
+                <h4 class="title-positive">已有优势</h4>
                 <ul id="strengths-list" class="feature-list"></ul>
               </div>
               <div class="card section-negative">
-                <h4 class="title-negative">关键要素缺失</h4>
+                <h4 class="title-negative">待补关键项</h4>
                 <ul id="risks-list" class="feature-list"></ul>
               </div>
             </div>
 
-            <div class="card mt-4">
-              <div class="card-header"><h4>系统置信度评估</h4></div>
-              <div id="evaluation-metrics" class="metrics-grid"></div>
+            <div class="fold-stack mt-4">
+              <details class="fold-section" open>
+                <summary class="fold-summary">
+                  <div class="fold-title-group">
+                    <span class="mini-label">Summary</span>
+                    <strong>结论摘要</strong>
+                  </div>
+                  <span class="fold-hint">默认展开</span>
+                </summary>
+                <div class="fold-body">
+                  <div class="fold-panel">
+                    <p id="plan-overview" class="lead-summary">--</p>
+                    <div id="ai-commentary-card" class="inline-insight hidden">
+                      <span class="inline-insight-label">智能评审摘要</span>
+                      <p id="ai-commentary-text" class="inline-insight-copy"></p>
+                    </div>
+                  </div>
+                </div>
+              </details>
+
+              <details class="fold-section">
+                <summary class="fold-summary">
+                  <div class="fold-title-group">
+                    <span class="mini-label">Metrics</span>
+                    <strong>置信度与画像</strong>
+                  </div>
+                  <span class="fold-hint">展开查看</span>
+                </summary>
+                <div class="fold-body fold-grid">
+                  <div class="fold-panel">
+                    <h5 class="fold-panel-title">系统置信度评估</h5>
+                    <div id="evaluation-metrics" class="metrics-grid"></div>
+                  </div>
+                  <div class="fold-panel">
+                    <h5 class="fold-panel-title">求职情境画像</h5>
+                    <div id="job-search-snapshot" class="metrics-grid"></div>
+                  </div>
+                </div>
+              </details>
+
+              <details class="fold-section">
+                <summary class="fold-summary">
+                  <div class="fold-title-group">
+                    <span class="mini-label">Ranking</span>
+                    <strong>推荐排序解释</strong>
+                  </div>
+                  <span class="fold-hint">展开查看</span>
+                </summary>
+                <div class="fold-body">
+                  <div class="fold-panel">
+                    <div id="recommendation-comparisons"></div>
+                  </div>
+                </div>
+              </details>
             </div>
 
             <div class="hidden">
@@ -141,6 +221,12 @@
           </div>
 
           <div id="tab-plan" class="tab-pane">
+            <div class="card">
+              <div class="card-header"><h4>岗位方案对照</h4></div>
+              <div id="role-switch-toolbar"></div>
+              <div id="role-switch-summary" class="panel-note"></div>
+            </div>
+
             <div class="grid-2">
               <div class="card">
                 <div class="card-header"><h4>行动时间线</h4></div>
@@ -151,7 +237,7 @@
                 </div>
               </div>
               <div class="stack-layout">
-                <div class="card"><div class="card-header"><h4>动态实战指导</h4></div><ul id="recommended-projects" class="feature-list"></ul></div>
+                <div class="card"><div class="card-header"><h4>项目与实战建议</h4></div><ul id="recommended-projects" class="feature-list"></ul></div>
                 <div class="card mt-4"><div class="card-header"><h4>专项补强节点</h4></div><div id="learning-sprints" class="sprints-grid"></div></div>
               </div>
             </div>
@@ -161,37 +247,110 @@
               <div class="card"><div class="card-header"><h4>计划自检</h4></div><div id="plan-self-checks" class="metric-grid"></div></div>
             </div>
 
-            <div class="grid-2 mt-4">
-              <div class="card"><div class="card-header"><h4>纵向深造路径</h4></div><ul id="growth-path-list" class="feature-list"></ul></div>
-              <div class="card"><div class="card-header"><h4>横向迁移路径</h4></div><ul id="transition-path-list" class="feature-list"></ul></div>
-            </div>
-            
-            <div class="card mt-4"><div class="card-header"><h4>落地资源库</h4></div><div id="resource-map" class="resource-grid"></div></div>
+            <details class="fold-section mt-4">
+              <summary class="fold-summary">
+                <div class="fold-title-group">
+                  <span class="mini-label">Path</span>
+                  <strong>成长路径与资源</strong>
+                </div>
+                <span class="fold-hint">展开查看</span>
+              </summary>
+              <div class="fold-body fold-grid">
+                <div class="fold-panel">
+                  <h5 class="fold-panel-title">纵向深造路径</h5>
+                  <ul id="growth-path-list" class="feature-list"></ul>
+                </div>
+                <div class="fold-panel">
+                  <h5 class="fold-panel-title">横向迁移路径</h5>
+                  <ul id="transition-path-list" class="feature-list"></ul>
+                </div>
+                <div class="fold-panel fold-span-wide">
+                  <h5 class="fold-panel-title">落地资源库</h5>
+                  <div id="resource-map" class="resource-grid"></div>
+                </div>
+              </div>
+            </details>
+
+            <details class="fold-section mt-4">
+              <summary class="fold-summary">
+                <div class="fold-title-group">
+                  <span class="mini-label">Apply</span>
+                  <strong>投递与简历</strong>
+                </div>
+                <span class="fold-hint">展开查看</span>
+              </summary>
+              <div class="fold-body fold-grid">
+                <div class="fold-panel">
+                  <h5 class="fold-panel-title">投递作战包</h5>
+                  <div id="application-strategy"></div>
+                </div>
+                <div class="fold-panel">
+                  <h5 class="fold-panel-title">简历改写清单</h5>
+                  <div id="resume-surgery"></div>
+                </div>
+              </div>
+            </details>
             <div class="hidden"><div id="growth-path"></div><div id="transition-paths"></div></div>
           </div>
 
           <div id="tab-agent" class="tab-pane">
             <div class="grid-2">
               <div class="card">
-                <div class="card-header"><h4>情境补充与对齐</h4></div>
-                <p class="text-muted mb-2">为提升规划精度，请补充以下缺失的背景信息：</p>
+                <div class="card-header"><h4>补充背景</h4></div>
+                <p class="text-muted mb-2">补充缺失背景，提升规划精度。</p>
                 <form id="agent-question-list" class="agent-form"></form>
               </div>
               <div class="card">
-                <div class="card-header"><h4>专业能力摸底</h4></div>
-                <p class="text-muted mb-2">客观评估该岗位核心职责的真实掌握情况：</p>
+                <div class="card-header"><h4>能力摸底</h4></div>
+                <p class="text-muted mb-2">快速判断当前岗位胜任度。</p>
                 <form id="self-assessment-form" class="agent-form"></form>
                 <div id="self-assessment-summary" class="assessment-summary mt-3"></div>
               </div>
             </div>
 
-            <div class="grid-2 mt-4">
-              <div class="card"><div class="card-header"><h4>多角色价值判断</h4></div><div id="stakeholder-views" class="stakeholder-grid"></div></div>
-              <div class="card"><div class="card-header"><h4>复测考核目标</h4></div><ul id="review-targets" class="feature-list"></ul></div>
-            </div>
+            <details class="fold-section mt-4">
+              <summary class="fold-summary">
+                <div class="fold-title-group">
+                  <span class="mini-label">Review</span>
+                  <strong>多角色与复测</strong>
+                </div>
+                <span class="fold-hint">展开查看</span>
+              </summary>
+              <div class="fold-body fold-grid">
+                <div class="fold-panel">
+                  <h5 class="fold-panel-title">多角色价值判断</h5>
+                  <div id="stakeholder-views" class="stakeholder-grid"></div>
+                </div>
+                <div class="fold-panel">
+                  <h5 class="fold-panel-title">复测考核目标</h5>
+                  <ul id="review-targets" class="feature-list"></ul>
+                </div>
+              </div>
+            </details>
 
-            <div class="card mt-4"><div class="card-header"><h4>验证与考核任务</h4></div><ul id="assessment-tasks" class="feature-list"></ul></div>
-            <div class="card mt-4"><div class="card-header"><h4>服务生命周期</h4></div><div id="service-loop" class="loop-grid"></div></div>
+            <details class="fold-section mt-4">
+              <summary class="fold-summary">
+                <div class="fold-title-group">
+                  <span class="mini-label">Practice</span>
+                  <strong>实战准备</strong>
+                </div>
+                <span class="fold-hint">展开查看</span>
+              </summary>
+              <div class="fold-body fold-grid">
+                <div class="fold-panel">
+                  <h5 class="fold-panel-title">验证与考核任务</h5>
+                  <ul id="assessment-tasks" class="feature-list"></ul>
+                </div>
+                <div class="fold-panel">
+                  <h5 class="fold-panel-title">面试冲刺题板</h5>
+                  <div id="interview-focus"></div>
+                </div>
+                <div class="fold-panel fold-span-wide">
+                  <h5 class="fold-panel-title">服务生命周期</h5>
+                  <div id="service-loop" class="loop-grid"></div>
+                </div>
+              </div>
+            </details>
           </div>
 
           <div id="tab-evidence" class="tab-pane">
@@ -202,29 +361,45 @@
             </div>
 
             <div class="grid-2">
-              <div class="card"><div class="card-header"><h4>原始样本切片</h4></div><div id="evidence-snippets" class="snippet-list"></div></div>
-              <div class="card"><div class="card-header"><h4>标准基线参照</h4></div><div id="template-evidence" class="snippet-list"></div></div>
+              <div class="card"><div class="card-header"><h4>样本切片</h4></div><div id="evidence-snippets" class="snippet-list"></div></div>
+              <div class="card"><div class="card-header"><h4>岗位基线</h4></div><div id="template-evidence" class="snippet-list"></div></div>
             </div>
 
-            <div class="card mt-4">
-              <div class="card-header"><h4>相似案例参考</h4></div>
-              <p class="text-muted mb-2">基于全库大数据匹配的历史相似画像：</p>
-              <div id="similar-cases" class="stakeholder-grid"></div>
-            </div>
-
-            <div class="card mt-4">
-              <div class="card-header"><h4>本地岗位库核查</h4></div>
-              <div class="search-bar" style="display:flex; gap:12px;">
-                <input type="text" id="jd-search-input" placeholder="输入关键字 (例：Java、硬件测试...)" class="input-field" style="flex:1;" />
-                <button id="jd-search-btn" class="btn btn-outline">执行检索</button>
+            <details class="fold-section mt-4">
+              <summary class="fold-summary">
+                <div class="fold-title-group">
+                  <span class="mini-label">Cases</span>
+                  <strong>相似案例参考</strong>
+                </div>
+                <span class="fold-hint">展开查看</span>
+              </summary>
+              <div class="fold-body">
+                <p class="fold-panel-copy">基于历史画像匹配相似样本。</p>
+                <div id="similar-cases" class="stakeholder-grid"></div>
               </div>
-              <div id="jd-search-results" class="search-results mt-3"></div>
-            </div>
+            </details>
+
+            <details class="fold-section mt-4">
+              <summary class="fold-summary">
+                <div class="fold-title-group">
+                  <span class="mini-label">JD Search</span>
+                  <strong>本地岗位库核查</strong>
+                </div>
+                <span class="fold-hint">展开查看</span>
+              </summary>
+              <div class="fold-body">
+                <div class="search-bar">
+                  <input type="text" id="jd-search-input" placeholder="输入关键字 (例：Java、硬件测试...)" class="input-field search-grow" />
+                  <button id="jd-search-btn" class="btn btn-outline">执行检索</button>
+                </div>
+                <div id="jd-search-results" class="search-results mt-3"></div>
+              </div>
+            </details>
           </div>
 
           <div id="tab-dashboard" class="tab-pane">
             <div class="grid-2">
-              <div class="card"><div class="card-header"><h4>全局宏观态势</h4></div><div id="school-dashboard-stats" class="dashboard-stats"></div></div>
+              <div class="card"><div class="card-header"><h4>学校整体概览</h4></div><div id="school-dashboard-stats" class="dashboard-stats"></div></div>
               <div class="card"><div class="card-header"><h4>历史分析快照</h4></div><ul id="history-list" class="history-list"></ul></div>
             </div>
 
@@ -236,33 +411,33 @@
               </div>
 
               <div class="card">
-                <div class="card-header"><h4>执行抽检复核</h4></div>
-                <div class="review-form-grid" style="display:flex; flex-direction:column; gap:12px; background:var(--surface-alt); padding:16px; border-radius:12px; border:1px solid var(--border);">
-                  <p id="current-review-analysis" style="margin:0 0 12px 0; font-size:0.9rem; color:var(--text-main); font-weight:600;">暂无锁定记录</p>
-                  <div style="display:flex; gap:12px;">
-                    <div style="flex:1;">
-                      <label style="font-size:0.85rem; color:var(--text-muted); display:block; margin-bottom:4px;">复核人</label>
+                <div class="card-header"><h4>人工复核与留痕</h4></div>
+                <div class="review-form-grid">
+                  <p id="current-review-analysis" class="review-lock">暂无锁定记录</p>
+                  <div class="form-row">
+                    <div class="form-field">
+                      <label>复核人</label>
                       <input id="reviewer-name-input" class="input-field" type="text" placeholder="例：张老师" />
                     </div>
-                    <div style="flex:1;">
-                      <label style="font-size:0.85rem; color:var(--text-muted); display:block; margin-bottom:4px;">角色身份</label>
-                      <select id="reviewer-role-select" style="width:100%;">
+                    <div class="form-field">
+                      <label>角色身份</label>
+                      <select id="reviewer-role-select">
                         <option value="辅导员">辅导员</option>
                         <option value="就业中心">就业中心</option>
                       </select>
                     </div>
                   </div>
-                  <div>
-                    <label style="font-size:0.85rem; color:var(--text-muted); display:block; margin-bottom:4px;">审批结论</label>
-                    <select id="review-decision-select" style="width:100%;">
+                  <div class="form-field">
+                    <label>审批结论</label>
+                    <select id="review-decision-select">
                       <option value="通过">✅ 建议通过</option>
                       <option value="需补强">⚠️ 需打回补强</option>
                       <option value="重点跟进">🚨 需重点跟进</option>
                     </select>
                   </div>
-                  <div>
-                    <label style="font-size:0.85rem; color:var(--text-muted); display:block; margin-bottom:4px;">批注与建议</label>
-                    <textarea id="review-notes-input" class="input-field" style="height:80px; resize:none; padding:12px;" placeholder="记录针对性的优化指导..."></textarea>
+                  <div class="form-field">
+                    <label>批注与建议</label>
+                    <textarea id="review-notes-input" class="input-field compact-textarea" placeholder="记录针对性的优化指导..."></textarea>
                   </div>
                   <button id="submit-review-btn" class="btn btn-outline full-width">确认并提交留痕</button>
                 </div>
@@ -273,18 +448,18 @@
             <div class="grid-2 mt-4">
               <div class="stack-layout">
                 <div class="card">
-                  <div class="card-header"><h4>系统健康度</h4></div>
+                  <div class="card-header"><h4>系统运行状态</h4></div>
                   <ul id="system-check-list" class="check-list"></ul>
                 </div>
                 <div class="card">
-                  <div class="card-header"><h4>技术底层组件</h4></div>
+                  <div class="card-header"><h4>技术方案说明</h4></div>
                   <div id="technical-keywords" class="chip-group mb-2"></div>
                   <div id="technical-modules"></div>
                 </div>
               </div>
               <div class="card">
-                <div class="card-header"><h4>自动化基准测试</h4></div>
-                <button id="run-benchmark-btn" class="btn btn-dashed full-width mb-2">执行自动化压测验证</button>
+                <div class="card-header"><h4>基准测试验证</h4></div>
+                <button id="run-benchmark-btn" class="btn btn-dashed full-width mb-2">运行基准测试</button>
                 <div id="benchmark-status" class="terminal-box"></div>
                 <div id="benchmark-summary-cards" class="mt-4"></div>
                 <div id="benchmark-verdict" class="mt-4"></div>
@@ -295,7 +470,7 @@
             <div class="grid-2 mt-4">
               <div class="card">
                 <div class="card-header"><h4>结构分布与服务分层</h4></div>
-                <div class="grid-2" style="gap:16px;">
+                <div class="grid-2 compact-grid">
                   <div>
                     <p class="text-muted mb-2">主岗位 / 专业 / 城市分布</p>
                     <div id="school-distribution"></div>
@@ -327,21 +502,21 @@
 
             <div class="card mt-4">
               <div class="card-header"><h4>关系图谱与衍生信息</h4></div>
-              <div id="career-graph" style="margin-bottom: 20px;"></div>
+              <div id="career-graph" class="career-graph-panel"></div>
               <div id="innovation-highlights"></div>
             </div>
 
             <div class="card mt-4">
-              <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
-                <h4>正式诊断报告 (Markdown)</h4>
-                <div style="display:flex; gap:8px;">
-                  <button id="edit-report-btn" class="btn btn-outline" style="font-size:0.85rem; padding:6px 14px;">✏️ 编辑报告</button>
-                  <button id="save-report-btn" class="btn" style="font-size:0.85rem; padding:6px 14px; display:none;">💾 保存预览</button>
-                  <button id="download-edited-btn" class="btn btn-outline" style="font-size:0.85rem; padding:6px 14px; display:none;">⬇️ 下载编辑版</button>
+              <div class="card-header split-header">
+                <h4>职业规划报告</h4>
+                <div class="inline-actions">
+                  <button id="edit-report-btn" class="btn btn-outline btn-compact">编辑报告</button>
+                  <button id="save-report-btn" class="btn btn-solid btn-compact hidden">保存预览</button>
+                  <button id="download-edited-btn" class="btn btn-outline btn-compact hidden">下载编辑版</button>
                 </div>
               </div>
-              <div id="report-editor-area" style="display:none;">
-                <textarea id="report-editor" style="width:100%; min-height:400px; font-family:monospace; font-size:0.9rem; background:var(--surface-alt); border:1px solid var(--border-strong); border-radius:12px; padding:16px; color:var(--text-main); resize:vertical; box-sizing:border-box; line-height:1.6;"></textarea>
+              <div id="report-editor-area" class="report-editor-shell">
+                <textarea id="report-editor"></textarea>
               </div>
               <div id="report-preview" class="report-preview"></div>
             </div>

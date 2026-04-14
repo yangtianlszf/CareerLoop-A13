@@ -5,12 +5,9 @@ import json
 from pathlib import Path
 
 from a13_starter.src.career_planner import build_career_plan, rank_student_against_templates
+from a13_starter.src.jd_search import load_role_templates
 from a13_starter.src.parser_service import parse_student_profile
 from a13_starter.src.report import build_career_report_markdown
-
-
-def _load_templates(path: Path) -> list[dict[str, object]]:
-    return json.loads(path.read_text(encoding="utf-8"))
 
 
 def _load_resume_text(path: Path) -> str:
@@ -33,11 +30,10 @@ def main() -> None:
     args = parser.parse_args()
 
     project_root = Path(__file__).resolve().parents[2]
-    templates_path = project_root / "a13_starter" / "generated" / "role_profile_templates.json"
     resume_path = project_root / args.resume
     output_dir = project_root / "a13_starter" / "generated"
 
-    templates = _load_templates(templates_path)
+    templates = load_role_templates()
     resume_text = _load_resume_text(resume_path)
     student, parser_metadata = parse_student_profile(resume_text, parser_mode=args.parser_mode)
     matches = rank_student_against_templates(student, templates)

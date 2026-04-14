@@ -7,6 +7,7 @@ from typing import Any
 from a13_starter.src.dataset import build_job_text_from_row, load_job_rows
 from a13_starter.src.extractors import build_job_profile
 from a13_starter.src.paths import resolve_project_root
+from a13_starter.src.role_template_specs import ensure_role_templates
 
 
 PROJECT_ROOT = resolve_project_root(__file__, 2)
@@ -25,8 +26,8 @@ def load_all_job_rows() -> list[dict[str, str]]:
 @lru_cache(maxsize=1)
 def load_role_templates() -> list[dict[str, Any]]:
     if not ROLE_TEMPLATES_PATH.exists():
-        return []
-    return json.loads(ROLE_TEMPLATES_PATH.read_text(encoding="utf-8"))
+        return ensure_role_templates([])
+    return ensure_role_templates(json.loads(ROLE_TEMPLATES_PATH.read_text(encoding="utf-8")))
 
 
 def search_job_profiles(query: str, limit: int = 12) -> list[dict[str, Any]]:

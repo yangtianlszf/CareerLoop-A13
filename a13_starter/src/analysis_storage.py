@@ -314,6 +314,7 @@ def find_similar_analyses(
     *,
     student_name: str | None,
     major: str | None,
+    current_skills: list[str] | None,
     target_roles: list[str] | None,
     city_preference: str | None,
     primary_role: str | None,
@@ -332,6 +333,11 @@ def find_similar_analyses(
 
     latest_review_by_analysis = _latest_review_map()
     target_role_set = {str(item).strip() for item in target_roles or [] if str(item).strip()}
+    current_skill_set = {
+        str(item).strip().lower()
+        for item in current_skills or []
+        if str(item).strip()
+    }
     results: list[dict[str, Any]] = []
     for row in rows:
         student_profile = json.loads(row["student_profile_json"])
@@ -358,18 +364,12 @@ def find_similar_analyses(
             score += 18
             reasons.append("目标岗位意向重叠")
 
-        skill_overlap = len(
-            {
-                str(item).strip()
-                for item in student_profile.get("skills", [])
-                if str(item).strip()
-            }
-            & {
-                str(item).strip()
-                for item in career_plan.get("evidence_bundle", {}).get("hit_terms", [])
-                if str(item).strip()
-            }
-        )
+        candidate_skill_set = {
+            str(item).strip().lower()
+            for item in student_profile.get("skills", [])
+            if str(item).strip()
+        }
+        skill_overlap = len(current_skill_set & candidate_skill_set)
         if skill_overlap:
             score += min(skill_overlap * 3, 12)
             reasons.append(f"命中 {skill_overlap} 个相近技能词")

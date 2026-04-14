@@ -7,9 +7,11 @@ from a13_starter.src.analysis_storage import find_similar_analyses
 from a13_starter.src.citation_utils import annotate_text_with_citations, build_term_citation_map
 from a13_starter.src.evidence_retrieval import build_grounded_evidence_bundle
 from a13_starter.src.extractors import refresh_student_profile_metrics
+from a13_starter.src.jd_search import load_role_templates
 from a13_starter.src.matcher import match_student_to_job
 from a13_starter.src.models import CareerPlan, JobProfile, StudentProfile
 from a13_starter.src.openai_responses import OpenAIResponsesClient  # 🌟 新增：引入大模型客户端
+from a13_starter.src.role_normalizer import normalize_job_title
 from a13_starter.src.skill_taxonomy import normalize_skill_alias, normalize_skill_list
 
 
@@ -74,6 +76,349 @@ def rank_student_against_templates(
     if top_k is None:
         return matches
     return matches[:top_k]
+
+
+def _normalize_role_label(role_title: str) -> str:
+    cleaned = str(role_title or "").strip()
+    if not cleaned:
+        return ""
+    return normalize_job_title(cleaned, detail=cleaned, industry="")
+
+
+def _normalized_role_labels(role_titles: list[str] | None) -> set[str]:
+    normalized: set[str] = set()
+    for role_title in role_titles or []:
+        role = _normalize_role_label(str(role_title))
+        if role:
+            normalized.add(role)
+    return normalized
+
+
+def _strategy_lane_score(
+    student: StudentProfile,
+    primary_match: dict[str, Any],
+    candidate: dict[str, Any],
+    lane: str,
+    selected_families: set[str],
+) -> int:
+    score = int(candidate.get("score", 0))
+    candidate_title = str(candidate.get("role_title", ""))
+    candidate_family = str(candidate.get("role_family", "综合"))
+    primary_family = str(primary_match.get("role_family", "综合"))
+    candidate_missing = len(candidate.get("missing_skills", []))
+    candidate_shared = len(candidate.get("shared_skills", []))
+
+    normalized_candidate = _normalize_role_label(candidate_title)
+    normalized_targets = _normalized_role_labels(student.target_roles)
+    normalized_transitions = _normalized_role_labels(list(primary_match.get("transition_paths", [])))
+
+    explicit_target = normalized_candidate in normalized_targets
+    in_transition_path = normalized_candidate in normalized_transitions
+    same_family = candidate_family == primary_family
+    score_gap = max(0, int(primary_match.get("score", 0)) - score)
+
+    adjusted = score
+    if lane == "cross":
+        if explicit_target:
+            adjusted += 12
+        if in_transition_path:
+            adjusted += 10
+        if not same_family:
+            adjusted += 5
+        if candidate_family not in selected_families:
+            adjusted += 2
+        if candidate_shared >= 2:
+            adjusted += 2
+        if candidate_missing <= 2:
+            adjusted += 2
+        if same_family and not explicit_target and not in_transition_path:
+            adjusted -= 6
+        if score_gap > 28:
+            adjusted -= 4
+    else:
+        if explicit_target:
+            adjusted += 12
+        if in_transition_path:
+            adjusted += 15
+        if same_family:
+            adjusted += 4
+        if candidate_family not in selected_families:
+            adjusted += 2
+        if candidate_missing <= 2:
+            adjusted += 3
+        if candidate_shared >= 2:
+            adjusted += 2
+        if score_gap > 22:
+            adjusted -= 2
+    return adjusted
+
+
+def _select_application_matches(
+    student: StudentProfile,
+    ranked_matches: list[dict[str, Any]],
+    limit: int = 3,
+) -> list[dict[str, Any]]:
+    if not ranked_matches:
+        return []
+
+    primary_match = ranked_matches[0]
+    remaining = list(ranked_matches[1: max(limit + 6, 8)])
+    selected = [primary_match]
+    selected_titles = {str(primary_match.get("role_title", ""))}
+    selected_families = {str(primary_match.get("role_family", "综合"))}
+
+    lane_order = ["cross", "safety"]
+    for lane in lane_order[: max(0, limit - 1)]:
+        available = [item for item in remaining if str(item.get("role_title", "")) not in selected_titles]
+        if not available:
+            break
+        chosen = max(
+            available,
+            key=lambda item: _strategy_lane_score(student, primary_match, item, lane, selected_families),
+        )
+        selected.append(chosen)
+        selected_titles.add(str(chosen.get("role_title", "")))
+        selected_families.add(str(chosen.get("role_family", "综合")))
+
+    if len(selected) < limit:
+        for item in ranked_matches[1:]:
+            title = str(item.get("role_title", ""))
+            if title in selected_titles:
+                continue
+            selected.append(item)
+            selected_titles.add(title)
+            if len(selected) >= limit:
+                break
+
+    return selected[:limit]
+
+
+def _application_positioning(
+    student: StudentProfile,
+    primary_match: dict[str, Any],
+    match: dict[str, Any],
+    lane_label: str,
+) -> str:
+    role_title = str(match.get("role_title", "目标岗位"))
+    normalized_role = _normalize_role_label(role_title)
+    normalized_targets = _normalized_role_labels(student.target_roles)
+    normalized_transitions = _normalized_role_labels(list(primary_match.get("transition_paths", [])))
+
+    if lane_label == "主攻":
+        return "当前最值得集中资源冲刺的岗位，优先匹配简历、项目讲稿和面试准备。"
+    if normalized_role in normalized_targets:
+        return "这是学生明确表达过的意向方向，适合作为保留并持续验证的第二赛道。"
+    if normalized_role in normalized_transitions:
+        return "这是主岗位的相邻迁移路径，共享较多底层能力，适合横向扩展投递。"
+    if str(match.get("role_family", "")) != str(primary_match.get("role_family", "")):
+        return "这是用于分散求职风险的跨族岗位，适合在不脱离能力底座的前提下提高面邀概率。"
+    return "这是与主岗位能力栈接近的备选方向，可作为阶段性兜底选择。"
+
+
+def _application_selection_reason(
+    student: StudentProfile,
+    primary_match: dict[str, Any],
+    match: dict[str, Any],
+) -> str:
+    normalized_role = _normalize_role_label(str(match.get("role_title", "")))
+    normalized_targets = _normalized_role_labels(student.target_roles)
+    normalized_transitions = _normalized_role_labels(list(primary_match.get("transition_paths", [])))
+    reasons: list[str] = []
+
+    if normalized_role in normalized_targets:
+        reasons.append("命中学生明确写下的目标岗位")
+    if normalized_role in normalized_transitions:
+        reasons.append("位于主岗位模板的横向迁移路径中")
+    if match.get("shared_skills"):
+        reasons.append("已验证共享技能：" + _join_or_default(list(match.get("shared_skills", [])), "基础技能", limit=2))
+    if match.get("missing_skills"):
+        reasons.append("主要缺口集中在：" + _join_or_default(list(match.get("missing_skills", [])), "项目表达", limit=2))
+    return "；".join(reasons[:3]) if reasons else "当前分数和证据链较稳定，适合纳入投递矩阵。"
+
+
+def _application_risk_note(primary_match: dict[str, Any], match: dict[str, Any], lane_label: str) -> str:
+    missing_skills = list(match.get("missing_skills", []))
+    if lane_label == "主攻":
+        return (
+            "主风险在于" + _join_or_default(missing_skills, "项目举证", limit=2) + "仍需补成可面试的案例。"
+            if missing_skills
+            else "当前短板主要转为表达和面试稳定性，建议尽快进入模拟面试。"
+        )
+    score_gap = max(0, int(primary_match.get("score", 0)) - int(match.get("score", 0)))
+    if score_gap >= 15:
+        return f"与主岗位相比仍有 {score_gap} 分差，需要控制投递比例，避免过早分散精力。"
+    if missing_skills:
+        return "该方向的短板主要在 " + _join_or_default(missing_skills, "项目表达", limit=2) + "，投递前最好先补 1 个最小案例。"
+    return "该方向可直接保留在投递池中，但建议沿用主项目证据，避免重新起一套故事线。"
+
+
+def _comparison_lane_label(strategy_matches: list[dict[str, Any]], role_title: str) -> str:
+    lane_labels = ["主攻", "跨投", "保底"]
+    for index, match in enumerate(strategy_matches[:3]):
+        if str(match.get("role_title", "")) == role_title:
+            return lane_labels[index]
+    return "候选"
+
+
+def _comparison_candidates(
+    student: StudentProfile,
+    ranked_matches: list[dict[str, Any]],
+    strategy_matches: list[dict[str, Any]],
+    limit: int = 4,
+) -> list[tuple[int, dict[str, Any]]]:
+    if not ranked_matches:
+        return []
+
+    strategy_titles = {str(item.get("role_title", "")) for item in strategy_matches[1:]}
+    normalized_targets = _normalized_role_labels(student.target_roles)
+    candidates: list[tuple[int, dict[str, Any]]] = []
+    selected_titles: set[str] = set()
+
+    for index, match in enumerate(ranked_matches[1:7], start=2):
+        role_title = str(match.get("role_title", ""))
+        normalized_title = _normalize_role_label(role_title)
+        if not role_title or role_title in selected_titles:
+            continue
+        if (
+            index <= 3
+            or role_title in strategy_titles
+            or normalized_title in normalized_targets
+        ):
+            candidates.append((index, match))
+            selected_titles.add(role_title)
+        if len(candidates) >= limit:
+            return candidates[:limit]
+
+    for match in strategy_matches[1:]:
+        role_title = str(match.get("role_title", ""))
+        if not role_title or role_title in selected_titles:
+            continue
+        rank_position = next(
+            (idx for idx, item in enumerate(ranked_matches, start=1) if str(item.get("role_title", "")) == role_title),
+            99,
+        )
+        candidates.append((rank_position, match))
+        selected_titles.add(role_title)
+        if len(candidates) >= limit:
+            break
+    return candidates[:limit]
+
+
+def _comparison_primary_advantage(primary_match: dict[str, Any], candidate: dict[str, Any]) -> str:
+    primary_shared = list(primary_match.get("shared_skills", []))
+    primary_missing = list(primary_match.get("missing_skills", []))
+    candidate_missing = list(candidate.get("missing_skills", []))
+    parts: list[str] = []
+
+    if primary_shared:
+        parts.append("主岗位已稳定命中 " + _join_or_default(primary_shared, "核心技能", limit=2))
+    if len(primary_missing) < len(candidate_missing):
+        parts.append("关键缺口更少")
+    elif not primary_missing:
+        parts.append("当前几乎没有硬缺口，更适合直接进入投递和面试")
+    return "；".join(parts[:3]) if parts else "主岗位的现有证据链更完整，执行成本更低。"
+
+
+def _comparison_candidate_value(
+    student: StudentProfile,
+    primary_match: dict[str, Any],
+    candidate: dict[str, Any],
+) -> str:
+    role_title = str(candidate.get("role_title", "目标岗位"))
+    normalized_role = _normalize_role_label(role_title)
+    normalized_targets = _normalized_role_labels(student.target_roles)
+    normalized_transitions = _normalized_role_labels(list(primary_match.get("transition_paths", [])))
+    shared_skills = list(candidate.get("shared_skills", []))
+    parts: list[str] = []
+
+    if normalized_role in normalized_targets:
+        parts.append("它仍是学生明确表达过的意向方向")
+    if normalized_role in normalized_transitions:
+        parts.append("它位于主岗位的迁移路径中")
+    if shared_skills:
+        parts.append("已有 " + _join_or_default(shared_skills, "基础能力", limit=2) + " 可直接复用")
+    return "；".join(parts[:3]) if parts else "它仍可作为备选方向保留在投递池中。"
+
+
+def _comparison_why_not_first(
+    student: StudentProfile,
+    primary_match: dict[str, Any],
+    candidate: dict[str, Any],
+) -> str:
+    primary_score = int(primary_match.get("score", 0))
+    candidate_score = int(candidate.get("score", 0))
+    score_gap = max(0, primary_score - candidate_score)
+    primary_shared = len(primary_match.get("shared_skills", []))
+    candidate_shared = len(candidate.get("shared_skills", []))
+    primary_missing = list(primary_match.get("missing_skills", []))
+    candidate_missing = list(candidate.get("missing_skills", []))
+    normalized_role = _normalize_role_label(str(candidate.get("role_title", "")))
+    normalized_targets = _normalized_role_labels(student.target_roles)
+    normalized_transitions = _normalized_role_labels(list(primary_match.get("transition_paths", [])))
+
+    reasons: list[str] = []
+    if score_gap > 0:
+        reasons.append(f"当前综合匹配分比主岗位低 {score_gap} 分")
+    if len(candidate_missing) > len(primary_missing):
+        reasons.append("关键缺口更多，主要还差 " + _join_or_default(candidate_missing, "岗位证据", limit=2))
+    elif candidate_missing and not primary_missing:
+        reasons.append("仍缺 " + _join_or_default(candidate_missing, "岗位证据", limit=2) + " 的直接案例")
+    if candidate_shared < primary_shared:
+        reasons.append(f"已验证共享技能少于主岗位（{candidate_shared} vs {primary_shared}）")
+    if (
+        str(candidate.get("role_family", "")) != str(primary_match.get("role_family", ""))
+        and normalized_role not in normalized_targets
+        and normalized_role not in normalized_transitions
+    ):
+        reasons.append("与当前主叙事不在同一岗位族，切过去需要重新组织简历和项目故事")
+    if not reasons:
+        reasons.append("虽然也具备投递价值，但当前稳定性和证据密度还不如主岗位")
+    return "；".join(reasons[:4]) + "。"
+
+
+def _comparison_upgrade_path(
+    student: StudentProfile,
+    primary_match: dict[str, Any],
+    candidate: dict[str, Any],
+) -> str:
+    role_title = str(candidate.get("role_title", "该岗位"))
+    missing_skills = list(candidate.get("missing_skills", []))
+    normalized_role = _normalize_role_label(role_title)
+    normalized_targets = _normalized_role_labels(student.target_roles)
+    normalized_transitions = _normalized_role_labels(list(primary_match.get("transition_paths", [])))
+    upgrade_focus = _join_or_default(missing_skills, "项目表达", limit=2)
+
+    if normalized_role in normalized_targets:
+        return f"如果补齐 {upgrade_focus}，并把现有项目改写成更贴近 {role_title} 的案例，它有机会在下一轮上升到主推位。"
+    if normalized_role in normalized_transitions:
+        return f"如果未来想把 {role_title} 升成第一优先，需要先补齐 {upgrade_focus}，再补 1 段更贴近该岗位职责的项目或实习证据。"
+    return f"若想把 {role_title} 提升到第一，需要补齐 {upgrade_focus}，并准备一套独立于主岗位的求职叙事与作品证据。"
+
+
+def _build_recommendation_comparisons(
+    student: StudentProfile,
+    primary_match: dict[str, Any],
+    ranked_matches: list[dict[str, Any]],
+    strategy_matches: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    comparison_items: list[dict[str, Any]] = []
+    for raw_rank, candidate in _comparison_candidates(student, ranked_matches, strategy_matches):
+        role_title = str(candidate.get("role_title", "候选岗位"))
+        comparison_items.append(
+            {
+                "role_title": role_title,
+                "role_family": str(candidate.get("role_family", "综合")),
+                "fit_score": int(candidate.get("score", 0)),
+                "raw_rank": raw_rank,
+                "lane": _comparison_lane_label(strategy_matches, role_title),
+                "score_gap": max(0, int(primary_match.get("score", 0)) - int(candidate.get("score", 0))),
+                "why_not_first": _comparison_why_not_first(student, primary_match, candidate),
+                "primary_advantage": _comparison_primary_advantage(primary_match, candidate),
+                "candidate_value": _comparison_candidate_value(student, primary_match, candidate),
+                "upgrade_path": _comparison_upgrade_path(student, primary_match, candidate),
+            }
+        )
+    return comparison_items[:4]
 
 
 def _extract_gap_keywords(gaps: list[str]) -> list[str]:
@@ -318,9 +663,11 @@ def _build_next_review_targets(
     gap_keywords: list[str],
 ) -> list[str]:
     current_score = int(primary_match["score"])
-    targets = [
-        f"下次复测时，将 {primary_match['role_title']} 匹配分从 {current_score} 分提升到 {min(current_score + 8, 92)} 分以上。",
-    ]
+    if current_score >= 92:
+        score_target = f"下次复测时，保持 {primary_match['role_title']} 匹配分稳定在 {current_score} 分以上，并验证解释链是否仍然完整。"
+    else:
+        score_target = f"下次复测时，将 {primary_match['role_title']} 匹配分从 {current_score} 分提升到 {min(current_score + 8, 92)} 分以上。"
+    targets = [score_target]
     if gap_keywords:
         targets.append("至少补齐 2 项核心短板：" + "、".join(gap_keywords[:2]))
     if student.missing_sections:
@@ -509,6 +856,104 @@ def _build_competency_dimensions(student: StudentProfile, primary_match: dict[st
     ]
 
 
+def _role_radar_axes() -> list[dict[str, Any]]:
+    return [
+        {"name": "综合适配", "max": 100, "detail": "主排序得分，反映当前岗位优先级。"},
+        {"name": "核心技能", "max": 100, "detail": "岗位核心技能与工具链命中情况。"},
+        {"name": "岗位胜任", "max": 100, "detail": "学历、证书、方向对齐和基础入场条件。"},
+        {"name": "软技能协同", "max": 100, "detail": "沟通表达、协作和岗位软要求的匹配度。"},
+        {"name": "证据举证", "max": 100, "detail": "项目/实习是否足以支撑真实面试追问。"},
+        {"name": "成长潜力", "max": 100, "detail": "补强空间与持续成长的可迁移性。"},
+    ]
+
+
+def _role_evidence_readiness(student: StudentProfile, match: dict[str, Any]) -> int:
+    shared_count = len(match.get("shared_skills", []))
+    missing_count = len(match.get("missing_skills", []))
+    project_bonus = min(len(student.projects) * 8, 16)
+    internship_bonus = min(len(student.internships) * 10, 20)
+    score = 36 + shared_count * 12 + project_bonus + internship_bonus - missing_count * 7
+    return max(0, min(score, 100))
+
+
+def _role_radar_values(student: StudentProfile, match: dict[str, Any]) -> list[int]:
+    breakdown = match.get("breakdown", {})
+    teamwork = min(100, 35 + len(student.internships) * 18 + (10 if "团队协作" in " ".join(student.soft_skills) else 0))
+    literacy = int(breakdown.get("professional_literacy", 0))
+    return [
+        int(match.get("score", 0)),
+        int(breakdown.get("professional_skills", 0)),
+        int(breakdown.get("basic_requirements", 0)),
+        max(literacy, teamwork),
+        _role_evidence_readiness(student, match),
+        int(breakdown.get("growth_potential", 0)),
+    ]
+
+
+def _build_role_comparison_summary(role_comparison_radar: dict[str, Any]) -> list[str]:
+    roles = list(role_comparison_radar.get("roles", []))
+    axes = list(role_comparison_radar.get("axes", []))
+    if len(roles) <= 1 or not axes:
+        return []
+
+    primary = roles[0]
+    primary_values = list(primary.get("values", []))
+    summaries: list[str] = []
+    for role in roles[1:]:
+        role_values = list(role.get("values", []))
+        if len(role_values) != len(primary_values):
+            continue
+
+        diffs = [role_values[index] - primary_values[index] for index in range(len(primary_values))]
+        best_index = max(range(len(diffs)), key=lambda index: diffs[index])
+        worst_index = min(range(len(diffs)), key=lambda index: diffs[index])
+
+        best_axis = str(axes[best_index].get("name", "关键维度"))
+        worst_axis = str(axes[worst_index].get("name", "关键维度"))
+        best_diff = diffs[best_index]
+        worst_diff = diffs[worst_index]
+
+        if best_diff >= 0:
+            best_text = f"在“{best_axis}”上不弱于主岗（{role_values[best_index]} vs {primary_values[best_index]}）"
+        else:
+            best_text = f"与主岗最接近的是“{best_axis}”（仅差 {abs(best_diff)} 分）"
+
+        if worst_diff < 0:
+            worst_text = f"差距最大的是“{worst_axis}”（落后 {abs(worst_diff)} 分）"
+        else:
+            worst_text = f"整体差距已较小，当前没有明显短板维度"
+
+        summaries.append(
+            f"{role.get('lane', '备选')} {role.get('role_title', '候选岗位')}：{best_text}；{worst_text}。"
+        )
+    return summaries
+
+
+def _build_role_comparison_radar(
+    student: StudentProfile,
+    strategy_matches: list[dict[str, Any]],
+) -> dict[str, Any]:
+    if not strategy_matches:
+        return {}
+
+    axes = _role_radar_axes()
+    lane_labels = ["主攻", "跨投", "保底"]
+    roles: list[dict[str, Any]] = []
+    for index, match in enumerate(strategy_matches[:3]):
+        roles.append(
+            {
+                "role_title": str(match.get("role_title", "目标岗位")),
+                "lane": lane_labels[index],
+                "score": int(match.get("score", 0)),
+                "values": _role_radar_values(student, match),
+            }
+        )
+
+    radar = {"axes": axes, "roles": roles}
+    radar["summary"] = _build_role_comparison_summary(radar)
+    return radar
+
+
 def _build_service_loop(
     student: StudentProfile,
     primary_match: dict[str, Any],
@@ -645,6 +1090,7 @@ def _build_similar_cases(student: StudentProfile, primary_match: dict[str, Any])
     return find_similar_analyses(
         student_name=student.name,
         major=student.major,
+        current_skills=student.skills,
         target_roles=student.target_roles,
         city_preference=student.city_preference,
         primary_role=str(primary_match.get("role_title", "")),
@@ -1016,6 +1462,421 @@ def _build_technical_modules() -> list[dict[str, str]]:
     ]
 
 
+def _load_role_template(role_title: str) -> dict[str, Any] | None:
+    return next((item for item in load_role_templates() if item.get("canonical_title") == role_title), None)
+
+
+def _service_segment(primary_score: int, profile_completeness: int) -> tuple[str, str]:
+    if primary_score >= 80 and profile_completeness >= 80:
+        return (
+            "强匹配直推",
+            "已经具备较强岗位贴合度，优先做定向投递、模拟面试和企业直连。",
+        )
+    if primary_score >= 65:
+        return (
+            "潜力转化",
+            "具备转化空间，关键是把短板转成项目证据和可讲清的求职材料。",
+        )
+    return (
+        "重点帮扶",
+        "当前不适合盲投，建议先补齐画像、主项目和岗位自测，再进入投递阶段。",
+    )
+
+
+def _job_search_stage(
+    student: StudentProfile,
+    primary_match: dict[str, Any],
+    self_assessment: dict[str, Any],
+) -> tuple[str, str]:
+    if student.profile_completeness < 70:
+        return "画像补全期", "先把学校、专业、目标岗位、项目和实习职责补齐，再做精准推荐。"
+    if not student.projects and not student.internships:
+        return "作品补强期", "当前最大短板不是投递量，而是缺少能支撑岗位胜任力的作品与经历。"
+    if int(self_assessment.get("score", 0)) < 50 or len(primary_match.get("missing_skills", [])) >= 3:
+        return "能力冲刺期", "先围绕 1 到 2 个关键技能做专项补强，再准备主项目讲稿。"
+    if int(primary_match.get("score", 0)) >= 80:
+        return "集中投递期", "画像和能力证据已较稳定，适合开始集中投递和模拟面试。"
+    return "定向打磨期", "当前适合一边补强，一边用目标 JD 校准简历与项目表达。"
+
+
+def _join_or_default(items: list[str] | None, default: str, limit: int = 3) -> str:
+    cleaned = [str(item).strip() for item in items or [] if str(item).strip()]
+    if not cleaned:
+        return default
+    return "、".join(cleaned[:limit])
+
+
+def _build_job_search_snapshot(
+    student: StudentProfile,
+    primary_match: dict[str, Any],
+    strategy_matches: list[dict[str, Any]],
+    role_template: dict[str, Any] | None,
+    self_assessment: dict[str, Any],
+    evidence_bundle: dict[str, Any],
+) -> list[dict[str, Any]]:
+    primary_score = int(primary_match.get("score", 0))
+    segment_label, segment_detail = _service_segment(primary_score, student.profile_completeness)
+    stage_label, stage_detail = _job_search_stage(student, primary_match, self_assessment)
+    preferred_cities = student.city_preference or _join_or_default(
+        list(role_template.get("typical_cities", [])) if role_template else [],
+        "待补充目标城市",
+        limit=2,
+    )
+    preferred_industries = _join_or_default(
+        student.target_industries or (list(role_template.get("typical_industries", [])) if role_template else []),
+        "待补充目标行业",
+        limit=3,
+    )
+    salary_hint = _join_or_default(
+        list(role_template.get("sample_salary_ranges", [])) if role_template else [],
+        "官方样本未给出稳定薪资带",
+        limit=2,
+    )
+    recommendation_matrix = []
+    lane_labels = ["主攻", "跨投", "保底"]
+    for index, match in enumerate(strategy_matches[:3]):
+        recommendation_matrix.append(f"{lane_labels[index]} {str(match.get('role_title', '未生成岗位'))}")
+    evidence_hit_rate = int(evidence_bundle.get("evidence_hit_rate", 0))
+    readiness_score = round((student.profile_completeness + primary_score + evidence_hit_rate) / 3)
+
+    return [
+        {
+            "label": "当前阶段",
+            "value": stage_label,
+            "detail": stage_detail,
+        },
+        {
+            "label": "服务分层",
+            "value": segment_label,
+            "detail": segment_detail,
+        },
+        {
+            "label": "主攻岗位",
+            "value": str(primary_match.get("role_title", "未生成")),
+            "detail": "主推荐岗位来自官方 JD 聚类模板，可直接追溯到原始样本。",
+        },
+        {
+            "label": "优先城市",
+            "value": preferred_cities,
+            "detail": "优先围绕这些城市做岗位检索、简历定制和宣讲会关注。",
+        },
+        {
+            "label": "目标行业",
+            "value": preferred_industries,
+            "detail": "优先关注岗位聚类中高频出现的行业，减少无效跨投。",
+        },
+        {
+            "label": "薪资参考",
+            "value": salary_hint,
+            "detail": "基于官方样本中的代表性薪资区间，用于建立合理预期。",
+        },
+        {
+            "label": "推荐编排",
+            "value": " / ".join(recommendation_matrix) or "待生成",
+            "detail": "主攻位看当前最佳匹配，跨投位优先保留学生第二意向或主岗迁移路径，保底位兼顾稳定性与面邀率。",
+        },
+        {
+            "label": "求职就绪度",
+            "value": f"{readiness_score} 分",
+            "detail": f"综合画像完整度 {student.profile_completeness}、主岗分 {primary_score}、证据命中率 {evidence_hit_rate} 计算。",
+        },
+    ]
+
+
+def _build_application_strategy(
+    student: StudentProfile,
+    primary_match: dict[str, Any],
+    strategy_matches: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    lane_labels = ["主攻", "跨投", "保底"]
+    candidates = strategy_matches[:3] if strategy_matches else [primary_match]
+    strategies: list[dict[str, Any]] = []
+
+    for index, match in enumerate(candidates):
+        role_title = str(match.get("role_title", "未生成岗位"))
+        role_template = _load_role_template(role_title)
+        city_focus = student.city_preference or _join_or_default(
+            list(role_template.get("typical_cities", [])) if role_template else [],
+            "优先锁定 1 到 2 个目标城市",
+            limit=2,
+        )
+        industry_focus = _join_or_default(
+            student.target_industries or (list(role_template.get("typical_industries", [])) if role_template else []),
+            "软件/互联网/企业服务",
+            limit=2,
+        )
+        salary_hint = _join_or_default(
+            list(role_template.get("sample_salary_ranges", [])) if role_template else [],
+            "样本薪资需结合现场岗位补充",
+            limit=1,
+        )
+        keywords = [
+            role_title,
+            *[str(item) for item in match.get("shared_skills", [])[:2]],
+            *[str(item) for item in match.get("missing_skills", [])[:1]],
+        ]
+        deliverables = []
+        deliverables.append("定制化简历 3 版")
+        deliverables.append("主项目讲稿 1 套")
+        if match.get("missing_skills"):
+            deliverables.append(f"补齐 {str(match['missing_skills'][0])} 的最小案例")
+        else:
+            deliverables.append("补一轮面试题复盘")
+
+        strategies.append(
+            {
+                "lane": lane_labels[index],
+                "role_title": role_title,
+                "fit_score": int(match.get("score", 0)),
+                "positioning": _application_positioning(student, primary_match, match, lane_labels[index]),
+                "selection_reason": _application_selection_reason(student, primary_match, match),
+                "risk_note": _application_risk_note(primary_match, match, lane_labels[index]),
+                "city_focus": city_focus,
+                "industry_focus": industry_focus,
+                "salary_hint": salary_hint,
+                "keywords": [item for item in keywords if item],
+                "rationale": (
+                    f"该方向已命中 {_join_or_default(list(match.get('shared_skills', [])), '基础技能', limit=2)}，"
+                    f"同时需要继续补齐 {_join_or_default(list(match.get('missing_skills', [])), '项目表达', limit=1)}。"
+                ),
+                "action": (
+                    "先用 3 份真实 JD 校准简历关键词，再围绕主项目准备一版可直接投递与面试的材料。"
+                    if index == 0
+                    else "保留相近技能词和项目证据，避免完全跨方向造成解释断层。"
+                ),
+                "deliverables": deliverables,
+            }
+        )
+
+    return strategies
+
+
+def _build_resume_surgery(
+    student: StudentProfile,
+    primary_match: dict[str, Any],
+    self_assessment: dict[str, Any],
+) -> list[dict[str, Any]]:
+    section_map = {
+        "目标岗位": {
+            "section": "求职意向",
+            "issue": "简历没有明确主攻岗位，容易让投递和老师指导都失焦。",
+            "action": f"在简历抬头或自我评价区明确写出“目标岗位：{primary_match['role_title']} / 备选岗位：{'、'.join(student.target_roles[:2]) or '相近岗位'}”。",
+            "deliverable": "1 行岗位意向 + 1 行城市偏好。",
+        },
+        "意向城市": {
+            "section": "城市偏好",
+            "issue": "缺少城市偏好会降低推岗与投递筛选效率。",
+            "action": "补充 1 到 2 个优先城市，并在投递时做城市版本区分。",
+            "deliverable": "在简历或求职表单中写清优先城市和可接受范围。",
+        },
+        "项目经历": {
+            "section": "项目经历",
+            "issue": "缺少项目会让岗位匹配只能停留在关键词层面，无法真正举证。",
+            "action": f"补 1 个与 {primary_match['role_title']} 强相关的项目，写清场景、职责、方案和结果。",
+            "deliverable": "每个项目至少 3 个 STAR 要点 + 1 个量化结果。",
+        },
+        "实习经历": {
+            "section": "实习/实训",
+            "issue": "没有实习或实训经历时，岗位适应性证据偏弱。",
+            "action": "用校内项目、竞赛实训或模拟交付案例替代真实实习经历的展示空白。",
+            "deliverable": "补一段“角色-任务-结果”式经历描述。",
+        },
+        "证书信息": {
+            "section": "基础证明",
+            "issue": "基础证书或能力证明偏弱，简历可信度受影响。",
+            "action": "补充英语、计算机或岗位相关基础证书，并写明时间节点。",
+            "deliverable": "在简历证书栏增加已获证书或备考计划。",
+        },
+    }
+
+    items: list[dict[str, Any]] = []
+    for label in student.missing_sections:
+        if label in section_map:
+            items.append(section_map[label])
+
+    for gap in list(primary_match.get("missing_skills", []))[:2]:
+        items.append(
+            {
+                "section": f"{gap} 证据",
+                "issue": f"{gap} 当前主要停留在缺口状态，简历里缺少能说服面试官的真实证据。",
+                "action": f"把 {gap} 写进项目职责、技术栈、解决问题过程和最终结果，避免只堆在技能列表。",
+                "deliverable": f"补 1 个 {gap} 最小案例，至少准备截图、代码/流程说明和结果指标各 1 项。",
+            }
+        )
+
+    weak_focuses = list(self_assessment.get("weak_focuses", []))
+    if weak_focuses:
+        items.append(
+            {
+                "section": "面试薄弱项",
+                "issue": f"岗位自测显示 {_join_or_default(weak_focuses, '核心技能', limit=2)} 仍偏弱，面试容易被追问击穿。",
+                "action": "围绕最低分维度补一页复盘笔记，并准备一个能证明进步的训练案例。",
+                "deliverable": "错题清单 1 份 + 二次复测目标 1 份。",
+            }
+        )
+
+    if not items:
+        items.append(
+            {
+                "section": "项目表达",
+                "issue": "当前主要风险不在于信息缺失，而在于表达不够岗位化。",
+                "action": "把最强项目改写成 STAR 结构，并突出业务结果与岗位能力对应关系。",
+                "deliverable": "1 分钟版项目讲稿 + 3 分钟版项目讲稿。",
+            }
+        )
+
+    return items[:5]
+
+
+def _build_interview_focus(
+    student: StudentProfile,
+    primary_match: dict[str, Any],
+    self_assessment: dict[str, Any],
+) -> list[dict[str, Any]]:
+    role_title = str(primary_match.get("role_title", "目标岗位"))
+    project_focus = student.agent_answers.get("project_focus") or (student.projects[0] if student.projects else "最相关项目")
+    shared_skills = list(primary_match.get("shared_skills", []))
+    missing_skills = list(primary_match.get("missing_skills", []))
+    weak_focuses = list(self_assessment.get("weak_focuses", []))
+
+    items = [
+        {
+            "theme": "项目总述",
+            "question": f"请用 3 分钟讲清 {project_focus} 为什么能证明你适合 {role_title}。",
+            "signal": "能完整说出业务场景、个人职责、关键动作和量化结果。",
+            "prep": "准备 1 分钟版与 3 分钟版两套话术，避免只讲技术名词。",
+        }
+    ]
+
+    for skill in shared_skills[:2]:
+        items.append(
+            {
+                "theme": f"{skill} 实战追问",
+                "question": f"如果面试官追问你在项目里如何使用 {skill}，你能否给出具体场景和结果？",
+                "signal": "回答里要出现真实场景、具体动作和结果指标，而不是泛泛描述。",
+                "prep": f"准备 1 个围绕 {skill} 的项目片段，最好附带截图、代码或测试结果。",
+            }
+        )
+
+    for skill in missing_skills[:2]:
+        items.append(
+            {
+                "theme": f"{skill} 补强计划",
+                "question": f"如果岗位要求 {skill}，你准备如何在 2 周内把它补到可面试水平？",
+                "signal": "不要空谈学习态度，要给出最小案例、学习路径和复测安排。",
+                "prep": f"准备 {skill} 的 7 到 14 天补强路线，以及 1 个可展示的最小练习案例。",
+            }
+        )
+
+    if weak_focuses:
+        focus = weak_focuses[0]
+        items.append(
+            {
+                "theme": "低分维度复盘",
+                "question": f"岗位自测里 {focus} 得分偏低，你下一轮怎么补，怎么证明自己真的补上了？",
+                "signal": "面试官更看重补短板的方法论和证据，而不是一句‘我会努力学习’。",
+                "prep": "准备错题复盘、训练动作和二次复测目标三件套。",
+            }
+        )
+
+    return items[:5]
+
+
+def _build_role_action_plan_bundle(
+    student: StudentProfile,
+    role_match: dict[str, Any],
+    lane_label: str,
+) -> dict[str, list[str]]:
+    role_title = str(role_match.get("role_title", "目标岗位"))
+    focus_gap = student.agent_answers.get("improvement_focus")
+    gap_keywords: list[str] = []
+    if focus_gap:
+        gap_keywords.append(focus_gap)
+    for keyword in list(role_match.get("missing_skills", [])):
+        if keyword not in gap_keywords:
+            gap_keywords.append(keyword)
+    if not gap_keywords:
+        gap_keywords = ["项目表达", "岗位举证"]
+
+    short_goal = student.agent_answers.get("thirty_day_goal") or f"完成 1 版可用于 {role_title} 投递的简历与项目讲稿"
+    lane_opening = {
+        "主攻": f"把简历求职意向、自我评价和项目标题统一改成 {role_title} 叙事，直接进入集中投递准备。",
+        "跨投": f"保留当前能力底座，但把项目职责、结果指标和关键词改写成更贴近 {role_title} 的版本。",
+        "保底": f"优先用最小改写成本把现有经历映射到 {role_title}，先提升面邀稳定性，再决定是否深切换。",
+    }.get(lane_label, f"围绕 {role_title} 重排简历和项目叙事，建立独立的投递版本。")
+
+    action_plan_30 = [
+        lane_opening,
+        "优先补齐该岗位的核心差距：" + "、".join(gap_keywords[:2]),
+        f"30 天内至少完成 1 个能证明 {role_title} 胜任力的最小案例或讲稿：{short_goal}",
+    ]
+    if student.missing_sections:
+        action_plan_30.append("同步补全简历缺失项：" + "、".join(student.missing_sections[:2]))
+
+    action_plan_90 = [
+        f"完成 1 个与 {role_title} 直接相关的项目或专题，并沉淀 README、截图或演示材料。",
+        "用 3 份真实 JD 校准关键词、项目要点和投递话术，形成该岗位专属版本。",
+        "准备 8 到 10 道该岗位高频面试题，并完成 1 次岗位化模拟面试。",
+    ]
+
+    action_plan_180 = [
+        f"争取 1 段与 {role_title} 相关的实习、实训或真实项目经历，补足长期证据链。",
+        f"持续维护 {role_title} 的项目案例库、面试题库和投递复盘记录。",
+        "把最有效的简历版本、项目讲稿和面试答案固化成可复用求职材料。",
+    ]
+
+    return {
+        "action_plan_30_days": action_plan_30[:4],
+        "action_plan_90_days": action_plan_90[:3],
+        "action_plan_180_days": action_plan_180[:3],
+        "gap_keywords": gap_keywords[:3],
+    }
+
+
+def _build_role_switch_simulations(
+    student: StudentProfile,
+    strategy_matches: list[dict[str, Any]],
+    application_strategy: list[dict[str, Any]],
+    self_assessment: dict[str, Any],
+) -> list[dict[str, Any]]:
+    strategy_lookup = {str(item.get("role_title", "")): item for item in application_strategy}
+    simulations: list[dict[str, Any]] = []
+
+    for match in strategy_matches[:3]:
+        role_title = str(match.get("role_title", "目标岗位"))
+        strategy_item = strategy_lookup.get(role_title, {})
+        lane_label = str(strategy_item.get("lane", _comparison_lane_label(strategy_matches, role_title)))
+        plan_bundle = _build_role_action_plan_bundle(student, match, lane_label)
+        evidence_bundle = build_grounded_evidence_bundle(student, match)
+        simulation_assessment = dict(self_assessment or {})
+        if match.get("missing_skills"):
+            simulation_assessment["weak_focuses"] = list(match.get("missing_skills", []))[:2]
+
+        simulations.append(
+            {
+                "role_title": role_title,
+                "lane": lane_label,
+                "fit_score": int(match.get("score", 0)),
+                "summary": (
+                    f"当前切到 {lane_label} 岗位 {role_title} 后，方案会优先围绕 "
+                    f"{_join_or_default(plan_bundle.get('gap_keywords', []), '项目表达', limit=2)} 做岗位化重写和补强。"
+                ),
+                "positioning": str(strategy_item.get("positioning", "")),
+                "selection_reason": str(strategy_item.get("selection_reason", "")),
+                "risk_note": str(strategy_item.get("risk_note", "")),
+                "action_plan_30_days": list(plan_bundle.get("action_plan_30_days", [])),
+                "action_plan_90_days": list(plan_bundle.get("action_plan_90_days", [])),
+                "action_plan_180_days": list(plan_bundle.get("action_plan_180_days", [])),
+                "evidence_bundle": evidence_bundle,
+                "resume_surgery": _build_resume_surgery(student, match, simulation_assessment),
+                "interview_focus": _build_interview_focus(student, match, simulation_assessment),
+                "next_review_targets": _build_next_review_targets(student, match, list(plan_bundle.get("gap_keywords", []))),
+            }
+        )
+
+    return simulations
+
+
 def build_career_plan(
     student: StudentProfile,
     ranked_matches: list[dict[str, object]],
@@ -1024,8 +1885,9 @@ def build_career_plan(
     parser_metadata: dict[str, Any] | None = None,
     self_assessment_answers: dict[str, int] | None = None,
 ) -> CareerPlan:
-    primary = ranked_matches[0]
-    backups = ranked_matches[1:3]
+    strategy_matches = _select_application_matches(student, ranked_matches)
+    primary = strategy_matches[0] if strategy_matches else ranked_matches[0]
+    backups = strategy_matches[1:3]
     focus_gap = student.agent_answers.get("improvement_focus")
     top_gap_keywords = list(primary.get("missing_skills") or [])
     if focus_gap and focus_gap not in top_gap_keywords:
@@ -1065,7 +1927,15 @@ def build_career_plan(
     )
     
     evidence_bundle = build_grounded_evidence_bundle(student, primary)
+    role_template = _load_role_template(role_title)
     resource_map = _build_resource_map(role_title, top_gap_keywords, self_assessment)
+    application_strategy = _build_application_strategy(student, primary, strategy_matches)
+    recommendation_comparisons = _build_recommendation_comparisons(student, primary, ranked_matches, strategy_matches)
+    role_switch_simulations = _build_role_switch_simulations(student, strategy_matches, application_strategy, self_assessment)
+    role_comparison_radar = _build_role_comparison_radar(student, strategy_matches)
+    job_search_snapshot = _build_job_search_snapshot(student, primary, strategy_matches, role_template, self_assessment, evidence_bundle)
+    resume_surgery = _build_resume_surgery(student, primary, self_assessment)
+    interview_focus = _build_interview_focus(student, primary, self_assessment)
     overview = annotate_text_with_citations(
         overview,
         evidence_bundle,
@@ -1096,6 +1966,7 @@ def build_career_plan(
         backup_roles=[match["role_title"] for match in backups],
         primary_score=primary["score"],
         overview=overview,
+        job_search_snapshot=job_search_snapshot,
         strengths=list(primary["strengths"]),
         risks=risks,
         primary_growth_path=list(primary["growth_path"]),
@@ -1103,20 +1974,26 @@ def build_career_plan(
         action_plan_30_days=action_plan_30,
         action_plan_90_days=action_plan_90,
         action_plan_180_days=action_plan_180,
+        application_strategy=application_strategy,
+        recommendation_comparisons=recommendation_comparisons,
+        role_switch_simulations=role_switch_simulations,
         # 🌟 核心替换：优先使用动态生成的项目，失败则使用规则字典兜底
         recommended_projects=dynamic_guidance.get("recommended_projects") or _project_suggestions_for_role(role_title),
         learning_sprints=_build_learning_sprints(student, primary, top_gap_keywords),
+        resume_surgery=resume_surgery,
         next_review_targets=_build_next_review_targets(student, primary, top_gap_keywords),
         growth_comparison=_build_growth_comparison(student, primary, previous_analysis),
         stakeholder_views=_build_stakeholder_views(student, primary, backups),
         evaluation_metrics=_build_evaluation_metrics(student, primary, parser_metadata, self_assessment, evidence_bundle),
         competency_dimensions=_build_competency_dimensions(student, primary),
+        role_comparison_radar=role_comparison_radar,
         service_loop=_build_service_loop(student, primary, self_assessment),
         gap_benefit_analysis=_build_gap_benefit_analysis(primary, self_assessment, evidence_bundle),
         plan_self_checks=_build_plan_self_checks(student, primary, parser_metadata, self_assessment, evidence_bundle, resource_map),
         similar_cases=_build_similar_cases(student, primary),
         # 🌟 核心替换：优先使用动态生成的任务，失败则使用规则字典兜底
         assessment_tasks=dynamic_guidance.get("assessment_tasks") or _assessment_tasks_for_role(role_title),
+        interview_focus=interview_focus,
         self_assessment=self_assessment,
         resource_map=resource_map,
         agent_questions=_build_agent_questions(student, primary, self_assessment),

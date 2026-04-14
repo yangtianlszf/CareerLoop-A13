@@ -23,7 +23,7 @@ from a13_starter.src.analysis_storage import (
 )
 from a13_starter.src.benchmark import run_benchmark
 from a13_starter.src.citation_utils import annotate_text_with_citations
-from a13_starter.src.jd_search import get_template_evidence, search_job_profiles
+from a13_starter.src.jd_search import get_template_evidence, load_role_templates, search_job_profiles
 from a13_starter.src.matcher import match_student_to_job
 from a13_starter.src.models import JobProfile
 from a13_starter.src.parser_service import parse_job_profile, parse_student_profile
@@ -43,9 +43,7 @@ MAX_UPLOAD_BYTES = 5 * 1024 * 1024
 
 
 def _load_templates() -> list[dict[str, object]]:
-    if not TEMPLATES_PATH.exists():
-        return []
-    return json.loads(TEMPLATES_PATH.read_text(encoding="utf-8"))
+    return load_role_templates()
 
 
 def _template_to_job_profile(template: dict[str, object]) -> JobProfile:
@@ -84,6 +82,21 @@ def _sample_resume_catalog() -> list[dict[str, str]]:
             "name": "student_resume.txt",
             "label": "基础学生样例",
             "description": "默认的基础演示样例，适合做系统联调。",
+        },
+        {
+            "name": "demo_resume_data_analyst.txt",
+            "label": "数据分析样例",
+            "description": "更适合展示数据分析、业务洞察方向的推荐结果。",
+        },
+        {
+            "name": "demo_resume_operations.txt",
+            "label": "运营增长样例",
+            "description": "更适合展示内容运营、用户增长方向的推荐结果。",
+        },
+        {
+            "name": "demo_resume_testdev.txt",
+            "label": "测试开发样例",
+            "description": "更适合展示自动化测试、质量平台方向的推荐结果。",
         },
     ]
 

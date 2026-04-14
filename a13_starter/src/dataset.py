@@ -13,6 +13,7 @@ except Exception:  # pragma: no cover - optional dependency fallback
 
 from a13_starter.src.extractors import build_job_profile
 from a13_starter.src.paths import resolve_project_root
+from a13_starter.src.role_normalizer import clean_text
 
 
 EXPECTED_HEADERS = [
@@ -32,21 +33,16 @@ EXPECTED_HEADERS = [
 
 
 def _normalize_cell(value: object) -> str:
-    if value is None:
-        return ""
-    text = str(value).strip()
-    text = text.replace("\r", "\n")
-    text = re.sub(r"<br\s*/?>", "\n", text, flags=re.IGNORECASE)
-    text = re.sub(r"<[^>]+>", " ", text)
-    text = re.sub(r"[ \t]+", " ", text)
-    text = re.sub(r"\n{2,}", "\n", text)
-    return text.strip()
+    return clean_text(value)
 
 
 PROJECT_ROOT = resolve_project_root(__file__, 2)
 GENERATED_DIR = PROJECT_ROOT / "a13_starter" / "generated"
 JOB_PROFILES_PATH = GENERATED_DIR / "job_profiles.jsonl"
 JD_ROWS_PATH = GENERATED_DIR / "jd_rows.json"
+CLEANED_JD_ROWS_PATH = GENERATED_DIR / "cleaned_jd_rows.json"
+CLEANING_REPORT_PATH = GENERATED_DIR / "cleaning_report.json"
+ROLE_CLUSTERS_PATH = GENERATED_DIR / "role_clusters.json"
 
 
 def _sheet_headers(sheet: Any) -> list[str]:
@@ -83,9 +79,37 @@ def load_job_rows(xls_path: str | Path) -> list[dict[str, str]]:
     return rows
 
 
+def load_cleaned_job_rows(xls_path: str | Path | None = None) -> list[dict[str, object]]:
+    if CLEANED_JD_ROWS_PATH.exists():
+        raw_rows = json.loads(CLEANED_JD_ROWS_PATH.read_text(encoding="utf-8"))
+        if isinstance(raw_rows, list):
+            return [
+                {str(key): value for key, value in row.items()}
+                for row in raw_rows
+                if isinstance(row, dict) and row
+            ]
+
+    cached_rows = _load_cached_job_rows()
+    if cached_rows:
+        return cached_rows
+
+    if xls_path is None:
+        return []
+    return load_job_rows(xls_path)
+
+
 def _load_cached_job_rows() -> list[dict[str, str]]:
+    if CLEANED_JD_ROWS_PATH.exists():
+        raw_rows = json.loads(CLEANED_JD_ROWS_PATH.read_text(encoding="utf-8"))
+        if isinstance(raw_rows, list):
+            return [
+                {str(key): value for key, value in row.items()}
+                for row in raw_rows
+                if isinstance(row, dict) and row
+            ]
+
     if JOB_PROFILES_PATH.exists():
-        rows: list[dict[str, str]] = []
+        rows: list[dict[str, object]] = []
         with JOB_PROFILES_PATH.open("r", encoding="utf-8") as handle:
             for line in handle:
                 line = line.strip()
@@ -94,7 +118,7 @@ def _load_cached_job_rows() -> list[dict[str, str]]:
                 item = json.loads(line)
                 source = item.get("source")
                 if isinstance(source, dict) and source:
-                    rows.append({str(key): _normalize_cell(value) for key, value in source.items()})
+                    rows.append({str(key): value for key, value in source.items()})
         if rows:
             return rows
 
@@ -102,7 +126,7 @@ def _load_cached_job_rows() -> list[dict[str, str]]:
         raw_rows = json.loads(JD_ROWS_PATH.read_text(encoding="utf-8"))
         if isinstance(raw_rows, list):
             return [
-                {str(key): _normalize_cell(value) for key, value in row.items()}
+                {str(key): value for key, value in row.items()}
                 for row in raw_rows
                 if isinstance(row, dict) and row
             ]
@@ -111,10 +135,16 @@ def _load_cached_job_rows() -> list[dict[str, str]]:
 
 
 def build_job_text_from_row(row: dict[str, str]) -> str:
+    normalized_title = row.get("_normalized_title") or row.get("岗位名称", "")
+    role_family = row.get("_role_family") or ""
+    normalized_address = row.get("_normalized_address") or row.get("地址", "")
+    normalized_salary = row.get("_normalized_salary_range") or row.get("薪资范围", "")
     parts = [
-        row.get("岗位名称", ""),
-        f"工作地点：{row.get('地址', '')}",
-        f"薪资：{row.get('薪资范围', '')}",
+        str(normalized_title),
+        f"岗位族：{role_family}" if role_family else "",
+        f"原始岗位：{row.get('岗位名称', '')}" if normalized_title and normalized_title != row.get("岗位名称", "") else "",
+        f"工作地点：{normalized_address}",
+        f"薪资：{normalized_salary}",
         f"公司名称：{row.get('公司名称', '')}",
         f"所属行业：{row.get('所属行业', '')}",
         f"公司规模：{row.get('公司规模', '')}",
@@ -142,6 +172,8 @@ def profile_job_rows(rows: list[dict[str, str]]) -> list[dict[str, object]]:
 
 def build_dataset_summary(profiled_rows: list[dict[str, object]]) -> dict[str, object]:
     title_counter = Counter()
+    normalized_title_counter = Counter()
+    role_family_counter = Counter()
     industry_counter = Counter()
     skill_counter = Counter()
     city_counter = Counter()
@@ -150,16 +182,21 @@ def build_dataset_summary(profiled_rows: list[dict[str, object]]) -> dict[str, o
         source = item["source"]
         profile = item["profile"]
         title_counter.update([source.get("岗位名称", "")])
+        normalized_title_counter.update([source.get("_normalized_title", source.get("岗位名称", ""))])
+        role_family_counter.update([source.get("_role_family", "综合")])
         industry_counter.update(
             [part.strip() for part in source.get("所属行业", "").split(",") if part.strip()]
         )
         skill_counter.update(profile.get("required_skills", []))
-        if profile.get("city"):
-            city_counter.update([profile["city"]])
+        normalized_city = source.get("_normalized_address") or profile.get("city")
+        if normalized_city:
+            city_counter.update([normalized_city])
 
     return {
         "job_count": len(profiled_rows),
+        "top_normalized_titles": normalized_title_counter.most_common(20),
         "top_job_titles": title_counter.most_common(20),
+        "top_role_families": role_family_counter.most_common(20),
         "top_industries": industry_counter.most_common(20),
         "top_skills": skill_counter.most_common(20),
         "top_cities": city_counter.most_common(20),

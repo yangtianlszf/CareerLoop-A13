@@ -88,16 +88,69 @@ def build_career_report_markdown(
         career_plan.stakeholder_views,
         lambda item: f"{item.get('role', '角色')}：{item.get('headline', '')}；重点：{'、'.join(item.get('items', []))}",
     )
+    snapshot_lines = _render_dict_items(
+        career_plan.job_search_snapshot,
+        lambda item: f"{item.get('label', '画像项')}：{item.get('value', '')}；说明：{item.get('detail', '')}",
+    )
     metric_lines = _render_dict_items(
         career_plan.evaluation_metrics,
         lambda item: f"{item.get('name', '指标')}：{item.get('score', 0)} 分，{item.get('detail', '')}",
     )
+    application_lines = _render_dict_items(
+        career_plan.application_strategy,
+        lambda item: (
+            f"{item.get('lane', '投递层')}｜{item.get('role_title', '')}｜匹配分 {item.get('fit_score', 0)}"
+            f"｜定位：{item.get('positioning', '')}"
+            f"｜入选原因：{item.get('selection_reason', '')}"
+            f"｜风险：{item.get('risk_note', '')}"
+            f"｜城市：{item.get('city_focus', '')}"
+            f"｜行业：{item.get('industry_focus', '')}"
+            f"｜薪资参考：{item.get('salary_hint', '')}"
+            f"｜关键词：{'、'.join(item.get('keywords', []))}"
+            f"｜建议：{item.get('action', '')}"
+            f"｜交付物：{'、'.join(item.get('deliverables', []))}"
+        ),
+    )
+    recommendation_comparison_lines = _render_dict_items(
+        career_plan.recommendation_comparisons,
+        lambda item: (
+            f"{item.get('role_title', '')}｜原始排名 #{item.get('raw_rank', '-')}"
+            f"｜当前定位：{item.get('lane', '')}"
+            f"｜与主岗分差 {item.get('score_gap', 0)}"
+            f"｜未排第一原因：{item.get('why_not_first', '')}"
+            f"｜主岗优势：{item.get('primary_advantage', '')}"
+            f"｜保留价值：{item.get('candidate_value', '')}"
+            f"｜翻盘条件：{item.get('upgrade_path', '')}"
+        ),
+    )
+    role_comparison_radar = career_plan.role_comparison_radar or {}
+    role_radar_role_lines = _render_dict_items(
+        role_comparison_radar.get("roles", []),
+        lambda item: (
+            f"{item.get('lane', '')} {item.get('role_title', '')}"
+            f"｜综合适配 {list(item.get('values', [0, 0, 0, 0, 0, 0]))[0]}"
+            f"｜核心技能 {list(item.get('values', [0, 0, 0, 0, 0, 0]))[1]}"
+            f"｜岗位胜任 {list(item.get('values', [0, 0, 0, 0, 0, 0]))[2]}"
+            f"｜软技能协同 {list(item.get('values', [0, 0, 0, 0, 0, 0]))[3]}"
+            f"｜证据举证 {list(item.get('values', [0, 0, 0, 0, 0, 0]))[4]}"
+            f"｜成长潜力 {list(item.get('values', [0, 0, 0, 0, 0, 0]))[5]}"
+        ),
+    )
+    role_radar_summary_lines = _render_list(list(role_comparison_radar.get("summary", [])))
     sprint_lines = _render_dict_items(
         career_plan.learning_sprints,
         lambda item: (
             f"{item.get('title', '训练任务')}（{item.get('type', '训练')}）"
             f"｜原因：{item.get('reason', '')}"
             f"｜交付物：{item.get('deliverable', '')}"
+        ),
+    )
+    resume_surgery_lines = _render_dict_items(
+        career_plan.resume_surgery,
+        lambda item: (
+            f"{item.get('section', '')}：问题={item.get('issue', '')}"
+            f"｜改写动作={item.get('action', '')}"
+            f"｜预期产出={item.get('deliverable', '')}"
         ),
     )
     question_lines = _render_dict_items(
@@ -133,6 +186,14 @@ def build_career_report_markdown(
     loop_lines = _render_dict_items(
         career_plan.service_loop,
         lambda item: f"{item.get('stage', '')}：{item.get('status', '')}，{item.get('detail', '')}",
+    )
+    interview_focus_lines = _render_dict_items(
+        career_plan.interview_focus,
+        lambda item: (
+            f"{item.get('theme', '')}：{item.get('question', '')}"
+            f"｜考察信号：{item.get('signal', '')}"
+            f"｜准备动作：{item.get('prep', '')}"
+        ),
     )
     resource_lines = _render_dict_items(
         career_plan.resource_map,
@@ -227,6 +288,9 @@ def build_career_report_markdown(
 ### 当前风险与短板
 {_render_list(career_plan.risks)}
 
+### 求职场景画像
+{snapshot_lines}
+
 ## 5. 职业发展路径
 ### 主路径
 {_render_list(career_plan.primary_growth_path)}
@@ -244,34 +308,50 @@ def build_career_report_markdown(
 ### 180 天行动计划
 {_render_list(career_plan.action_plan_180_days)}
 
-## 7. 推荐补充项目
+### 投递作战包
+{application_lines}
+
+## 7. 推荐排序对比解释
+{recommendation_comparison_lines}
+
+## 8. 多候选岗位能力差异
+### 雷达维度快照
+{role_radar_role_lines}
+
+### 自动读图结论
+{role_radar_summary_lines}
+
+## 9. 推荐补充项目
 {_render_list(career_plan.recommended_projects)}
 
-## 8. 训练闭环
+## 10. 训练闭环
 ### 学习冲刺任务
 {sprint_lines}
 
 ### 下一次复测目标
 {_render_list(career_plan.next_review_targets)}
 
-## 9. 差距-收益分析
+## 11. 差距-收益分析
 {gap_benefit_lines}
 
-## 10. 计划自检
+## 12. 简历改写清单
+{resume_surgery_lines}
+
+## 13. 计划自检
 {plan_check_lines}
 
-## 11. 成长对比
+## 14. 成长对比
 - 对比结论：{comparison.get('summary', '暂无对比结果')}
 ### 变化明细
 {_render_list(comparison.get('progress_items', []))}
 
-## 12. 相似案例参考
+## 15. 相似案例参考
 {similar_case_lines}
 
-## 13. 多角色服务视角
+## 16. 多角色服务视角
 {stakeholder_lines}
 
-## 14. 技术方案概述
+## 17. 技术方案概述
 - 技术定位：证据驱动生成 + 可解释匹配 + 人机协同闭环
 - 方案概述：系统先把学生简历解析为结构化画像，再将官方 JD 与岗位模板转为可计算的岗位能力维度；匹配阶段输出总分与分维度解释，并对每条结论保留证据回看入口；规划阶段将能力差距映射为补强动作，通过智能体追问、岗位自测与复测形成成长闭环；学校侧再用运营看板承接个体结果与群体趋势，实现从推荐到运营的一体化服务。
 
@@ -281,17 +361,20 @@ def build_career_report_markdown(
 ### 核心技术模块
 {technical_module_lines}
 
-## 15. 评测快照
+## 18. 评测快照
 {metric_lines}
 
-## 16. 胜任力模型
+## 19. 胜任力模型
 {competency_lines}
 
-## 17. 服务闭环
+## 20. 服务闭环
 {loop_lines}
 
 ### 岗位自测任务
 {_render_list(career_plan.assessment_tasks)}
+
+### 面试冲刺题板
+{interview_focus_lines}
 
 ### 岗位自测结果
 - 自测标题：{career_plan.self_assessment.get('title', '未生成')}
@@ -299,13 +382,13 @@ def build_career_report_markdown(
 - 自测结论：{career_plan.self_assessment.get('summary', '暂无')}
 {_render_list([f"{item.get('focus', '')}：{item.get('level', '')}" for item in career_plan.self_assessment.get('items', [])])}
 
-## 18. 资源映射
+## 19. 资源映射
 {resource_lines}
 
-## 19. 智能体追问
+## 20. 智能体追问
 {question_lines}
 
-## 20. 创新锚点
+## 21. 创新锚点
 - 产品标签：{career_plan.product_signature or "未设置"}
 {innovation_lines}
 """

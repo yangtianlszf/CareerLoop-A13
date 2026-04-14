@@ -8,6 +8,7 @@ from typing import Any
 
 from a13_starter.src.career_planner import apply_agent_answers, build_career_plan, rank_student_against_templates
 from a13_starter.src.extractors import refresh_student_profile_metrics
+from a13_starter.src.jd_search import load_role_templates
 from a13_starter.src.parser_service import parse_student_profile
 from a13_starter.src.paths import resolve_project_root
 from a13_starter.src.report import build_career_report_markdown
@@ -15,9 +16,6 @@ from a13_starter.src.report import build_career_report_markdown
 
 PROJECT_ROOT = resolve_project_root(__file__, 2)
 BENCHMARK_CASES_PATH = PROJECT_ROOT / "a13_starter" / "samples" / "benchmark_cases.json"
-TEMPLATES_PATH = PROJECT_ROOT / "a13_starter" / "generated" / "role_profile_templates.json"
-
-
 def _load_json(path: Path) -> Any:
     return json.loads(path.read_text(encoding="utf-8"))
 
@@ -157,7 +155,7 @@ def _build_summary_cards(
         {
             "label": "样例数",
             "value": case_count,
-            "detail": "覆盖后端、前端、实施与基础学生四类典型样例。",
+            "detail": "覆盖后端、前端、实施、基础、数据分析、运营和测试开发七类典型样例。",
         },
         {
             "label": "Top1 命中率",
@@ -208,7 +206,7 @@ def _build_summary_cards(
 
 
 def run_benchmark(parser_mode: str = "rule") -> dict[str, Any]:
-    templates = _load_json(TEMPLATES_PATH)
+    templates = load_role_templates()
     cases = _load_json(BENCHMARK_CASES_PATH)
 
     case_results: list[dict[str, Any]] = []
@@ -401,7 +399,7 @@ def run_benchmark(parser_mode: str = "rule") -> dict[str, Any]:
         },
         "judge_notes": [
             "这套内置验证更像答辩中的“小样本人工复核”，不是学术 benchmark，但非常适合证明系统稳定性。",
-            "后端、前端、实施三类方向已经能稳定落到合理岗位族，说明双画像和规则链路有效。",
+            "后端、前端、实施、数据分析、运营和测试开发等方向都已能稳定落到合理岗位族，说明双画像和规则链路有效。",
             "新增的模拟复测提升率可用于证明系统不是静态推荐，而是能把差距建议转成可量化改进。",
             "规则回退率能够直接展示 auto 模式下的稳定性与现场答辩兜底能力。",
             "如果后续补入更多真实学生样本，这块可以直接升级成校级运营验证中心。",

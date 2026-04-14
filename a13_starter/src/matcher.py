@@ -9,9 +9,136 @@ try:
 except ImportError:  # pragma: no cover - optional dependency for semantic matching
     OpenAI = None
 
+from a13_starter.src.role_normalizer import normalize_job_title
 from a13_starter.src.settings import get_openai_api_key, get_openai_base_url, llm_is_configured
 from a13_starter.src.models import JobProfile, MatchBreakdown, MatchResult, StudentProfile
 from a13_starter.src.skill_taxonomy import normalize_skill_alias, normalize_skill_list
+
+
+_ROLE_TAG_SIGNALS: dict[str, tuple[tuple[str, int], ...]] = {
+    "backend": (
+        ("后端", 4),
+        ("java开发", 4),
+        ("服务端", 4),
+        ("python开发", 3),
+        ("spring", 2),
+        ("spring boot", 3),
+        ("接口开发", 3),
+        ("接口设计", 3),
+        ("数据库设计", 2),
+    ),
+    "frontend": (
+        ("前端", 4),
+        ("web前端", 4),
+        ("vue", 3),
+        ("react", 3),
+        ("javascript", 2),
+        ("typescript", 2),
+        ("html", 1),
+        ("css", 1),
+        ("交互", 1),
+    ),
+    "testing": (
+        ("测试开发", 4),
+        ("自动化测试", 4),
+        ("功能测试", 3),
+        ("接口测试", 3),
+        ("测试用例", 3),
+        ("回归测试", 2),
+        ("缺陷", 2),
+        ("selenium", 2),
+        ("pytest", 2),
+        ("jmeter", 2),
+        ("联调测试", 2),
+    ),
+    "product": (
+        ("产品", 4),
+        ("prd", 3),
+        ("原型", 3),
+        ("axure", 3),
+        ("需求分析", 2),
+        ("用户研究", 2),
+        ("需求文档", 2),
+    ),
+    "implementation": (
+        ("实施", 4),
+        ("交付", 4),
+        ("上线", 3),
+        ("部署", 3),
+        ("系统部署", 4),
+        ("培训", 3),
+        ("现场", 2),
+        ("环境配置", 2),
+        ("初始化", 2),
+        ("使用手册", 2),
+    ),
+    "support": (
+        ("技术支持", 4),
+        ("售前", 4),
+        ("售后", 3),
+        ("解决方案", 4),
+        ("故障排查", 3),
+        ("问题定位", 3),
+        ("工单", 2),
+        ("客户", 1),
+        ("服务意识", 2),
+    ),
+    "data": (
+        ("数据分析师", 5),
+        ("商业分析", 4),
+        ("bi", 3),
+        ("数据分析", 3),
+        ("数据清洗", 3),
+        ("可视化", 3),
+        ("指标", 3),
+        ("报表", 3),
+        ("数据看板", 3),
+        ("excel", 3),
+        ("ppt", 2),
+        ("留存", 2),
+        ("复购", 2),
+        ("流失", 2),
+        ("用户分层", 2),
+        ("经营分析", 2),
+        ("异常指标", 2),
+    ),
+    "operations": (
+        ("运营专员", 5),
+        ("内容运营", 4),
+        ("用户运营", 4),
+        ("社区运营", 4),
+        ("新媒体运营", 4),
+        ("运营", 3),
+        ("增长", 2),
+        ("活动运营", 3),
+        ("活动策划", 2),
+        ("内容策划", 2),
+        ("裂变", 2),
+        ("转化", 2),
+        ("seo", 2),
+        ("粉丝", 2),
+    ),
+    "project": (
+        ("项目专员", 5),
+        ("项目经理", 5),
+        ("项目管理", 3),
+        ("里程碑", 2),
+        ("风险控制", 2),
+        ("资源分配", 2),
+        ("会议纪要", 2),
+        ("跨部门", 1),
+        ("行动项", 1),
+    ),
+    "embedded": (
+        ("硬件", 4),
+        ("嵌入式", 4),
+        ("单片机", 3),
+        ("c/c++", 3),
+        ("c++", 3),
+        ("电路", 2),
+        ("硬件调试", 3),
+    ),
+}
 
 
 def _get_embeddings(texts: list[str]) -> list[list[float]]:
@@ -131,50 +258,103 @@ def _semantic_match_skills(student_skills: list[str], job_skills: list[str], thr
     return list(set(shared_skills)), list(set(missing_skills))
 
 
+def _merge_tag_scores(base: dict[str, int], extra: dict[str, int]) -> dict[str, int]:
+    for tag, score in extra.items():
+        base[tag] = base.get(tag, 0) + score
+    return base
+
+
+def _role_tag_scores_from_text(text: str, multiplier: int = 1) -> dict[str, int]:
+    source = str(text or "").strip()
+    if not source:
+        return {}
+
+    lowered = source.lower()
+    scores: dict[str, int] = {}
+    for tag, signals in _ROLE_TAG_SIGNALS.items():
+        tag_score = 0
+        for keyword, weight in signals:
+            if keyword.lower() in lowered:
+                tag_score += weight
+        if tag_score > 0:
+            scores[tag] = tag_score * max(1, multiplier)
+    return scores
+
+
+def _primary_role_tags(scores: dict[str, int]) -> set[str]:
+    if not scores:
+        return set()
+    max_score = max(scores.values())
+    threshold = max(4, max_score - 2)
+    return {tag for tag, score in scores.items() if score >= threshold}
+
+
+def _normalize_role_title(text: str) -> str:
+    cleaned = str(text or "").strip()
+    if not cleaned:
+        return ""
+    return normalize_job_title(cleaned, detail=cleaned, industry="")
+
+
 def _role_tags_from_text(text: str) -> set[str]:
-    tags = set()
-    lowered = text.lower()
-    if any(keyword in text for keyword in ["后端", "Java", "服务端"]) or "spring" in lowered:
-        tags.add("backend")
-    if any(keyword in text for keyword in ["前端"]) or any(
-        keyword in lowered for keyword in ["vue", "react", "javascript", "typescript", "html", "css"]
-    ):
-        tags.add("frontend")
-    if "测试" in text or any(keyword in lowered for keyword in ["selenium", "jmeter", "postman", "pytest"]):
-        tags.add("testing")
-    if any(keyword in text for keyword in ["产品", "prd", "原型", "axure", "需求"]):
-        tags.add("product")
-    if "实施" in text:
-        tags.add("implementation")
-    if any(keyword in text for keyword in ["支持", "售前", "解决方案"]):
-        tags.add("support")
-    if any(keyword in text for keyword in ["数据", "分析"]) or any(
-        keyword in lowered for keyword in ["sql", "python", "machine learning"]
-    ):
-        tags.add("data")
-    if any(keyword in text for keyword in ["硬件", "嵌入式", "单片机", "c/c++"]) or "c++" in lowered:
-        tags.add("embedded")
-    return tags
+    return set(_role_tag_scores_from_text(text))
 
 
-def _role_alignment_bonus(student: StudentProfile, job: JobProfile) -> int:
-    if not student.target_roles:
+def _collect_student_evidence_tag_scores(student: StudentProfile) -> dict[str, int]:
+    scores: dict[str, int] = {}
+    for internship in student.internships:
+        _merge_tag_scores(scores, _role_tag_scores_from_text(internship, multiplier=3))
+    for project in student.projects:
+        _merge_tag_scores(scores, _role_tag_scores_from_text(project, multiplier=2))
+    for award in student.awards:
+        _merge_tag_scores(scores, _role_tag_scores_from_text(award, multiplier=1))
+    if not scores and student.skills:
+        _merge_tag_scores(scores, _role_tag_scores_from_text(" ".join(student.skills), multiplier=1))
+    return scores
+
+
+def _role_alignment_adjustment(student: StudentProfile, job: JobProfile) -> int:
+    if not student.target_roles and not student.projects and not student.internships:
         return 0
 
-    job_text = job.title + " " + " ".join(job.required_skills)
-    job_tags = _role_tags_from_text(job_text)
+    job_scores: dict[str, int] = {}
+    _merge_tag_scores(job_scores, _role_tag_scores_from_text(job.title, multiplier=3))
+    _merge_tag_scores(job_scores, _role_tag_scores_from_text(job.raw_text, multiplier=2))
+    _merge_tag_scores(job_scores, _role_tag_scores_from_text(" ".join(job.required_skills), multiplier=1))
+    if not job_scores:
+        return 0
 
-    best_bonus = 0
-    for target in student.target_roles:
-        if target in job.title or job.title in target:
-            best_bonus = max(best_bonus, 20)
-            continue
+    target_scores = _role_tag_scores_from_text(" ".join(student.target_roles), multiplier=2)
+    evidence_scores = _collect_student_evidence_tag_scores(student)
 
-        target_tags = _role_tags_from_text(target)
-        if target_tags & job_tags:
-            best_bonus = max(best_bonus, 12)
+    normalized_job_title = _normalize_role_title(job.title)
+    normalized_targets = {
+        normalized
+        for normalized in (_normalize_role_title(target) for target in student.target_roles)
+        if normalized
+    }
 
-    return best_bonus
+    job_primary_tags = _primary_role_tags(job_scores)
+    target_primary_tags = _primary_role_tags(target_scores)
+    evidence_primary_tags = _primary_role_tags(evidence_scores)
+
+    adjustment = 0
+    if normalized_job_title and normalized_job_title in normalized_targets:
+        adjustment += 4
+
+    if target_primary_tags:
+        if job_primary_tags & target_primary_tags:
+            adjustment += 3
+        else:
+            adjustment -= 2
+
+    if evidence_primary_tags:
+        if job_primary_tags & evidence_primary_tags:
+            adjustment += 6
+        else:
+            adjustment -= 4
+
+    return max(-8, min(adjustment, 12))
 
 
 def _score_basic_requirements(student: StudentProfile, job: JobProfile) -> int:
@@ -192,7 +372,6 @@ def _score_basic_requirements(student: StudentProfile, job: JobProfile) -> int:
         if shared_certificates:
             score += 20
 
-    score += _role_alignment_bonus(student, job)
     return max(0, min(score, 100))
 
 
@@ -290,6 +469,10 @@ def _build_suggestions(student: StudentProfile, missing_skills: list[str], gaps:
         suggestions.append("先把简历基础信息补全：" + "、".join(student.missing_sections[:3]))
     if not suggestions and not gaps:
         suggestions.append("可以直接冲刺该岗位，并同步准备更高一级岗位的能力储备")
+    if len(suggestions) < 2:
+        suggestions.append("挑 3 份真实 JD 做定制化简历改写，并准备 1 套项目讲稿")
+    if len(suggestions) < 3:
+        suggestions.append("围绕目标岗位完成 8 到 10 道高频面试题复盘，形成下一轮复测清单")
     return suggestions
 
 
@@ -310,6 +493,8 @@ def _build_explanation(
         parts.append("下一步最需要补强的是：" + "、".join(missing_skills[:3]) + "。")
     if student.projects or student.internships:
         parts.append("已有项目或实习经历，可以作为岗位申请时的证据支撑。")
+    else:
+        parts.append("当前更适合先补一个可展示项目，再进入集中投递。")
     return "".join(parts)
 
 
@@ -329,9 +514,11 @@ def match_student_to_job(student: StudentProfile, job: JobProfile) -> MatchResul
     skills_score = _score_overlap(set(shared_skills), set(job.required_skills))
     literacy_score = _score_overlap(set(shared_soft_skills), set(job.soft_skills))
     growth = _score_growth_potential(student)
+    alignment_adjustment = _role_alignment_adjustment(student, job)
 
     # 综合算分
-    total = int(basic * 0.2 + skills_score * 0.4 + literacy_score * 0.2 + growth * 0.2)
+    total = int(basic * 0.2 + skills_score * 0.4 + literacy_score * 0.2 + growth * 0.2) + alignment_adjustment
+    total = max(0, min(total, 100))
     gaps = _build_gaps(student, missing_skills, missing_soft_skills, job)
 
     breakdown = MatchBreakdown(
