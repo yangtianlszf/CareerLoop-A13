@@ -6,6 +6,7 @@ from typing import Any
 from a13_starter.src.jd_search import load_all_job_rows, load_role_templates
 from a13_starter.src.models import StudentProfile
 from a13_starter.src.skill_taxonomy import expand_skill_list, normalize_skill_alias
+from a13_starter.src.template_evidence_regenerator import select_template_rows
 
 
 def _dedupe_keep_order(items: list[str]) -> list[str]:
@@ -186,11 +187,10 @@ def build_grounded_evidence_bundle(
     query_terms = _build_query_terms(student, primary_match, template)
 
     source_title = str(template.get("source_title", "")).strip() if template else ""
-    matching_rows = [
-        row for row in load_all_job_rows() if source_title and str(row.get("岗位名称", "")).strip() == source_title
-    ]
+    all_rows = load_all_job_rows()
+    matching_rows = select_template_rows(template, all_rows) if template else []
     if not matching_rows:
-        matching_rows = load_all_job_rows()
+        matching_rows = all_rows
 
     candidates: list[dict[str, Any]] = []
     if template:

@@ -30,7 +30,7 @@ _ROLE_RULES: list[dict[str, Any]] = [
     {
         "canonical_title": "Java开发工程师",
         "role_family": "开发",
-        "aliases": ("java", "后端开发", "后端工程师", "服务端"),
+        "aliases": ("java",),
     },
     {
         "canonical_title": "Python开发工程师",
@@ -202,6 +202,17 @@ def clean_text(value: object) -> str:
     return text.strip()
 
 
+def _contains_role_alias(source: str, alias: str) -> bool:
+    lowered_source = str(source or "").lower()
+    lowered_alias = str(alias or "").strip().lower()
+    if not lowered_source or not lowered_alias:
+        return False
+    if re.search(r"[a-zA-Z]", lowered_alias):
+        pattern = rf"(?<![a-z0-9+#./-]){re.escape(lowered_alias)}(?![a-z0-9+#./-])"
+        return re.search(pattern, lowered_source) is not None
+    return lowered_alias in lowered_source
+
+
 def infer_role_family(title: str | None) -> str:
     clean_title = str(title or "").strip()
     return _ROLE_FAMILY_LOOKUP.get(clean_title, "综合")
@@ -218,7 +229,7 @@ def normalize_job_title(title: str, detail: str = "", industry: str = "") -> str
 
     for rule in _ROLE_RULES:
         for alias in rule["aliases"]:
-            if alias.lower() in lowered or alias.lower() in detail_lower:
+            if _contains_role_alias(lowered, alias) or _contains_role_alias(detail_lower, alias):
                 return str(rule["canonical_title"])
 
     if "产品" in raw_title and "经理" in raw_title:

@@ -12,7 +12,7 @@ except ImportError:  # pragma: no cover - optional dependency for semantic match
 from a13_starter.src.role_normalizer import normalize_job_title
 from a13_starter.src.settings import get_openai_api_key, get_openai_base_url, llm_is_configured
 from a13_starter.src.models import JobProfile, MatchBreakdown, MatchResult, StudentProfile
-from a13_starter.src.skill_taxonomy import normalize_skill_alias, normalize_skill_list
+from a13_starter.src.skill_taxonomy import expand_skill_aliases, normalize_skill_alias, normalize_skill_list
 
 
 _ROLE_TAG_SIGNALS: dict[str, tuple[tuple[str, int], ...]] = {
@@ -141,6 +141,14 @@ _ROLE_TAG_SIGNALS: dict[str, tuple[tuple[str, int], ...]] = {
 }
 
 
+_STACK_SIGNAL_KEYWORDS: dict[str, tuple[str, ...]] = {
+    "java": ("java开发工程师", "java开发", "java"),
+    "python": ("python开发工程师", "python开发", "python"),
+    "cpp": ("c/c++开发工程师", "c/c++开发", "c/c++", "c++", "cpp"),
+    "frontend": ("前端开发工程师", "web前端", "前端", "javascript", "vue", "react"),
+}
+
+
 def _get_embeddings(texts: list[str]) -> list[list[float]]:
     """调用大模型 Embedding API 将文本转化为高维向量"""
     if not texts:
@@ -177,6 +185,135 @@ def _normalize_skill_text(text: str) -> str:
     return re.sub(r"[^0-9a-zA-Z\u4e00-\u9fff+#.]+", "", text).lower()
 
 
+def _normalize_certificate_text(text: str) -> str:
+    return re.sub(r"[\s()（）\-_/]+", "", str(text or "").strip().lower())
+
+
+def _stack_signals_from_text(text: str) -> set[str]:
+    lowered = str(text or "").strip().lower()
+    if not lowered:
+        return set()
+
+    def has_keyword(keyword: str) -> bool:
+        lowered_keyword = str(keyword or "").strip().lower()
+        if not lowered_keyword:
+            return False
+        if re.search(r"[a-zA-Z]", lowered_keyword):
+            pattern = rf"(?<![a-z0-9+#./-]){re.escape(lowered_keyword)}(?![a-z0-9+#./-])"
+            return re.search(pattern, lowered) is not None
+        return lowered_keyword in lowered
+
+    signals: set[str] = set()
+    for label, keywords in _STACK_SIGNAL_KEYWORDS.items():
+        if any(has_keyword(keyword) for keyword in keywords):
+            signals.add(label)
+    return signals
+
+
+def _student_target_stack_signals(student: StudentProfile) -> set[str]:
+    return _stack_signals_from_text(" ".join(student.target_roles))
+
+
+def _job_stack_signals(job: JobProfile) -> set[str]:
+    return _stack_signals_from_text(" ".join([job.title, job.raw_text, *job.required_skills]))
+
+
+def _role_market_realism_adjustment(student: StudentProfile, job: JobProfile) -> int:
+    normalized_title = normalize_job_title(job.title, detail=job.raw_text, industry="")
+    if normalized_title != "Python开发工程师":
+        return 0
+
+    target_stack_signals = _student_target_stack_signals(student)
+    evidence_stack_signals = _stack_signals_from_text(" ".join([*student.projects, *student.internships]))
+
+    adjustment = 0
+    if "python" not in target_stack_signals:
+        adjustment -= 1
+    if "java" in target_stack_signals and "python" not in target_stack_signals:
+        adjustment -= 1
+    if "python" not in evidence_stack_signals:
+        adjustment -= 2
+
+    return max(-3, min(adjustment, 0))
+
+
+def _certificate_token(text: str) -> str:
+    normalized = _normalize_certificate_text(text)
+    if not normalized:
+        return ""
+    if any(keyword in normalized for keyword in ("大学英语六级", "英语六级", "cet6", "cet六级")):
+        return "english6"
+    if any(keyword in normalized for keyword in ("大学英语四级", "英语四级", "cet4", "cet四级")):
+        return "english4"
+    if any(keyword in normalized for keyword in ("全国计算机等级考试二级", "计算机二级", "计算机2级", "ncre2")):
+        return "computer2"
+    if "普通话" in normalized:
+        return "mandarin"
+    if "pmp" in normalized:
+        return "pmp"
+    if "软考" in normalized:
+        if "高级" in normalized:
+            return "softtest_high"
+        if "中级" in normalized:
+            return "softtest_mid"
+        if "初级" in normalized:
+            return "softtest_base"
+        return "softtest"
+    return normalized
+
+
+def _certificate_matches_requirement(student_cert: str, required_cert: str) -> bool:
+    student_token = _certificate_token(student_cert)
+    required_token = _certificate_token(required_cert)
+    if not student_token or not required_token:
+        return False
+    if student_token == required_token:
+        return True
+    if required_token == "english4" and student_token == "english6":
+        return True
+    softtest_rank = {
+        "softtest": 0,
+        "softtest_base": 1,
+        "softtest_mid": 2,
+        "softtest_high": 3,
+    }
+    if required_token in softtest_rank and student_token in softtest_rank:
+        if required_token == "softtest":
+            return True
+        return softtest_rank[student_token] >= softtest_rank[required_token]
+    return student_token in required_token or required_token in student_token
+
+
+def _anchor_skill_groups(job: JobProfile) -> list[set[str]]:
+    title = str(job.title or "").lower()
+    groups: list[set[str]] = []
+    if "java" in title:
+        groups.append({"Java"})
+    if "python" in title:
+        groups.append({"Python"})
+    if "c/c++" in title or "c++" in title:
+        groups.append({"C++", "C"})
+    if "前端" in title:
+        groups.append({"HTML", "CSS", "JavaScript", "Vue", "React"})
+    if "数据分析" in title:
+        groups.append({"Python", "SQL", "Excel", "数据分析"})
+    return groups
+
+
+def _anchor_skill_penalty(job: JobProfile, shared_skills: list[str], missing_skills: list[str]) -> int:
+    shared_set = set(shared_skills)
+    missing_set = set(missing_skills)
+    penalty = 0
+    for group in _anchor_skill_groups(job):
+        if shared_set & group:
+            continue
+        missing_count = len(group & missing_set)
+        if missing_count == 0:
+            continue
+        penalty -= 10 if len(group) == 1 else 8
+    return penalty
+
+
 def _canonicalize_skills_for_matching(skills: list[str]) -> list[tuple[str, str]]:
     canonical_skills = normalize_skill_list(skills)
     canonical_lookup = {normalize_skill_alias(skill): skill for skill in skills}
@@ -187,6 +324,15 @@ def _canonicalize_skills_for_matching(skills: list[str]) -> list[tuple[str, str]
     return pairs
 
 
+def _skill_alias_tokens(skill: str) -> set[str]:
+    aliases = expand_skill_aliases(skill) or [skill]
+    return {
+        _normalize_skill_text(alias)
+        for alias in aliases
+        if _normalize_skill_text(alias)
+    }
+
+
 def _rule_based_match_skills(student_skills: list[str], job_skills: list[str]) -> tuple[list[str], list[str]]:
     if not job_skills:
         return student_skills, []
@@ -194,17 +340,20 @@ def _rule_based_match_skills(student_skills: list[str], job_skills: list[str]) -
         return [], job_skills
 
     normalized_student_skills = _canonicalize_skills_for_matching(student_skills)
+    student_alias_sets = {
+        display: _skill_alias_tokens(display)
+        for display, _ in normalized_student_skills
+    }
     normalized_job_skills = _canonicalize_skills_for_matching(job_skills)
 
     shared_skills: list[str] = []
     missing_skills: list[str] = []
-    for job_skill, job_skill_normalized in normalized_job_skills:
+    for job_skill, _ in normalized_job_skills:
+        job_aliases = _skill_alias_tokens(job_skill)
         matched = any(
-            job_skill_normalized == student_skill_normalized
-            or job_skill_normalized in student_skill_normalized
-            or student_skill_normalized in job_skill_normalized
-            for _, student_skill_normalized in normalized_student_skills
-            if job_skill_normalized and student_skill_normalized
+            job_aliases & student_aliases
+            for student_aliases in student_alias_sets.values()
+            if job_aliases and student_aliases
         )
         if matched:
             shared_skills.append(job_skill)
@@ -289,6 +438,10 @@ def _primary_role_tags(scores: dict[str, int]) -> set[str]:
     return {tag for tag, score in scores.items() if score >= threshold}
 
 
+def role_primary_tags(text: str) -> set[str]:
+    return _primary_role_tags(_role_tag_scores_from_text(text))
+
+
 def _normalize_role_title(text: str) -> str:
     cleaned = str(text or "").strip()
     if not cleaned:
@@ -354,6 +507,14 @@ def _role_alignment_adjustment(student: StudentProfile, job: JobProfile) -> int:
         else:
             adjustment -= 4
 
+    target_stack_signals = _student_target_stack_signals(student)
+    job_stack_signals = _job_stack_signals(job)
+    if target_stack_signals and job_stack_signals:
+        if target_stack_signals & job_stack_signals:
+            adjustment += 2
+        else:
+            adjustment -= 4
+
     return max(-8, min(adjustment, 12))
 
 
@@ -368,9 +529,13 @@ def _score_basic_requirements(student: StudentProfile, job: JobProfile) -> int:
             score -= 20
 
     if job.certificates:
-        shared_certificates = set(student.certificates) & set(job.certificates)
-        if shared_certificates:
-            score += 20
+        matched_certificates = [
+            required_cert
+            for required_cert in job.certificates
+            if any(_certificate_matches_requirement(student_cert, required_cert) for student_cert in student.certificates)
+        ]
+        if matched_certificates:
+            score += int(round(20 * (len(matched_certificates) / max(1, len(job.certificates)))))
 
     return max(0, min(score, 100))
 
@@ -381,12 +546,53 @@ def _score_overlap(shared: set[str], required: set[str], empty_default: int = 60
     return int(len(shared) / len(required) * 100)
 
 
+def _order_items_by_reference(items: list[str], reference: list[str]) -> list[str]:
+    if not items:
+        return []
+    normalized_lookup = {
+        _normalize_skill_text(item): item
+        for item in items
+    }
+    ordered: list[str] = []
+    for ref in reference:
+        item = normalized_lookup.get(_normalize_skill_text(ref))
+        if item and item not in ordered:
+            ordered.append(item)
+    for item in items:
+        if item not in ordered:
+            ordered.append(item)
+    return ordered
+
+
+def _prune_missing_soft_skills(
+    student: StudentProfile,
+    job: JobProfile,
+    shared_soft_skills: list[str],
+    missing_soft_skills: list[str],
+) -> list[str]:
+    ordered_missing = _order_items_by_reference(missing_soft_skills, job.soft_skills)
+    if not ordered_missing:
+        return []
+
+    required_count = max(1, len(job.soft_skills))
+    coverage = len(shared_soft_skills) / required_count
+    has_experience_evidence = bool(student.projects or student.internships or student.awards)
+
+    # 对于已有较充分项目/实习证据且软技能覆盖已较高的候选人，不再把剩余泛化软技能直接打成关键短板。
+    if has_experience_evidence and coverage >= 0.6 and len(ordered_missing) <= 2:
+        return []
+
+    limit = 2 if coverage >= 0.4 else 3
+    return ordered_missing[:limit]
+
+
 def _score_growth_potential(student: StudentProfile) -> int:
-    score = 40
-    score += min(len(student.projects) * 15, 30)
-    score += min(len(student.internships) * 15, 30)
-    score += min(len(student.certificates) * 10, 20)
-    score += min(len(student.skills) * 2, 20)
+    score = 20
+    score += min(len(student.projects) * 12, 24)
+    score += min(len(student.internships) * 14, 20)
+    score += min(len(student.certificates) * 5, 10)
+    score += min(len(student.skills) * 2, 16)
+    score += min(len(student.awards) * 4, 8)
     return max(0, min(score, 100))
 
 
@@ -429,23 +635,9 @@ def _build_gaps(
     if missing_soft_skills:
         gaps.append("职业素养还可加强：" + "、".join(missing_soft_skills[:5]))
     
-    # 🌟 修复证书智障匹配：引入向上兼容机制（如 CET-6 覆盖 CET-4）
     missing_certificates = []
-    student_certs_str = " ".join(student.certificates).lower()
-    
     for required_cert in job.certificates:
-        req_lower = required_cert.lower()
-        
-        # 1. 如果企业要求四级，但学生画像里有六级，则算作满足要求，跳过
-        if "四级" in req_lower and "六级" in student_certs_str:
-            continue
-            
-        # 2. 如果企业要求软考初级，学生有中级/高级，跳过（可在此扩展更多规则）
-        if "初级" in req_lower and ("中级" in student_certs_str or "高级" in student_certs_str):
-            continue
-
-        # 如果确实没有，且不满足覆盖条件，再加入缺失名单
-        if required_cert not in student.certificates:
+        if not any(_certificate_matches_requirement(student_cert, required_cert) for student_cert in student.certificates):
             missing_certificates.append(required_cert)
 
     if missing_certificates:
@@ -503,11 +695,10 @@ def match_student_to_job(student: StudentProfile, job: JobProfile) -> MatchResul
     shared_skills, missing_skills = _semantic_match_skills(student.skills, job.required_skills, threshold=0.82)
     shared_soft_skills, missing_soft_skills = _semantic_match_skills(student.soft_skills, job.soft_skills, threshold=0.85)
 
-    # 排序以保证输出结果顺序一致性
-    shared_skills = sorted(shared_skills)
-    missing_skills = sorted(missing_skills)
-    shared_soft_skills = sorted(shared_soft_skills)
-    missing_soft_skills = sorted(missing_soft_skills)
+    shared_skills = _order_items_by_reference(shared_skills, job.required_skills)
+    missing_skills = _order_items_by_reference(missing_skills, job.required_skills)
+    shared_soft_skills = _order_items_by_reference(shared_soft_skills, job.soft_skills)
+    missing_soft_skills = _prune_missing_soft_skills(student, job, shared_soft_skills, missing_soft_skills)
 
     # 计算各维度得分
     basic = _score_basic_requirements(student, job)
@@ -515,9 +706,16 @@ def match_student_to_job(student: StudentProfile, job: JobProfile) -> MatchResul
     literacy_score = _score_overlap(set(shared_soft_skills), set(job.soft_skills))
     growth = _score_growth_potential(student)
     alignment_adjustment = _role_alignment_adjustment(student, job)
+    market_realism_adjustment = _role_market_realism_adjustment(student, job)
+    anchor_penalty = _anchor_skill_penalty(job, shared_skills, missing_skills)
 
     # 综合算分
-    total = int(basic * 0.2 + skills_score * 0.4 + literacy_score * 0.2 + growth * 0.2) + alignment_adjustment
+    total = (
+        int(basic * 0.2 + skills_score * 0.4 + literacy_score * 0.2 + growth * 0.2)
+        + alignment_adjustment
+        + market_realism_adjustment
+        + anchor_penalty
+    )
     total = max(0, min(total, 100))
     gaps = _build_gaps(student, missing_skills, missing_soft_skills, job)
 

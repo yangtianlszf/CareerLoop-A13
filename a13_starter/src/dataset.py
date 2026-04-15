@@ -13,7 +13,7 @@ except Exception:  # pragma: no cover - optional dependency fallback
 
 from a13_starter.src.extractors import build_job_profile
 from a13_starter.src.paths import resolve_project_root
-from a13_starter.src.role_normalizer import clean_text
+from a13_starter.src.role_normalizer import build_cleaning_report, clean_job_row, clean_text
 
 
 EXPECTED_HEADERS = [
@@ -89,13 +89,15 @@ def load_cleaned_job_rows(xls_path: str | Path | None = None) -> list[dict[str, 
                 if isinstance(row, dict) and row
             ]
 
+    if xls_path is not None:
+        raw_rows = load_job_rows(xls_path)
+        return [clean_job_row(row) for row in raw_rows]
+
     cached_rows = _load_cached_job_rows()
     if cached_rows:
-        return cached_rows
+        return [clean_job_row(row) for row in cached_rows]
 
-    if xls_path is None:
-        return []
-    return load_job_rows(xls_path)
+    return []
 
 
 def _load_cached_job_rows() -> list[dict[str, str]]:

@@ -95,7 +95,7 @@
             <button class="tab-btn" data-target="tab-plan">行动路径</button>
             <button class="tab-btn" data-target="tab-agent">能力校准</button>
             <button class="tab-btn" data-target="tab-evidence">证据基线</button>
-            <button class="tab-btn" data-target="tab-dashboard">运营看板</button>
+            <button class="tab-btn" data-target="tab-dashboard">图谱与报告</button>
           </nav>
 
           <div id="tab-overview" class="tab-pane active">
@@ -362,7 +362,7 @@
 
             <div class="grid-2">
               <div class="card"><div class="card-header"><h4>样本切片</h4></div><div id="evidence-snippets" class="snippet-list"></div></div>
-              <div class="card"><div class="card-header"><h4>岗位基线</h4></div><div id="template-evidence" class="snippet-list"></div></div>
+              <div class="card"><div class="card-header"><h4>岗位基线证据</h4></div><div id="template-evidence" class="snippet-list"></div></div>
             </div>
 
             <details class="fold-section mt-4">
@@ -398,115 +398,7 @@
           </div>
 
           <div id="tab-dashboard" class="tab-pane">
-            <div class="grid-2">
-              <div class="card"><div class="card-header"><h4>学校整体概览</h4></div><div id="school-dashboard-stats" class="dashboard-stats"></div></div>
-              <div class="card"><div class="card-header"><h4>历史分析快照</h4></div><ul id="history-list" class="history-list"></ul></div>
-            </div>
-
-            <div class="grid-2 mt-4">
-              <div class="card">
-                <div class="card-header"><h4>辅导员复核指标</h4></div>
-                <div id="school-review-metrics" class="metric-grid"></div>
-                <div id="school-recent-reviews" class="history-list mt-4"></div>
-              </div>
-
-              <div class="card">
-                <div class="card-header"><h4>人工复核与留痕</h4></div>
-                <div class="review-form-grid">
-                  <p id="current-review-analysis" class="review-lock">暂无锁定记录</p>
-                  <div class="form-row">
-                    <div class="form-field">
-                      <label>复核人</label>
-                      <input id="reviewer-name-input" class="input-field" type="text" placeholder="例：张老师" />
-                    </div>
-                    <div class="form-field">
-                      <label>角色身份</label>
-                      <select id="reviewer-role-select">
-                        <option value="辅导员">辅导员</option>
-                        <option value="就业中心">就业中心</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div class="form-field">
-                    <label>审批结论</label>
-                    <select id="review-decision-select">
-                      <option value="通过">✅ 建议通过</option>
-                      <option value="需补强">⚠️ 需打回补强</option>
-                      <option value="重点跟进">🚨 需重点跟进</option>
-                    </select>
-                  </div>
-                  <div class="form-field">
-                    <label>批注与建议</label>
-                    <textarea id="review-notes-input" class="input-field compact-textarea" placeholder="记录针对性的优化指导..."></textarea>
-                  </div>
-                  <button id="submit-review-btn" class="btn btn-outline full-width">确认并提交留痕</button>
-                </div>
-                <div id="review-records" class="history-list mt-4"></div>
-              </div>
-            </div>
-
-            <div class="grid-2 mt-4">
-              <div class="stack-layout">
-                <div class="card">
-                  <div class="card-header"><h4>系统运行状态</h4></div>
-                  <ul id="system-check-list" class="check-list"></ul>
-                </div>
-                <div class="card">
-                  <div class="card-header"><h4>技术方案说明</h4></div>
-                  <div id="technical-keywords" class="chip-group mb-2"></div>
-                  <div id="technical-modules"></div>
-                </div>
-              </div>
-              <div class="card">
-                <div class="card-header"><h4>基准测试验证</h4></div>
-                <button id="run-benchmark-btn" class="btn btn-dashed full-width mb-2">运行基准测试</button>
-                <div id="benchmark-status" class="terminal-box"></div>
-                <div id="benchmark-summary-cards" class="mt-4"></div>
-                <div id="benchmark-verdict" class="mt-4"></div>
-                <div id="benchmark-cases" class="mt-4"></div>
-              </div>
-            </div>
-
-            <div class="grid-2 mt-4">
-              <div class="card">
-                <div class="card-header"><h4>结构分布与服务分层</h4></div>
-                <div class="grid-2 compact-grid">
-                  <div>
-                    <p class="text-muted mb-2">主岗位 / 专业 / 城市分布</p>
-                    <div id="school-distribution"></div>
-                  </div>
-                  <div>
-                    <p class="text-muted mb-2">服务分层</p>
-                    <div id="school-service-segments"></div>
-                  </div>
-                </div>
-              </div>
-              <div class="card">
-                <div class="card-header"><h4>重点跟进与推岗建议</h4></div>
-                <div id="school-follow-up"></div>
-                <div class="card-header mt-4"><h4>定向推岗建议</h4></div>
-                <div id="school-push-recommendations"></div>
-              </div>
-            </div>
-
-            <div class="grid-2 mt-4">
-              <div class="card">
-                <div class="card-header"><h4>治理指标</h4></div>
-                <div id="school-governance-metrics" class="metric-grid"></div>
-              </div>
-              <div class="card">
-                <div class="card-header"><h4>抽检队列</h4></div>
-                <div id="school-audit-queue" class="history-list"></div>
-              </div>
-            </div>
-
-            <div class="card mt-4">
-              <div class="card-header"><h4>关系图谱与衍生信息</h4></div>
-              <div id="career-graph" class="career-graph-panel"></div>
-              <div id="innovation-highlights"></div>
-            </div>
-
-            <div class="card mt-4">
+            <div class="card">
               <div class="card-header split-header">
                 <h4>职业规划报告</h4>
                 <div class="inline-actions">
@@ -520,6 +412,168 @@
               </div>
               <div id="report-preview" class="report-preview"></div>
             </div>
+
+            <div class="card mt-4 dashboard-primary-card">
+              <div class="card-header"><h4>图谱与成长亮点</h4></div>
+              <div id="career-graph" class="career-graph-panel"></div>
+              <div id="innovation-highlights"></div>
+            </div>
+
+            <details class="fold-section mt-4 management-fold">
+              <summary class="fold-summary">
+                <div class="fold-title-group">
+                  <span class="mini-label">Operations</span>
+                  <strong>运营与复核</strong>
+                </div>
+                <span class="fold-hint">按需查看</span>
+              </summary>
+              <div class="fold-body management-grid">
+                <div class="fold-panel management-panel management-panel-metrics">
+                  <div class="management-panel-head">
+                    <h5 class="fold-panel-title">学校概览</h5>
+                  </div>
+                  <div id="school-dashboard-stats" class="dashboard-stats"></div>
+                </div>
+
+                <div class="fold-panel management-panel management-panel-metrics">
+                  <div class="management-panel-head">
+                    <h5 class="fold-panel-title">复核概览</h5>
+                  </div>
+                  <div id="school-review-metrics" class="metric-grid"></div>
+                  <div class="management-mini-stream">
+                    <span class="management-inline-label">最近复核</span>
+                    <div id="school-recent-reviews" class="history-list"></div>
+                  </div>
+                </div>
+
+                <div class="fold-panel management-panel">
+                  <div class="management-panel-head">
+                    <h5 class="fold-panel-title">历史快照</h5>
+                  </div>
+                  <ul id="history-list" class="history-list"></ul>
+                </div>
+
+                <div class="fold-panel management-panel management-panel-wide">
+                  <div class="management-panel-head">
+                    <h5 class="fold-panel-title">跟进池与推岗</h5>
+                  </div>
+                  <div class="management-dual">
+                    <section class="management-block">
+                      <span class="management-inline-label">重点跟进</span>
+                      <div id="school-follow-up"></div>
+                    </section>
+                    <section class="management-block">
+                      <span class="management-inline-label">定向推岗</span>
+                      <div id="school-push-recommendations"></div>
+                    </section>
+                  </div>
+                </div>
+
+                <div class="fold-panel management-panel management-panel-wide">
+                  <div class="management-panel-head">
+                    <h5 class="fold-panel-title">复核工作台</h5>
+                  </div>
+                  <div class="management-workbench">
+                    <div class="review-form-grid management-form-grid">
+                      <p id="current-review-analysis" class="review-lock">暂无锁定记录</p>
+                      <div class="form-row">
+                        <div class="form-field">
+                          <label>复核人</label>
+                          <input id="reviewer-name-input" class="input-field" type="text" placeholder="例：张老师" />
+                        </div>
+                        <div class="form-field">
+                          <label>角色身份</label>
+                          <select id="reviewer-role-select">
+                            <option value="辅导员">辅导员</option>
+                            <option value="就业中心">就业中心</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div class="form-field">
+                        <label>审批结论</label>
+                        <select id="review-decision-select">
+                          <option value="通过">✅ 建议通过</option>
+                          <option value="需补强">⚠️ 需打回补强</option>
+                          <option value="重点跟进">🚨 需重点跟进</option>
+                        </select>
+                      </div>
+                      <div class="form-field">
+                        <label>批注与建议</label>
+                        <textarea id="review-notes-input" class="input-field compact-textarea" placeholder="记录针对性的优化指导..."></textarea>
+                      </div>
+                      <button id="submit-review-btn" class="btn btn-outline full-width">确认并提交留痕</button>
+                    </div>
+                    <section class="management-block management-records">
+                      <span class="management-inline-label">复核记录</span>
+                      <div id="review-records" class="history-list"></div>
+                    </section>
+                  </div>
+                </div>
+              </div>
+            </details>
+
+            <details class="fold-section mt-4">
+              <summary class="fold-summary">
+                <div class="fold-title-group">
+                  <span class="mini-label">Trends</span>
+                  <strong>更多运营趋势</strong>
+                </div>
+                <span class="fold-hint">展开查看</span>
+              </summary>
+              <div class="fold-body fold-grid">
+                <div class="fold-panel">
+                  <h5 class="fold-panel-title">结构分布与服务分层</h5>
+                  <div class="grid-2 compact-grid">
+                    <div>
+                      <p class="dashboard-panel-note">主岗位 / 专业 / 城市分布</p>
+                      <div id="school-distribution"></div>
+                    </div>
+                    <div>
+                      <p class="dashboard-panel-note">服务分层</p>
+                      <div id="school-service-segments"></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="fold-panel">
+                  <h5 class="fold-panel-title">治理指标与抽检队列</h5>
+                  <div id="school-governance-metrics" class="metric-grid"></div>
+                  <div class="dashboard-subsection">
+                    <p class="dashboard-panel-note">抽检队列</p>
+                    <div id="school-audit-queue" class="history-list"></div>
+                  </div>
+                </div>
+              </div>
+            </details>
+
+            <details class="fold-section mt-4">
+              <summary class="fold-summary">
+                <div class="fold-title-group">
+                  <span class="mini-label">Internal</span>
+                  <strong>系统与验证</strong>
+                </div>
+                <span class="fold-hint">答辩备用</span>
+              </summary>
+              <div class="fold-body fold-grid">
+                <div class="fold-panel">
+                  <h5 class="fold-panel-title">系统运行状态</h5>
+                  <ul id="system-check-list" class="check-list"></ul>
+                </div>
+                <div class="fold-panel">
+                  <h5 class="fold-panel-title">技术方案说明</h5>
+                  <div id="technical-keywords" class="chip-group mb-2"></div>
+                  <div id="technical-modules"></div>
+                </div>
+                <div class="fold-panel fold-span-wide">
+                  <h5 class="fold-panel-title">基准测试验证</h5>
+                  <p class="dashboard-panel-note">默认不打扰主视图，需要时再手动运行样例验证。</p>
+                  <button id="run-benchmark-btn" class="btn btn-dashed full-width mb-2">运行基准测试</button>
+                  <div id="benchmark-status" class="terminal-box"></div>
+                  <div id="benchmark-summary-cards" class="mt-4"></div>
+                  <div id="benchmark-verdict" class="mt-4"></div>
+                  <div id="benchmark-cases" class="mt-4"></div>
+                </div>
+              </div>
+            </details>
 
             <div class="hidden">
               <div id="school-summary-cards"></div><div id="career-strengths"></div><div id="career-risks"></div>

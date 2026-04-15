@@ -8,7 +8,7 @@ from a13_starter.src.citation_utils import annotate_text_with_citations, build_t
 from a13_starter.src.evidence_retrieval import build_grounded_evidence_bundle
 from a13_starter.src.extractors import refresh_student_profile_metrics
 from a13_starter.src.jd_search import load_role_templates
-from a13_starter.src.matcher import match_student_to_job
+from a13_starter.src.matcher import match_student_to_job, role_primary_tags
 from a13_starter.src.models import CareerPlan, JobProfile, StudentProfile
 from a13_starter.src.openai_responses import OpenAIResponsesClient  # 🌟 新增：引入大模型客户端
 from a13_starter.src.role_normalizer import normalize_job_title
@@ -52,19 +52,30 @@ def rank_student_against_templates(
     for template in templates:
         job_profile = template_to_job_profile(template)
         match = match_student_to_job(student, job_profile)
+        ranking_context_bonus = _ranking_context_bonus(student, template, match)
+        final_score = min(100, int(match.score) + ranking_context_bonus)
+        explanation = str(match.explanation)
+        if final_score != int(match.score):
+            explanation = explanation.replace(
+                f"综合匹配度为 {int(match.score)} 分",
+                f"综合匹配度为 {final_score} 分",
+                1,
+            )
         matches.append(
             {
                 "role_title": template["canonical_title"],
                 "role_family": template["role_family"],
-                "score": match.score,
+                "score": final_score,
+                "base_score": match.score,
+                "ranking_context_bonus": ranking_context_bonus,
                 "breakdown": match.breakdown.to_dict(),
                 "strengths": match.strengths,
                 "gaps": match.gaps,
                 "suggestions": match.suggestions,
                 "shared_skills": match.shared_skills,
                 "missing_skills": match.missing_skills,
-                "explanation": match.explanation,
-                "confidence_label": match.confidence_label,
+                "explanation": explanation,
+                "confidence_label": _confidence_label(final_score),
                 "transition_paths": template["transition_paths"],
                 "growth_path": template["vertical_growth_path"],
                 "summary": template["summary"],
@@ -72,7 +83,15 @@ def rank_student_against_templates(
                 "preferred_skills": template["preferred_skills"],
             }
         )
-    matches.sort(key=lambda item: item["score"], reverse=True)
+    matches.sort(
+        key=lambda item: (
+            int(item.get("score", 0)),
+            int(item.get("base_score", 0)),
+            len(item.get("shared_skills", [])),
+            -len(item.get("missing_skills", [])),
+        ),
+        reverse=True,
+    )
     if top_k is None:
         return matches
     return matches[:top_k]
@@ -92,6 +111,78 @@ def _normalized_role_labels(role_titles: list[str] | None) -> set[str]:
         if role:
             normalized.add(role)
     return normalized
+
+
+def _confidence_label(total: int) -> str:
+    if total >= 80:
+        return "高"
+    if total >= 60:
+        return "中"
+    return "低"
+
+
+def _normalize_city_label(value: str) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    return text.split("-")[0].replace("市", "").strip().lower()
+
+
+def _city_preference_matches(student: StudentProfile, template: dict[str, object]) -> bool:
+    preferred_city = _normalize_city_label(student.city_preference or "")
+    if not preferred_city:
+        return False
+    for city in list(template.get("typical_cities", [])) or []:
+        template_city = _normalize_city_label(str(city))
+        if template_city and (preferred_city in template_city or template_city in preferred_city):
+            return True
+    return False
+
+
+def _industry_overlap(student: StudentProfile, template: dict[str, object]) -> bool:
+    target_industries = [str(item).strip().lower() for item in student.target_industries if str(item).strip()]
+    if not target_industries:
+        return False
+    for industry in list(template.get("typical_industries", [])) or []:
+        lowered_industry = str(industry).strip().lower()
+        if not lowered_industry:
+            continue
+        if any(
+            target in lowered_industry or lowered_industry in target
+            for target in target_industries
+            if target
+        ):
+            return True
+    return False
+
+
+def _ranking_context_bonus(
+    student: StudentProfile,
+    template: dict[str, object],
+    match: MatchResult,
+) -> int:
+    shared_count = len(match.shared_skills)
+    role_title = str(template.get("canonical_title", ""))
+    normalized_role = _normalize_role_label(role_title)
+    normalized_targets = _normalized_role_labels(student.target_roles)
+    candidate_tags = role_primary_tags(role_title)
+    target_tags = role_primary_tags(" ".join(student.target_roles))
+
+    bonus = 0
+    if normalized_role and normalized_role in normalized_targets and shared_count >= 2:
+        bonus += 3
+    elif shared_count >= 2 and candidate_tags and target_tags and candidate_tags & target_tags:
+        bonus += 1
+
+    scenario_match = False
+    if int(match.score) >= 55 and shared_count >= 2 and _industry_overlap(student, template):
+        scenario_match = True
+    if int(match.score) >= 60 and shared_count >= 2 and _city_preference_matches(student, template):
+        scenario_match = True
+    if scenario_match:
+        bonus += 1
+
+    return min(bonus, 4)
 
 
 def _strategy_lane_score(
@@ -992,13 +1083,115 @@ def _build_service_loop(
 def _resolve_gap_dimension(keyword: str, primary_match: dict[str, Any]) -> tuple[str, int]:
     lowered = str(keyword).lower()
     breakdown = primary_match.get("breakdown", {})
+    if any(term in lowered for term in ["项目表达", "项目讲解", "项目复盘", "star", "项目案例"]):
+        return "发展潜力", int(breakdown.get("growth_potential", 0))
+    if any(term in lowered for term in ["岗位知识", "工具链", "岗位自测"]):
+        return "知识技能", int(breakdown.get("professional_skills", 0))
     if any(term in lowered for term in ["沟通", "表达", "协作", "责任", "培训"]):
         return "团队协作", int(breakdown.get("professional_literacy", 0))
     if any(term in lowered for term in ["项目", "实习", "举证", "star"]):
         return "发展潜力", int(breakdown.get("growth_potential", 0))
-    if any(term in lowered for term in ["证书", "学历", "岗位", "意向"]):
+    if any(term in lowered for term in ["证书", "学历", "意向", "简历", "完整", "目标岗位"]):
         return "岗位胜任", int(breakdown.get("basic_requirements", 0))
     return "知识技能", int(breakdown.get("professional_skills", 0))
+
+
+def _append_gap_candidate(candidates: list[str], keyword: str) -> None:
+    cleaned = normalize_skill_alias(keyword)
+    if not cleaned:
+        return
+    if any(str(item).lower() == cleaned.lower() for item in candidates):
+        return
+    candidates.append(cleaned)
+
+
+def _fallback_gap_candidates(
+    primary_match: dict[str, Any],
+    self_assessment: dict[str, Any],
+    evidence_bundle: dict[str, Any],
+) -> list[str]:
+    candidates: list[str] = []
+    weak_focuses = normalize_skill_list(self_assessment.get("weak_focuses", []))
+
+    for keyword in list(primary_match.get("missing_skills", []))[:3]:
+        _append_gap_candidate(candidates, str(keyword))
+
+    for focus in weak_focuses[:2]:
+        _append_gap_candidate(candidates, focus)
+
+    for keyword in _extract_gap_keywords(list(primary_match.get("gaps", [])))[:4]:
+        _append_gap_candidate(candidates, keyword)
+
+    evidence_hit_rate = int(evidence_bundle.get("evidence_hit_rate", 0))
+    if evidence_hit_rate < 65:
+        _append_gap_candidate(candidates, "项目表达")
+
+    if int(self_assessment.get("score", 0)) == 0:
+        _append_gap_candidate(candidates, "岗位自测")
+
+    breakdown = primary_match.get("breakdown", {})
+    dimension_fallbacks = [
+        ("growth_potential", "项目表达"),
+        ("professional_skills", "岗位知识"),
+        ("basic_requirements", "简历完整度"),
+        ("professional_literacy", "沟通表达"),
+    ]
+    for _, fallback_keyword in sorted(
+        dimension_fallbacks,
+        key=lambda item: int(breakdown.get(item[0], 0)),
+    ):
+        if len(candidates) >= 4:
+            break
+        _append_gap_candidate(candidates, fallback_keyword)
+
+    if not candidates:
+        candidates.extend(["项目表达", "岗位知识"])
+    return candidates[:4]
+
+
+def _gap_item_copy(keyword: str, dimension: str) -> tuple[str, str, str]:
+    lowered = str(keyword).lower()
+    if any(term in lowered for term in ["项目", "举证", "star"]):
+        return (
+            f"{keyword} 目前更像“写在简历里”，还没有稳定沉淀成能讲清楚的项目证据，这会直接压低“{dimension}”维度。",
+            f"围绕 {keyword} 补 1 个最小案例，并整理成 STAR 讲稿、项目截图和结果指标。",
+            f"补充 {keyword} 的项目截图、流程图、成果数据或可复述的项目讲解稿。",
+        )
+    if any(term in lowered for term in ["沟通", "表达", "协作", "培训"]):
+        return (
+            f"{keyword} 还缺少可被面试官追问的真实场景，容易让“{dimension}”维度停留在泛化表述。",
+            f"补 1 次汇报、培训或跨部门协作复盘，把职责、冲突和结果讲具体。",
+            f"沉淀协作案例、沟通纪要、培训反馈或可量化结果描述。",
+        )
+    if any(term in lowered for term in ["证书", "英语", "四级", "六级", "软考", "计算机"]):
+        return (
+            f"{keyword} 属于岗位筛选时的基础门槛，缺口会先压低“{dimension}”维度，再影响简历通过率。",
+            f"明确考试或补证时间表，并把已通过证书和备考进度同步写进简历。",
+            f"补充证书编号、成绩单、考试计划或已报名记录。",
+        )
+    if "自测" in lowered:
+        return (
+            f"{keyword} 还没有完成，当前很难判断知识点是否真的能讲出来，这会压低“{dimension}”维度。",
+            f"先完成一轮岗位自测，记录不会讲的点，再回填到项目讲稿和面试题板。",
+            f"形成错题清单、知识点复盘和下一次复测分数对比。",
+        )
+    if any(term in lowered for term in ["知识", "工具链"]):
+        return (
+            f"{keyword} 仍偏弱时，面试容易停留在概念层，难以支撑“{dimension}”维度继续上升。",
+            f"围绕 {keyword} 做 1 次岗位自测、1 个最小练习和 1 版简历改写。",
+            f"补充练习记录、代码片段、工具使用截图或题目复盘说明。",
+        )
+    if any(term in lowered for term in ["简历", "完整", "目标岗位", "意向"]):
+        return (
+            f"{keyword} 还不够完整，会让系统和招聘方都难以准确判断你的岗位定位，从而拖累“{dimension}”维度。",
+            f"补齐目标岗位、项目职责、实习职责和结果描述，再做一轮岗位化改写。",
+            f"补充清晰的目标岗位、职责边界、成果数字和投递版本记录。",
+        )
+    return (
+        f"{keyword} 主要压低“{dimension}”维度，补齐后更容易把匹配解释从‘会写简历’变成‘能举证’。",
+        f"围绕 {keyword} 完成 1 个最小案例、1 次岗位自测和 1 版项目表达稿。",
+        f"补充 {keyword} 的项目截图、代码片段、STAR 表达或上线记录。",
+    )
 
 
 def _build_gap_benefit_analysis(
@@ -1006,19 +1199,23 @@ def _build_gap_benefit_analysis(
     self_assessment: dict[str, Any],
     evidence_bundle: dict[str, Any],
 ) -> list[dict[str, Any]]:
-    candidates = list(primary_match.get("missing_skills", [])[:3])
-    for focus in self_assessment.get("weak_focuses", [])[:2]:
-        canonical_focus = normalize_skill_alias(focus)
-        if canonical_focus and canonical_focus not in candidates:
-            candidates.append(canonical_focus)
-
+    candidates = _fallback_gap_candidates(primary_match, self_assessment, evidence_bundle)
     term_map = build_term_citation_map(evidence_bundle)
+    weak_focuses = {str(item).lower() for item in normalize_skill_list(self_assessment.get("weak_focuses", []))}
+    fallback_citations = [
+        str(item.get("citation_id", "")).strip()
+        for item in evidence_bundle.get("items", [])
+        if str(item.get("citation_id", "")).strip()
+    ]
     items: list[dict[str, Any]] = []
     for index, keyword in enumerate(candidates[:4], start=1):
         dimension, current_score = _resolve_gap_dimension(keyword, primary_match)
-        expected_gain = min(16, 6 + index * 2 + (3 if keyword in self_assessment.get("weak_focuses", []) else 0))
+        expected_gain = min(16, 6 + index * 2 + (3 if str(keyword).lower() in weak_focuses else 0))
         projected_score = min(100, current_score + expected_gain)
         citation_ids = term_map.get(str(keyword).lower(), [])
+        if not citation_ids:
+            citation_ids = fallback_citations[:1]
+        detail, action, expected_evidence = _gap_item_copy(str(keyword), dimension)
         items.append(
             {
                 "gap": keyword,
@@ -1027,9 +1224,9 @@ def _build_gap_benefit_analysis(
                 "expected_gain": expected_gain,
                 "projected_score": projected_score,
                 "citations": citation_ids[:2],
-                "detail": f"{keyword} 主要压低“{dimension}”维度，补齐后更容易把匹配解释从‘会写简历’变成‘能举证’。",
-                "action": f"围绕 {keyword} 完成 1 个最小案例、1 次岗位自测和 1 版项目表达稿。",
-                "expected_evidence": f"补充 {keyword} 的项目截图、代码片段、STAR 表达或上线记录。",
+                "detail": detail,
+                "action": action,
+                "expected_evidence": expected_evidence,
             }
         )
     return items
@@ -1833,14 +2030,58 @@ def _build_role_action_plan_bundle(
     }
 
 
+def _build_role_plan_panel_bundle(
+    student: StudentProfile,
+    role_match: dict[str, Any],
+    self_assessment: dict[str, Any],
+    evidence_bundle: dict[str, Any],
+    *,
+    parser_metadata: dict[str, Any] | None = None,
+    gap_keywords: list[str] | None = None,
+) -> dict[str, Any]:
+    role_title = str(role_match.get("role_title", "目标岗位"))
+    resolved_gap_keywords = [str(item).strip() for item in gap_keywords or [] if str(item).strip()]
+    if not resolved_gap_keywords:
+        focus_gap = student.agent_answers.get("improvement_focus")
+        if focus_gap:
+            resolved_gap_keywords.append(focus_gap)
+        for keyword in list(role_match.get("missing_skills", [])):
+            if keyword not in resolved_gap_keywords:
+                resolved_gap_keywords.append(keyword)
+    if not resolved_gap_keywords:
+        resolved_gap_keywords = ["项目表达", "岗位举证"]
+
+    resource_map = _build_resource_map(role_title, resolved_gap_keywords, self_assessment)
+    return {
+        "recommended_projects": _project_suggestions_for_role(role_title),
+        "learning_sprints": _build_learning_sprints(student, role_match, resolved_gap_keywords),
+        "gap_benefit_analysis": _build_gap_benefit_analysis(role_match, self_assessment, evidence_bundle),
+        "plan_self_checks": _build_plan_self_checks(
+            student,
+            role_match,
+            parser_metadata,
+            self_assessment,
+            evidence_bundle,
+            resource_map,
+        ),
+        "resource_map": resource_map,
+        "growth_path": list(role_match.get("growth_path", [])),
+        "transition_paths": list(role_match.get("transition_paths", [])),
+        "assessment_tasks": _assessment_tasks_for_role(role_title),
+    }
+
+
 def _build_role_switch_simulations(
     student: StudentProfile,
     strategy_matches: list[dict[str, Any]],
     application_strategy: list[dict[str, Any]],
     self_assessment: dict[str, Any],
+    parser_metadata: dict[str, Any] | None = None,
+    primary_role_bundle: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     strategy_lookup = {str(item.get("role_title", "")): item for item in application_strategy}
     simulations: list[dict[str, Any]] = []
+    primary_role_title = str(strategy_matches[0].get("role_title", "")) if strategy_matches else ""
 
     for match in strategy_matches[:3]:
         role_title = str(match.get("role_title", "目标岗位"))
@@ -1851,6 +2092,16 @@ def _build_role_switch_simulations(
         simulation_assessment = dict(self_assessment or {})
         if match.get("missing_skills"):
             simulation_assessment["weak_focuses"] = list(match.get("missing_skills", []))[:2]
+        panel_bundle = _build_role_plan_panel_bundle(
+            student,
+            match,
+            simulation_assessment,
+            evidence_bundle,
+            parser_metadata=parser_metadata,
+            gap_keywords=list(plan_bundle.get("gap_keywords", [])),
+        )
+        if role_title == primary_role_title and primary_role_bundle:
+            panel_bundle.update(primary_role_bundle)
 
         simulations.append(
             {
@@ -1871,6 +2122,14 @@ def _build_role_switch_simulations(
                 "resume_surgery": _build_resume_surgery(student, match, simulation_assessment),
                 "interview_focus": _build_interview_focus(student, match, simulation_assessment),
                 "next_review_targets": _build_next_review_targets(student, match, list(plan_bundle.get("gap_keywords", []))),
+                "recommended_projects": list(panel_bundle.get("recommended_projects", [])),
+                "learning_sprints": list(panel_bundle.get("learning_sprints", [])),
+                "gap_benefit_analysis": list(panel_bundle.get("gap_benefit_analysis", [])),
+                "plan_self_checks": list(panel_bundle.get("plan_self_checks", [])),
+                "resource_map": list(panel_bundle.get("resource_map", [])),
+                "growth_path": list(panel_bundle.get("growth_path", [])),
+                "transition_paths": list(panel_bundle.get("transition_paths", [])),
+                "assessment_tasks": list(panel_bundle.get("assessment_tasks", [])),
             }
         )
 
@@ -1917,8 +2176,6 @@ def build_career_plan(
 
     risks = list(primary["gaps"])
 
-    short_goal = student.agent_answers.get("thirty_day_goal") or "做出一个可展示的求职作品"
-    
     # 🌟 核心替换：传入大模型生成的动态自测题
     self_assessment = _build_self_assessment_summary(
         role_title, 
@@ -1928,38 +2185,42 @@ def build_career_plan(
     
     evidence_bundle = build_grounded_evidence_bundle(student, primary)
     role_template = _load_role_template(role_title)
-    resource_map = _build_resource_map(role_title, top_gap_keywords, self_assessment)
+    primary_panel_bundle = _build_role_plan_panel_bundle(
+        student,
+        primary,
+        self_assessment,
+        evidence_bundle,
+        parser_metadata=parser_metadata,
+        gap_keywords=top_gap_keywords,
+    )
+    primary_panel_bundle["recommended_projects"] = dynamic_guidance.get("recommended_projects") or list(
+        primary_panel_bundle.get("recommended_projects", [])
+    )
+    primary_panel_bundle["assessment_tasks"] = dynamic_guidance.get("assessment_tasks") or list(
+        primary_panel_bundle.get("assessment_tasks", [])
+    )
+    resource_map = list(primary_panel_bundle.get("resource_map", []))
     application_strategy = _build_application_strategy(student, primary, strategy_matches)
     recommendation_comparisons = _build_recommendation_comparisons(student, primary, ranked_matches, strategy_matches)
-    role_switch_simulations = _build_role_switch_simulations(student, strategy_matches, application_strategy, self_assessment)
+    role_switch_simulations = _build_role_switch_simulations(
+        student,
+        strategy_matches,
+        application_strategy,
+        self_assessment,
+        parser_metadata,
+        primary_panel_bundle,
+    )
     role_comparison_radar = _build_role_comparison_radar(student, strategy_matches)
     job_search_snapshot = _build_job_search_snapshot(student, primary, strategy_matches, role_template, self_assessment, evidence_bundle)
     resume_surgery = _build_resume_surgery(student, primary, self_assessment)
     interview_focus = _build_interview_focus(student, primary, self_assessment)
+    primary_plan_bundle = _build_role_action_plan_bundle(student, primary, "主攻")
     overview = annotate_text_with_citations(
         overview,
         evidence_bundle,
         preferred_terms=[role_title, *top_gap_keywords, *(primary.get("shared_skills") or [])],
         max_annotations=3,
     )
-    action_plan_30 = [
-        "补齐简历中的关键信息，至少补充专业、目标岗位、项目成果和实习职责",
-        "围绕目标岗位补 2 到 3 项最关键技能：" + "、".join(top_gap_keywords[:3] or ["项目表达", "岗位举证"]),
-        f"30 天内优先拿到一个明确成果：{short_goal}",
-    ]
-    if focus_gap:
-        action_plan_30.insert(1, f"优先围绕补充问答里选择的短板 {focus_gap} 做一次专题补强")
-
-    action_plan_90 = [
-        "完成 1 个与目标岗位直接相关的项目，并沉淀 README、截图和演示视频",
-        "根据备选岗位补一个通用能力模块，比如接口测试、部署文档或原型设计",
-        "用 3 份真实或模拟 JD 反复校准简历和能力画像",
-    ]
-    action_plan_180 = [
-        "优先争取与主岗位匹配的实习或真实项目经历",
-        "建立主岗位 + 备选岗位的双路径求职策略，持续迭代作品集",
-        "将项目、竞赛和职业规划报告整合成一套完整求职材料",
-    ]
 
     return CareerPlan(
         primary_role=role_title,
@@ -1971,15 +2232,15 @@ def build_career_plan(
         risks=risks,
         primary_growth_path=list(primary["growth_path"]),
         transition_paths=list(primary["transition_paths"]),
-        action_plan_30_days=action_plan_30,
-        action_plan_90_days=action_plan_90,
-        action_plan_180_days=action_plan_180,
+        action_plan_30_days=list(primary_plan_bundle.get("action_plan_30_days", [])),
+        action_plan_90_days=list(primary_plan_bundle.get("action_plan_90_days", [])),
+        action_plan_180_days=list(primary_plan_bundle.get("action_plan_180_days", [])),
         application_strategy=application_strategy,
         recommendation_comparisons=recommendation_comparisons,
         role_switch_simulations=role_switch_simulations,
         # 🌟 核心替换：优先使用动态生成的项目，失败则使用规则字典兜底
-        recommended_projects=dynamic_guidance.get("recommended_projects") or _project_suggestions_for_role(role_title),
-        learning_sprints=_build_learning_sprints(student, primary, top_gap_keywords),
+        recommended_projects=list(primary_panel_bundle.get("recommended_projects", [])),
+        learning_sprints=list(primary_panel_bundle.get("learning_sprints", [])),
         resume_surgery=resume_surgery,
         next_review_targets=_build_next_review_targets(student, primary, top_gap_keywords),
         growth_comparison=_build_growth_comparison(student, primary, previous_analysis),
@@ -1988,11 +2249,11 @@ def build_career_plan(
         competency_dimensions=_build_competency_dimensions(student, primary),
         role_comparison_radar=role_comparison_radar,
         service_loop=_build_service_loop(student, primary, self_assessment),
-        gap_benefit_analysis=_build_gap_benefit_analysis(primary, self_assessment, evidence_bundle),
-        plan_self_checks=_build_plan_self_checks(student, primary, parser_metadata, self_assessment, evidence_bundle, resource_map),
+        gap_benefit_analysis=list(primary_panel_bundle.get("gap_benefit_analysis", [])),
+        plan_self_checks=list(primary_panel_bundle.get("plan_self_checks", [])),
         similar_cases=_build_similar_cases(student, primary),
         # 🌟 核心替换：优先使用动态生成的任务，失败则使用规则字典兜底
-        assessment_tasks=dynamic_guidance.get("assessment_tasks") or _assessment_tasks_for_role(role_title),
+        assessment_tasks=list(primary_panel_bundle.get("assessment_tasks", [])),
         interview_focus=interview_focus,
         self_assessment=self_assessment,
         resource_map=resource_map,

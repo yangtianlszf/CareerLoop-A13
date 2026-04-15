@@ -134,6 +134,41 @@ ROLE_TEMPLATE_SPECS = {
 
 SUPPLEMENTAL_ROLE_TEMPLATES = [
     {
+        "source_title": "Python开发工程师",
+        "canonical_title": "Python开发工程师",
+        "role_family": "开发",
+        "dataset_job_count": 0,
+        "summary": "围绕 Python 后端服务、AI 应用工程或自动化平台开发开展工作，强调 Python 工程实现、部署联调和框架落地能力，不作为通用后端的默认兜底岗位。",
+        "core_skills": ["Python", "SQL", "Linux", "Git"],
+        "preferred_skills": ["MySQL", "Docker", "Redis", "FastAPI", "Flask", "Django", "需求分析"],
+        "soft_skills": ["沟通", "团队协作", "学习能力", "责任心", "分析能力"],
+        "certificates": ["英语四级", "计算机二级"],
+        "education_requirement": "本科",
+        "experience_requirement": "应届优先，但更适合具备 Python 后端、AI 应用落地、自动化平台或脚本工程化经历的学生",
+        "typical_industries": ["企业服务", "计算机软件", "人工智能", "互联网", "IT服务"],
+        "typical_cities": ["上海-浦东新区", "杭州-余杭区", "深圳-南山区", "北京-海淀区", "南京-雨花台区"],
+        "sample_salary_ranges": ["9000-15000元", "1-1.8万", "8000-12000元", "1.2-1.8万"],
+        "vertical_growth_path": ["Python开发工程师", "Python后端工程师", "高级后端开发工程师", "技术负责人"],
+        "transition_paths": ["数据分析师", "测试开发工程师", "Java开发工程师"],
+        "match_weights": {
+            "basic_requirements": 0.2,
+            "professional_skills": 0.4,
+            "professional_literacy": 0.2,
+            "growth_potential": 0.2,
+        },
+        "dataset_evidence": {
+            "top_skills": [["Python", 0], ["SQL", 0], ["MySQL", 0], ["Linux", 0], ["Git", 0]],
+            "top_soft_skills": [["沟通", 0], ["团队协作", 0], ["学习能力", 0], ["责任心", 0]],
+            "top_industries": [["计算机软件", 0], ["互联网", 0], ["企业服务", 0]],
+            "top_cities": [["上海-浦东新区", 0], ["杭州-余杭区", 0], ["深圳-南山区", 0]],
+        },
+        "innovation_ability": "能把业务需求快速转成 Python 服务、AI 应用能力或自动化脚本，提升开发和交付效率",
+        "learning_ability": "能快速学习新框架、模型接入方式和接口规范，在短周期内完成模块搭建与联调",
+        "stress_tolerance": "能在联调、上线和排障场景中保持稳定推进和问题闭环",
+        "communication_ability": "能和前端、测试及业务方有效同步接口、数据结构和迭代进度",
+        "internship_ability": "具备参与 Python 服务开发、AI 应用落地、数据库设计和系统联调的实践基础",
+    },
+    {
         "source_title": "数据分析师",
         "canonical_title": "数据分析师",
         "role_family": "数据",
@@ -171,12 +206,129 @@ SUPPLEMENTAL_ROLE_TEMPLATES = [
 ]
 
 
+TEMPLATE_CALIBRATIONS: dict[str, dict[str, object]] = {
+    "Java开发工程师": {
+        "core_skills": ["Java", "Spring", "SQL", "MySQL"],
+        "preferred_skills": ["Spring Boot", "Linux", "Git", "Redis", "Docker", "需求分析"],
+        "soft_skills": ["沟通", "团队协作", "学习能力", "责任心", "执行力", "分析能力"],
+    },
+    "C/C++开发工程师": {
+        "core_skills": ["C", "C++", "Linux"],
+        "preferred_skills": ["嵌入式", "单片机", "TCP/IP", "Python", "Git", "需求分析"],
+        "soft_skills": ["沟通", "团队协作", "学习能力", "责任心", "创新", "分析能力"],
+    },
+    "前端开发工程师": {
+        "core_skills": ["HTML", "CSS", "JavaScript"],
+        "preferred_skills": ["Vue", "React", "TypeScript", "Git", "原型设计", "需求分析"],
+        "soft_skills": ["团队协作", "沟通", "学习能力", "创新", "执行力"],
+    },
+    "实施工程师": {
+        "core_skills": ["Linux", "SQL", "项目管理"],
+        "preferred_skills": ["MySQL", "Oracle", "HTTP", "需求分析", "数据分析", "ERP"],
+        "soft_skills": ["执行力", "沟通", "服务意识", "团队协作", "责任心", "表达能力"],
+    },
+    "技术支持工程师": {
+        "core_skills": ["Linux", "需求分析"],
+        "preferred_skills": ["项目管理", "SQL", "PPT", "Excel", "HTTP", "Oracle", "PLC", "数据分析"],
+        "soft_skills": ["沟通", "服务意识", "团队协作", "表达能力", "责任心", "执行力"],
+    },
+    "测试工程师": {
+        "core_skills": ["测试用例", "功能测试"],
+        "preferred_skills": ["自动化测试", "性能测试", "SQL", "Linux", "Python", "MySQL", "需求分析"],
+        "soft_skills": ["沟通", "团队协作", "责任心", "分析能力", "学习能力"],
+    },
+    "软件测试工程师": {
+        "core_skills": ["测试用例", "功能测试", "自动化测试"],
+        "preferred_skills": ["接口测试", "Selenium", "Python", "Linux", "需求分析", "性能测试", "SQL"],
+        "soft_skills": ["沟通", "团队协作", "责任心", "分析能力", "学习能力"],
+    },
+    "测试开发工程师": {
+        "core_skills": ["自动化测试", "Selenium", "测试用例"],
+        "preferred_skills": ["Python", "Java", "Linux", "SQL", "Jenkins", "性能测试", "Git"],
+        "soft_skills": ["沟通", "团队协作", "责任心", "分析能力", "学习能力"],
+    },
+    "硬件测试工程师": {
+        "core_skills": ["测试用例", "功能测试", "性能测试"],
+        "preferred_skills": ["硬件调试", "嵌入式", "C++", "Linux", "单片机", "电路设计"],
+        "soft_skills": ["沟通", "团队协作", "责任心", "学习能力", "分析能力"],
+    },
+    "质量工程师": {
+        "core_skills": ["测试用例", "项目管理"],
+        "preferred_skills": ["数据分析", "功能测试", "Excel", "Word", "需求分析"],
+        "soft_skills": ["沟通", "责任心", "执行力", "分析能力", "抗压"],
+    },
+    "产品助理": {
+        "core_skills": ["需求分析", "原型设计"],
+        "preferred_skills": ["PRD", "Axure", "PPT", "数据分析", "项目管理", "用户研究"],
+        "soft_skills": ["沟通", "团队协作", "分析能力", "学习能力", "表达能力"],
+    },
+    "售前工程师": {
+        "core_skills": ["商务谈判", "PPT", "Excel"],
+        "preferred_skills": ["方案设计", "项目管理", "Word", "数据分析", "CRM", "ERP", "Visio"],
+        "soft_skills": ["沟通", "表达能力", "客户关系", "团队协作", "责任心"],
+    },
+    "项目专员": {
+        "core_skills": ["项目管理", "Excel", "PPT"],
+        "preferred_skills": ["Word", "数据库", "ERP", "Visio", "需求分析"],
+        "soft_skills": ["沟通", "执行力", "团队协作", "责任心", "表达能力"],
+    },
+    "项目经理": {
+        "core_skills": ["项目管理", "需求分析"],
+        "preferred_skills": ["PMP", "方案设计", "Excel", "Word", "商务谈判", "数据分析"],
+        "soft_skills": ["沟通", "执行力", "团队协作", "责任心", "抗压", "表达能力"],
+    },
+    "运营专员": {
+        "core_skills": ["社区运营", "用户运营", "数据分析"],
+        "preferred_skills": ["内容运营", "Excel", "PPT", "Word", "SEO", "项目管理"],
+        "soft_skills": ["沟通", "团队协作", "执行力", "学习能力", "责任心"],
+    },
+    "Python开发工程师": {
+        "summary": "围绕 Python 后端服务、AI 应用工程或自动化平台开发开展工作，强调 Python 工程实现、部署联调和框架落地能力，不作为通用后端的默认兜底岗位。",
+        "core_skills": ["Python", "SQL", "Linux", "Git"],
+        "preferred_skills": ["MySQL", "Docker", "Redis", "FastAPI", "Flask", "Django", "需求分析"],
+        "soft_skills": ["沟通", "团队协作", "学习能力", "责任心", "分析能力"],
+        "experience_requirement": "应届优先，但更适合具备 Python 后端、AI 应用落地、自动化平台或脚本工程化经历的学生",
+        "vertical_growth_path": ["Python开发工程师", "Python后端工程师", "高级后端开发工程师", "技术负责人"],
+        "typical_industries": ["企业服务", "计算机软件", "人工智能", "互联网", "IT服务"],
+    },
+    "数据分析师": {
+        "core_skills": ["数据分析", "Excel", "SQL"],
+        "preferred_skills": ["Python", "PPT", "MySQL", "项目管理", "需求分析", "Word"],
+        "soft_skills": ["分析能力", "沟通", "表达能力", "学习能力", "执行力", "团队协作"],
+    },
+}
+
+
+def _dedupe_list(items: list[str] | None) -> list[str]:
+    deduped: list[str] = []
+    for item in items or []:
+        text = str(item or "").strip()
+        if text and text not in deduped:
+            deduped.append(text)
+    return deduped
+
+
+def _apply_template_calibrations(template: dict[str, object]) -> dict[str, object]:
+    normalized = dict(template)
+    title = str(normalized.get("canonical_title", "")).strip()
+    override = TEMPLATE_CALIBRATIONS.get(title)
+    if not override:
+        return normalized
+
+    for key, value in override.items():
+        if isinstance(value, list):
+            normalized[key] = _dedupe_list(list(value))
+        else:
+            normalized[key] = value
+    return normalized
+
+
 def ensure_role_templates(templates: list[dict[str, object]]) -> list[dict[str, object]]:
-    normalized = [dict(item) for item in templates if isinstance(item, dict)]
+    normalized = [_apply_template_calibrations(dict(item)) for item in templates if isinstance(item, dict)]
     existing_titles = {str(item.get("canonical_title", "")).strip() for item in normalized}
     for template in SUPPLEMENTAL_ROLE_TEMPLATES:
         title = str(template.get("canonical_title", "")).strip()
         if title and title not in existing_titles:
-            normalized.append(dict(template))
+            normalized.append(_apply_template_calibrations(dict(template)))
             existing_titles.add(title)
     return normalized

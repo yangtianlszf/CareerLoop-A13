@@ -7,23 +7,85 @@ from a13_starter.src.constants import (
     DEFAULT_GROWTH_PATHS,
     EDUCATION_LEVELS,
     SKILL_VOCAB,
+    SOFT_SKILL_ALIASES,
     SOFT_SKILL_VOCAB,
 )
 from a13_starter.src.models import JobProfile, StudentProfile
 
 
+SOFT_SKILL_CONTEXT_HINTS: dict[str, list[str]] = {
+    "沟通": ["需求沟通", "客户沟通", "用户沟通", "跨部门沟通", "客户培训", "用户培训", "讲解", "对接", "汇报", "展示"],
+    "团队协作": ["团队协作", "团队合作", "跨部门协作", "协作工作", "协同", "配合", "合作"],
+    "学习能力": ["学习能力", "快速学习", "自学能力", "快速上手", "复盘", "适应新环境", "快速掌握"],
+    "抗压": ["抗压", "高压", "紧急上线", "应急", "倒班", "投诉", "高强度", "连续支持"],
+    "责任心": ["责任心", "持续维护", "跟进闭环", "问题记录整理", "文档整理", "使用手册整理", "稳定维护"],
+    "执行力": ["执行力", "落地", "部署", "实施", "交付", "推进", "上线", "环境配置"],
+    "分析能力": ["分析能力", "需求分析", "业务分析", "数据分析", "数据清洗", "问题定位", "故障排查", "结果展示"],
+    "表达能力": ["表达能力", "汇报展示", "汇报", "展示", "讲解", "培训", "使用手册", "答辩"],
+    "创新": ["创新", "优化方案", "改进方案"],
+    "服务意识": ["服务意识", "客户现场", "现场支持", "技术支持", "用户培训", "客户培训", "售后"],
+    "客户关系": ["客户关系", "客户维护", "客户培训", "客户现场", "客户沟通"],
+}
+
+TOP_LEVEL_SECTION_LABELS = {
+    "姓名",
+    "学校",
+    "院校",
+    "专业",
+    "学历",
+    "意向城市",
+    "工作地点",
+    "目标行业",
+    "目标岗位",
+    "技能",
+    "证书",
+    "项目经历",
+    "实习经历",
+    "竞赛经历",
+    "获奖经历",
+    "荣誉",
+    "个人评价",
+    "自我评价",
+}
+
+
 def _extract_keywords(text: str, vocab: list[str]) -> list[str]:
     found = []
     lowered = text.lower()
+    searchable = re.sub(r"(?<=[a-z0-9+#])/(?=[a-z0-9+#])", " ", lowered)
     for item in vocab:
         item_lower = item.lower()
         if re.search(r"[a-zA-Z]", item):
             pattern = rf"(?<![a-z0-9+#./-]){re.escape(item_lower)}(?![a-z0-9+#./-])"
-            if re.search(pattern, lowered):
+            if re.search(pattern, searchable):
                 found.append(item)
-        elif item_lower in lowered:
+        elif item_lower in searchable:
             found.append(item)
     return found
+
+
+def _extract_soft_skills(text: str) -> list[str]:
+    lowered = text.lower()
+    scores: dict[str, int] = {}
+
+    for skill, aliases in SOFT_SKILL_ALIASES.items():
+        for alias in aliases:
+            alias_lower = alias.lower()
+            if alias_lower and alias_lower in lowered:
+                scores[skill] = scores.get(skill, 0) + 2
+
+    for skill, hints in SOFT_SKILL_CONTEXT_HINTS.items():
+        for hint in hints:
+            hint_lower = hint.lower()
+            if hint_lower and hint_lower in lowered:
+                scores[skill] = scores.get(skill, 0) + 1
+
+    extracted: list[str] = []
+    for skill in SOFT_SKILL_VOCAB:
+        score = scores.get(skill, 0)
+        if score >= 2:
+            extracted.append(skill)
+    return extracted
 
 
 def _extract_labeled_value(text: str, labels: list[str]) -> str | None:
@@ -34,6 +96,35 @@ def _extract_labeled_value(text: str, labels: list[str]) -> str | None:
             if value:
                 return value
     return None
+
+
+def _extract_labeled_block(text: str, labels: list[str]) -> str:
+    target_labels = {label.strip() for label in labels if str(label).strip()}
+    if not target_labels:
+        return ""
+
+    items: list[str] = []
+    in_section = False
+    for raw_line in text.splitlines():
+        stripped = raw_line.strip()
+        if not stripped:
+            continue
+
+        label = _line_label(stripped)
+        if label in target_labels:
+            content = re.sub(rf"^(?:{'|'.join(re.escape(item) for item in target_labels)})[:：]\s*", "", stripped).strip()
+            in_section = True
+            if content:
+                items.append(content)
+            continue
+
+        if in_section and label in TOP_LEVEL_SECTION_LABELS:
+            break
+
+        if in_section:
+            items.append(stripped)
+
+    return "\n".join(items).strip()
 
 
 def _split_items(raw: str) -> list[str]:
@@ -73,15 +164,76 @@ def _extract_title(text: str, default_title: str) -> str:
     return lines[0]
 
 
+def _line_label(line: str) -> str | None:
+    match = re.match(r"^([\u4e00-\u9fffA-Za-z0-9/ ]{1,20})[:：]\s*(.*)$", line.strip())
+    if not match:
+        return None
+    return match.group(1).strip()
+
+
 def _extract_named_sections(text: str, prefix: str) -> list[str]:
-    items = []
-    for line in text.splitlines():
-        stripped = line.strip()
-        stripped = re.sub(rf"^{prefix}经历[:：]\s*", "", stripped)
-        stripped = re.sub(rf"^{prefix}[:：]\s*", "", stripped)
-        if stripped and prefix in stripped:
+    items: list[str] = []
+    in_section = False
+    section_labels = {prefix, f"{prefix}经历"}
+
+    for raw_line in text.splitlines():
+        stripped = raw_line.strip()
+        if not stripped:
+            continue
+
+        label = _line_label(stripped)
+        if label in section_labels:
+            content = re.sub(rf"^(?:{prefix}经历|{prefix})[:：]\s*", "", stripped).strip()
+            in_section = True
+            if content:
+                items.append(content)
+            continue
+
+        if in_section and label in TOP_LEVEL_SECTION_LABELS:
+            in_section = False
+
+        if in_section:
+            items.append(stripped)
+            continue
+
+        if re.match(rf"^{prefix}\d*[:：]", stripped):
             items.append(stripped)
     return items
+
+
+def _extract_student_skills(
+    raw_text: str,
+    projects: list[str],
+    internships: list[str],
+    awards: list[str],
+) -> list[str]:
+    skill_block = _extract_labeled_block(raw_text, ["技能"])
+    evidence_text = "\n".join(
+        part
+        for part in [skill_block, *projects, *internships, *awards]
+        if str(part or "").strip()
+    )
+    return _extract_keywords(evidence_text or raw_text, SKILL_VOCAB)
+
+
+def _extract_student_soft_skills(
+    raw_text: str,
+    projects: list[str],
+    internships: list[str],
+    awards: list[str],
+) -> list[str]:
+    evaluation_block = _extract_labeled_block(raw_text, ["个人评价", "自我评价"])
+    evidence_text = "\n".join(
+        part
+        for part in [evaluation_block, *projects, *internships, *awards]
+        if str(part or "").strip()
+    )
+    return _extract_soft_skills(evidence_text or raw_text)
+
+
+def _extract_student_certificates(raw_text: str) -> list[str]:
+    certificate_block = _extract_labeled_block(raw_text, ["证书"])
+    return _extract_keywords(certificate_block or raw_text, CERTIFICATE_VOCAB)
 
 
 def _extract_awards(text: str) -> list[str]:
@@ -175,7 +327,7 @@ def build_job_profile(raw_text: str) -> JobProfile:
         title=title,
         raw_text=raw_text,
         required_skills=_extract_keywords(raw_text, SKILL_VOCAB),
-        soft_skills=_extract_keywords(raw_text, SOFT_SKILL_VOCAB),
+        soft_skills=_extract_soft_skills(raw_text),
         certificates=_extract_keywords(raw_text, CERTIFICATE_VOCAB),
         education_requirement=_extract_education(raw_text),
         experience_requirement=_extract_experience(raw_text),
@@ -202,13 +354,13 @@ def build_student_profile(raw_text: str) -> StudentProfile:
     if industry_match:
         target_industries = _split_items(industry_match.group(1))
 
-    skills = _extract_keywords(raw_text, SKILL_VOCAB)
-    soft_skills = _extract_keywords(raw_text, SOFT_SKILL_VOCAB)
-    certificates = _extract_keywords(raw_text, CERTIFICATE_VOCAB)
     education_level = _extract_education(raw_text)
     projects = _extract_named_sections(raw_text, "项目")
     internships = _extract_named_sections(raw_text, "实习")
     awards = _extract_awards(raw_text)
+    skills = _extract_student_skills(raw_text, projects, internships, awards)
+    soft_skills = _extract_student_soft_skills(raw_text, projects, internships, awards)
+    certificates = _extract_student_certificates(raw_text)
     return refresh_student_profile_metrics(
         StudentProfile(
         name=name,
