@@ -1,108 +1,97 @@
-# A13 职业规划 Demo
+# A13 Starter 运行说明
 
-这是我们给 2026 服务外包大赛 A13 题准备的本地演示版本。  
-当前已经可以完成这条完整链路：
+本目录是项目的主运行模块，包含本地服务、前端页面、核心逻辑、样例数据、工具脚本和生成结果。
 
-- 输入简历文本
-- 上传本地简历文件
-- 解析学生画像
-- 和岗位模板做匹配评分
-- 生成职业规划与行动建议
-- 在网页中展示结果
-- 自动保存历史记录
-- 内置样例基准验证
-- 导出 Markdown / HTML / Word 报告
-- 通过打印页导出 PDF
+除非特别说明，下面所有命令都默认在仓库根目录 `/home/qwp/workspace/CareerLoop-A13` 执行，不要先 `cd` 到 `a13_starter/` 再运行模块命令。
 
-## 一、队友怎么直接跑起来
+## 1. 这个子项目负责什么
 
-### 1. 进入项目目录
+`a13_starter/` 当前已经包含以下能力：
 
-```bash
-cd a13_starter
-```
+- 简历文本输入与本地文件上传
+- 学生画像解析
+- 岗位模板匹配与排序
+- 主岗、备选岗和排序解释
+- 行动路径、简历改写、面试题板
+- 岗位切换模拟与能力差异对照
+- 模板证据、原始样本切片和 JD 检索
+- 历史记录、复核留痕、运营视图
+- Markdown / HTML / Word / PDF 导出
 
-如果你当前就在项目根目录 `server2026`，也可以不切目录，直接按下面命令运行。
+## 2. 环境准备
 
-### 2. 配置千问 API Key
-
-我们现在默认推荐用千问 DashScope。
-
-如果你的环境支持 `pip`，建议先执行：
+### 安装依赖
 
 ```bash
 pip install -r a13_starter/requirements.txt
 ```
 
-这样可以补齐 `PDF` 解析依赖。
-同时也会安装 `xlrd`，用于直接读取官方 `A13-JD采样数据.xls`。
+当前依赖里主要包含：
 
-如果你暂时不能装依赖也没关系，项目现在会优先使用已经生成好的岗位数据缓存，演示仍然能跑起来。
+- `xlrd`：读取官方 `A13-JD采样数据.xls`
+- `pypdf`：解析 PDF 简历与验证 PDF 导出
 
-#### Windows PowerShell
+### 准备环境变量
 
-```powershell
-$env:DASHSCOPE_API_KEY="你的千问key"
-$env:LLM_PROVIDER="dashscope"
-$env:DASHSCOPE_MODEL="qwen3.5-flash"
-$env:A13_API_PORT="8001"
-```
-
-#### Windows cmd
-
-```cmd
-set DASHSCOPE_API_KEY=你的千问key
-set LLM_PROVIDER=dashscope
-set DASHSCOPE_MODEL=qwen3.5-flash
-set A13_API_PORT=8001
-```
-
-#### macOS / Linux / Git Bash
+推荐在仓库根目录创建 `.env.local`：
 
 ```bash
-export DASHSCOPE_API_KEY="你的千问key"
-export LLM_PROVIDER="dashscope"
-export DASHSCOPE_MODEL="qwen3.5-flash"
-export A13_API_PORT="8001"
+DASHSCOPE_API_KEY=你的key
+LLM_PROVIDER=dashscope
+DASHSCOPE_MODEL=qwen-plus
+A13_API_HOST=127.0.0.1
+A13_API_PORT=8000
 ```
 
-### 3. 启动本地服务
+项目会自动读取仓库根目录下的 `.env` 与 `.env.local`。
+
+如果没有模型 Key，也可以直接运行，系统会自动回退到规则解析。
+
+## 3. 启动服务
 
 ```bash
 python -m a13_starter.api_server
 ```
 
-如果你的环境里 `python` 不行，就试：
+如果你的环境里使用的是 `python3`：
 
 ```bash
 python3 -m a13_starter.api_server
 ```
 
-### 4. 打开浏览器
-
-访问：
+启动后默认访问：
 
 ```text
-http://127.0.0.1:8001/
+http://127.0.0.1:8000/
 ```
 
-如果你的机器上 `8000` 端口可用，也可以不设置 `A13_API_PORT`，默认就是 `8000`。
+## 4. 页面使用流程
 
-### 5. 页面里怎么操作
+推荐按下面顺序使用：
 
-- 点击 `载入样例`，或者直接把自己的简历文本粘贴进左侧输入框
-- 也可以点击 `解析本地简历文件`，直接上传 `txt / md / docx` 简历
-- `解析模式` 选 `auto`
-- 点击 `生成职业规划`
-- 等几秒到十几秒，页面会显示学生画像、岗位匹配、职业路径、职业图谱和报告预览
-- 生成后结果会自动进入“最近分析记录”
-- 左侧会自动显示环境自检结果
-- 页面支持检索官方原始 JD，并查看岗位模板对应的代表性样本
-- 报告区可以直接下载 `Markdown / HTML / Word`，或通过打印页导出 `PDF`
+1. 在左侧输入简历文本，或点击 `选择本地文件`
+2. 解析模式优先选择 `auto`
+3. 点击 `生成职业规划`
+4. 查看 `诊断总览`
+5. 查看 `行动路径`
+6. 查看 `证据基线`
+7. 查看 `图谱与报告`
+8. 需要时导出 `Markdown / HTML / Word / PDF`
 
-## 二、推荐演示素材
+## 5. 解析模式说明
 
-页面左侧已经内置“答辩样例快切”，当前可直接演示这 7 份样例：
+- `auto`
+  有模型配置时优先使用大模型解析，失败时自动回退到规则解析
+
+- `llm`
+  强制使用大模型解析
+
+- `rule`
+  完全使用本地规则解析，适合断网演示或基准验证
+
+## 6. 内置样例
+
+当前已内置 `7` 份样例，可直接用于答辩演示：
 
 - `a13_starter/samples/demo_resume_backend.txt`
 - `a13_starter/samples/demo_resume_implementation.txt`
@@ -114,203 +103,93 @@ http://127.0.0.1:8001/
 
 建议演示顺序：
 
-1. 先用 `demo_resume_backend.txt` 演示最稳
-2. 再切换 `frontend`、`implementation` 展示不同岗位族的显著差异
-3. 最后用 `data_analyst`、`operations`、`testdev` 展示扩展岗位覆盖和验证中心完整度
+1. 后端样例
+2. 实施样例
+3. 前端样例
+4. 数据分析或测试开发样例
 
-## 三、简历文件上传说明
+## 7. 常用命令
 
-现在页面已经支持直接上传本地简历文件。
-
-目前支持：
-
-- `txt`
-- `md`
-- `docx`
-- `pdf`
-
-说明：
-
-- `pdf` 依赖当前环境里是否安装了解析库
-- 如果环境里没有 PDF 解析依赖，系统会提示你优先上传 `txt / md / docx`
-- 为了演示稳定，最推荐上传 `docx` 或直接粘贴文本
-## 四、解析模式说明
-
-页面里有 3 种解析模式：
-
-- `auto`
-  有 LLM key 时优先走大模型解析，没 key 时自动回退到规则解析
-- `llm`
-  强制走大模型解析
-- `rule`
-  强制走规则解析
-
-平时开发和展示，推荐都用 `auto`。
-
-## 五、如果不想开网页
-
-可以直接在命令行运行：
+### 启动本地服务
 
 ```bash
-python -m a13_starter.tools.match_resume_to_templates --parser-mode auto
+python -m a13_starter.api_server
 ```
 
-也可以直接跑内置样例验证：
+### 运行基准验证
 
 ```bash
 python -m a13_starter.tools.run_benchmark --parser-mode rule
 ```
 
-这会输出 7 个典型学生样例的命中率、解释覆盖、报告就绪度和闭环能力评分。
-
-运行后会生成这些结果文件：
-
-- `a13_starter/generated/student_role_matches.json`
-- `a13_starter/generated/student_role_matches.md`
-- `a13_starter/generated/career_plan.json`
-- `a13_starter/generated/career_plan_report.md`
-
-## 六、生成结果会写到哪里
-
-主要输出目录：
-
-- `a13_starter/generated/`
-
-你们演示时最常用的是：
-
-- `career_plan_report.md`
-- `student_role_matches.json`
-- `career_plan.json`
-
-## 七、项目里现在已经有什么
-
-目前已经做好的能力包括：
-
-- 官方 JD 数据导入
-- 岗位库与岗位模板生成
-- 学生简历解析
-- 岗位匹配评分
-- 职业规划生成
-- Markdown 报告生成
-- 本地网页演示
-- 简历文件上传解析
-- 千问 LLM 解析接入
-- `auto / llm / rule` 三种模式切换
-- 分析结果持久化存档
-- 职业图谱可视化
-- 官方原始 JD 检索与模板证据回看
-- RAG 式证据链：分块检索、重排与片段引用
-- 环境自检
-- 内置样例验证中心
-- HTML / Word / PDF 导出
-- Docker 部署文件
-
-## 八、常见问题
-
-### 1. PowerShell 提示 `export` 不是命令
-
-因为 `export` 是 bash 写法。  
-在 PowerShell 里要写：
-
-```powershell
-$env:DASHSCOPE_API_KEY="你的千问key"
-```
-
-### 2. 点击生成后要等多久
-
-正常情况：
-
-- 3 到 10 秒：正常
-- 10 到 20 秒：也正常
-- 超过 30 秒：需要怀疑网络、key、模型拥堵或接口异常
-
-### 3. 没有千问 key 能不能跑
-
-可以。  
-把页面里的 `解析模式` 设成 `rule`，或者直接用 `auto`，系统会回退到规则解析。
-
-### 4. 上传 PDF 失败怎么办
-
-优先换成 `docx / txt / md`。  
-因为 PDF 是否能解析，取决于当前机器里有没有安装 PDF 解析依赖。
-
-### 5. 页面打不开怎么办
-
-先看终端里有没有报错。  
-再确认你是不是已经运行了：
+### 测试自动模式
 
 ```bash
-python -m a13_starter.api_server
+python -m a13_starter.tools.run_benchmark --parser-mode auto
 ```
 
-然后确认浏览器打开的是：
-
-```text
-http://127.0.0.1:8000/
-```
-
-### 6. 启动时报端口占用
-
-说明 `8000` 端口已经被别的程序用了。  
-先把旧的 Python 服务关掉，再重新启动。
-
-### 7. PDF 怎么导出最稳
-
-推荐用页面里的 `导出 PDF` 按钮。  
-它会打开打印页，然后你在浏览器里选择“另存为 PDF”，这样中文显示最稳定。
-
-## 九、如果想用 OpenAI 而不是千问
-
-也支持 OpenAI。
-
-### PowerShell
-
-```powershell
-$env:OPENAI_API_KEY="你的OpenAI key"
-$env:OPENAI_MODEL="gpt-5-mini"
-python -m a13_starter.api_server
-```
-
-### Bash
+### 命令行匹配样例简历
 
 ```bash
-export OPENAI_API_KEY="你的OpenAI key"
-export OPENAI_MODEL="gpt-5-mini"
-python3 -m a13_starter.api_server
+python -m a13_starter.tools.match_resume_to_templates --parser-mode auto
 ```
 
-## 十、项目结构速览
+## 8. 常见接口
 
-- `a13_starter/api_server.py`
-  本地 API 服务入口
-- `a13_starter/web/`
-  网页演示界面
-- `a13_starter/src/`
-  核心逻辑，包括画像抽取、匹配、职业规划、LLM 解析、文件解析
-- `a13_starter/tools/`
-  数据导入和批处理脚本
-- `a13_starter/samples/`
-  样例简历
-- `a13_starter/generated/`
-  生成结果
-- `a13_starter/DEPLOY.md`
-  Docker 和部署说明
-- `a13_starter/答辩讲解提纲.md`
-  答辩讲解建议
+- `GET /health`：服务健康检查
+- `GET /api/system-check`：环境自检
+- `GET /api/demo-resumes`：样例列表
+- `POST /api/upload-resume-file`：上传简历文件
+- `POST /api/career-plan`：生成职业规划
+- `POST /api/export-report`：导出报告
+- `GET /api/jd-search`：检索原始岗位样本
 
-## 十一、当前最建议的用法
+## 9. 生成结果在哪里
 
-如果你只是想快速演示：
+主要运行产物位于 `a13_starter/generated/`：
 
-1. 配好千问 key
-2. 运行 `python -m a13_starter.api_server`
-3. 打开 `http://127.0.0.1:8000/`
-4. 点击 `载入样例` 或上传一份 `docx` 简历
-5. `解析模式` 选 `auto`
-6. 点击 `生成职业规划`
+- `job_profiles.jsonl`：清洗后的岗位记录
+- `role_profile_templates.json`：岗位模板库
+- `dataset_summary.json`：数据集统计摘要
+- `analysis_history.db`：历史分析与复核数据库
+- `career_plan_report.md`：最近一次报告产物
 
-## 十二、提醒
+其中 `generated/*.md` 属于运行输出，不是项目主文档。
 
-- API key 不要提交到 Git 仓库
-- 如果 key 发到群里或聊天里了，建议尽快重置
-- 正式答辩前，建议提前生成一遍演示结果，避免现场网络波动影响展示
+## 10. 常见问题
+
+### 页面打不开怎么办
+
+- 先确认服务是否已经启动
+- 再检查 `http://127.0.0.1:8000/health`
+- 再检查 `http://127.0.0.1:8000/api/system-check`
+
+### 没有模型 Key 能不能跑
+
+可以。选择 `rule`，或者直接用 `auto` 让系统自动回退。
+
+### PDF 简历解析失败怎么办
+
+优先改用 `docx`、`txt` 或 `md`。`pdf` 依赖解析库与文件本身是否包含可抽取文本。
+
+### 端口被占用怎么办
+
+在 `.env.local` 中修改：
+
+```bash
+A13_API_PORT=8001
+```
+
+### 现场担心网络波动怎么办
+
+- 展示时优先准备好样例
+- 默认用 `auto`
+- 如果网络不稳，立即切到 `rule`
+
+## 11. 关联文档
+
+- [../README.md](../README.md)
+- [DEPLOY.md](DEPLOY.md)
+- [答辩讲解提纲.md](答辩讲解提纲.md)
+- [答辩演示脚本.md](答辩演示脚本.md)
+- [提交版说明.md](提交版说明.md)

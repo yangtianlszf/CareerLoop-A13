@@ -26,50 +26,56 @@
       <aside class="sidebar">
         <div class="card form-card">
           <div class="workspace-hero compact">
-            <h2 class="workspace-title">上传简历，生成结果</h2>
-            <p class="workspace-summary">主岗、行动和证据自动联动</p>
+            <h2 class="workspace-title">简历输入台</h2>
+            <p class="workspace-summary">上传、样例、生成一屏完成</p>
           </div>
 
-          <div class="card-header">
-            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-            <h3>上传简历</h3>
-          </div>
-          <textarea id="resume-input" placeholder="输入或粘贴简历文本、自我介绍及项目经历..."></textarea>
-          
-          <div class="upload-group">
-            <input type="file" id="resume-file-input" accept=".txt,.pdf,.docx,.doc" class="hidden-input" />
-            <button id="upload-file-btn" class="btn btn-dashed full-width">选择本地文件</button>
-            <p class="field-note">支持本地文件或直接使用样例。</p>
-          </div>
-
-          <div class="settings-group">
-            <label for="parser-mode-select">解析模式</label>
-            <select id="parser-mode-select">
-              <option value="auto">优先大模型 (降级兜底)</option>
-              <option value="llm">强制大模型深度解析</option>
-              <option value="rule">本地规则解析 (断网备用)</option>
-            </select>
-          </div>
-
-          <div class="sample-strip">
-            <div class="sample-strip-header">
-              <span>使用样例</span>
+          <div class="form-editor-panel">
+            <div class="card-header form-panel-header">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+              <h3>内容输入</h3>
             </div>
-            <div id="sample-gallery" class="sample-gallery"></div>
+            <textarea id="resume-input" placeholder="输入或粘贴简历文本、自我介绍及项目经历..."></textarea>
+
+            <div class="upload-group">
+              <input type="file" id="resume-file-input" accept=".txt,.pdf,.docx,.doc" class="hidden-input" />
+              <button id="upload-file-btn" class="btn btn-dashed full-width">选择本地文件</button>
+              <p class="field-note">支持 txt / pdf / docx</p>
+            </div>
           </div>
 
-          <button id="analyze-btn" class="btn btn-solid full-width btn-large action-primary">生成职业规划</button>
-          
-          <button id="print-pdf-btn" class="btn btn-outline full-width action-secondary">
-            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
-            导出报告 PDF
-          </button>
-          
-          <div id="status-panel" class="status-panel" aria-live="polite">
-            <div class="status-indicator"></div>
-            <div class="status-copy">
-              <span class="status-label">运行状态</span>
-              <span id="status-text" class="status-text">等待输入</span>
+          <div class="form-support-panel">
+            <div class="settings-group">
+              <label for="parser-mode-select">解析模式</label>
+              <select id="parser-mode-select">
+                <option value="auto">优先大模型 (降级兜底)</option>
+                <option value="llm">强制大模型深度解析</option>
+                <option value="rule">本地规则解析 (断网备用)</option>
+              </select>
+            </div>
+
+            <div class="sample-strip">
+              <div class="sample-strip-header">
+                <span>样例填充</span>
+              </div>
+              <div id="sample-gallery" class="sample-gallery"></div>
+            </div>
+          </div>
+
+          <div class="form-action-panel">
+            <button id="analyze-btn" class="btn btn-solid full-width btn-large action-primary">生成职业规划</button>
+
+            <button id="print-pdf-btn" class="btn btn-outline full-width action-secondary">
+              <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+              导出报告 PDF
+            </button>
+
+            <div id="status-panel" class="status-panel" aria-live="polite">
+              <div class="status-indicator"></div>
+              <div class="status-copy">
+                <span class="status-label">运行状态</span>
+                <span id="status-text" class="status-text">等待输入</span>
+              </div>
             </div>
           </div>
         </div>
@@ -77,14 +83,44 @@
 
       <main class="main-content">
         <div id="empty-state" class="empty-state">
-          <div class="empty-state-panel">
-            <div class="empty-graphic"></div>
-            <h2>上传简历，先看主岗结论</h2>
-            <p>主岗推荐、行动路径、证据基线会同步生成</p>
-            <div class="empty-pill-row">
-              <span class="empty-pill">岗位匹配</span>
-              <span class="empty-pill">行动路径</span>
-              <span class="empty-pill">证据基线</span>
+          <div id="empty-state-panel" class="empty-state-panel">
+            <div class="empty-state-shell">
+              <div class="empty-runtime-panel">
+                <div class="empty-runtime-head">
+                  <div class="empty-graphic"></div>
+                  <div class="empty-runtime-copy">
+                    <span id="empty-runtime-chip" class="empty-runtime-chip">待分析</span>
+                    <h3 id="empty-runtime-title" class="empty-runtime-title">等待分析</h3>
+                    <p id="empty-runtime-text" class="empty-runtime-text">输入后开始</p>
+                  </div>
+                </div>
+                <div class="empty-progress-track">
+                  <span id="empty-progress-fill" class="empty-progress-fill"></span>
+                </div>
+              </div>
+              <div class="empty-stage-board">
+                <div class="empty-stage-orbit" aria-hidden="true"></div>
+                <div class="empty-stage-surface">
+                  <div class="empty-progress-steps">
+                    <div class="empty-progress-step" data-step-index="0">
+                      <span>01</span>
+                      <strong>解析</strong>
+                    </div>
+                    <div class="empty-progress-step" data-step-index="1">
+                      <span>02</span>
+                      <strong>匹配</strong>
+                    </div>
+                    <div class="empty-progress-step" data-step-index="2">
+                      <span>03</span>
+                      <strong>方案</strong>
+                    </div>
+                    <div class="empty-progress-step" data-step-index="3">
+                      <span>04</span>
+                      <strong>证据</strong>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -404,7 +440,9 @@
                 <div class="inline-actions">
                   <button id="edit-report-btn" class="btn btn-outline btn-compact">编辑报告</button>
                   <button id="save-report-btn" class="btn btn-solid btn-compact hidden">保存预览</button>
-                  <button id="download-edited-btn" class="btn btn-outline btn-compact hidden">下载编辑版</button>
+                  <button id="download-edited-btn" class="btn btn-outline btn-compact">导出 Markdown</button>
+                  <button id="download-html-btn" class="btn btn-outline btn-compact">导出 HTML</button>
+                  <button id="download-docx-btn" class="btn btn-outline btn-compact">导出 Word</button>
                 </div>
               </div>
               <div id="report-editor-area" class="report-editor-shell">

@@ -1,7 +1,10 @@
 $ErrorActionPreference = "Stop"
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\\..")).Path
-$toolRoot = "D:\\develop\\a13-app-tools"
+$toolRoot = $env:A13_WINDOWS_TOOL_ROOT
+if ([string]::IsNullOrWhiteSpace($toolRoot)) {
+  $toolRoot = Join-Path $repoRoot ".desktop_tools"
+}
 $venvPython = Join-Path $toolRoot "venv\\Scripts\\python.exe"
 $pyinstaller = Join-Path $toolRoot "venv\\Scripts\\pyinstaller.exe"
 $buildRoot = Join-Path $toolRoot "build"

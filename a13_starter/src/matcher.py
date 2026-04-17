@@ -148,6 +148,50 @@ _STACK_SIGNAL_KEYWORDS: dict[str, tuple[str, ...]] = {
     "frontend": ("前端开发工程师", "web前端", "前端", "javascript", "vue", "react"),
 }
 
+_PYTHON_ENGINEERING_STRONG_KEYWORDS: tuple[str, ...] = (
+    "django",
+    "flask",
+    "fastapi",
+    "tornado",
+    "sqlalchemy",
+    "celery",
+    "redis",
+    "docker",
+    "kafka",
+    "grpc",
+    "微服务",
+)
+
+_PYTHON_ENGINEERING_WEAK_KEYWORDS: tuple[str, ...] = (
+    "后端",
+    "服务端",
+    "接口开发",
+    "接口设计",
+    "api",
+    "权限控制",
+    "数据库设计",
+    "联调",
+    "部署",
+    "上线",
+)
+
+_DATA_ANALYSIS_KEYWORDS: tuple[str, ...] = (
+    "数据分析",
+    "数据清洗",
+    "可视化",
+    "报表",
+    "看板",
+    "指标",
+    "excel",
+    "ppt",
+    "用户分层",
+    "经营分析",
+    "异常指标",
+    "留存",
+    "复购",
+    "流失",
+)
+
 
 def _get_embeddings(texts: list[str]) -> list[list[float]]:
     """调用大模型 Embedding API 将文本转化为高维向量"""
@@ -218,6 +262,22 @@ def _job_stack_signals(job: JobProfile) -> set[str]:
     return _stack_signals_from_text(" ".join([job.title, job.raw_text, *job.required_skills]))
 
 
+def _keyword_hit_count(text: str, keywords: tuple[str, ...]) -> int:
+    lowered = str(text or "").strip().lower()
+    if not lowered:
+        return 0
+    return sum(1 for keyword in keywords if keyword and keyword.lower() in lowered)
+
+
+def _normalized_target_titles(student: StudentProfile) -> set[str]:
+    normalized: set[str] = set()
+    for role in student.target_roles:
+        clean_role = normalize_job_title(str(role or "").strip(), detail=str(role or "").strip(), industry="")
+        if clean_role:
+            normalized.add(clean_role)
+    return normalized
+
+
 def _role_market_realism_adjustment(student: StudentProfile, job: JobProfile) -> int:
     normalized_title = normalize_job_title(job.title, detail=job.raw_text, industry="")
     if normalized_title != "Python开发工程师":
@@ -225,16 +285,43 @@ def _role_market_realism_adjustment(student: StudentProfile, job: JobProfile) ->
 
     target_stack_signals = _student_target_stack_signals(student)
     evidence_stack_signals = _stack_signals_from_text(" ".join([*student.projects, *student.internships]))
+    normalized_targets = _normalized_target_titles(student)
+    target_scores = _role_tag_scores_from_text(" ".join(student.target_roles), multiplier=1)
+    evidence_scores = _collect_student_evidence_tag_scores(student)
+    target_text = " ".join(student.target_roles)
+    evidence_text = " ".join([*student.projects, *student.internships, *student.skills])
+
+    explicit_python_target = "Python开发工程师" in normalized_targets
+    has_data_target = "数据分析师" in normalized_targets
+    strong_engineering_hits = _keyword_hit_count(evidence_text, _PYTHON_ENGINEERING_STRONG_KEYWORDS)
+    weak_engineering_hits = _keyword_hit_count(evidence_text, _PYTHON_ENGINEERING_WEAK_KEYWORDS)
+    data_hits = _keyword_hit_count(" ".join([target_text, evidence_text]), _DATA_ANALYSIS_KEYWORDS)
+    target_data_score = target_scores.get("data", 0)
+    target_backend_score = target_scores.get("backend", 0)
+    evidence_data_score = evidence_scores.get("data", 0)
+    evidence_backend_score = evidence_scores.get("backend", 0)
 
     adjustment = 0
-    if "python" not in target_stack_signals:
-        adjustment -= 1
+    if "python" not in target_stack_signals or not explicit_python_target:
+        adjustment -= 5
     if "java" in target_stack_signals and "python" not in target_stack_signals:
         adjustment -= 1
     if "python" not in evidence_stack_signals:
         adjustment -= 2
+    if strong_engineering_hits == 0:
+        adjustment -= 6
+    elif strong_engineering_hits == 1 and weak_engineering_hits <= 1:
+        adjustment -= 2
+    if has_data_target and target_data_score >= target_backend_score:
+        adjustment -= 5
+    if has_data_target and not explicit_python_target and strong_engineering_hits == 0:
+        adjustment -= 4
+    if data_hits >= 3 and evidence_data_score >= max(12, evidence_backend_score - 4):
+        adjustment -= 5
+    if explicit_python_target and (strong_engineering_hits > 0 or weak_engineering_hits >= 3):
+        adjustment += 3
 
-    return max(-3, min(adjustment, 0))
+    return max(-24, min(adjustment, 0))
 
 
 def _certificate_token(text: str) -> str:

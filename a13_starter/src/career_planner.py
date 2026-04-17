@@ -113,6 +113,12 @@ def _normalized_role_labels(role_titles: list[str] | None) -> set[str]:
     return normalized
 
 
+def _primary_target_role(student: StudentProfile) -> str:
+    if not student.target_roles:
+        return ""
+    return _normalize_role_label(str(student.target_roles[0]))
+
+
 def _confidence_label(total: int) -> str:
     if total >= 80:
         return "高"
@@ -165,12 +171,15 @@ def _ranking_context_bonus(
     role_title = str(template.get("canonical_title", ""))
     normalized_role = _normalize_role_label(role_title)
     normalized_targets = _normalized_role_labels(student.target_roles)
+    primary_target = _primary_target_role(student)
     candidate_tags = role_primary_tags(role_title)
     target_tags = role_primary_tags(" ".join(student.target_roles))
 
     bonus = 0
     if normalized_role and normalized_role in normalized_targets and shared_count >= 2:
         bonus += 3
+        if primary_target and normalized_role == primary_target:
+            bonus += 2
     elif shared_count >= 2 and candidate_tags and target_tags and candidate_tags & target_tags:
         bonus += 1
 
@@ -182,7 +191,7 @@ def _ranking_context_bonus(
     if scenario_match:
         bonus += 1
 
-    return min(bonus, 4)
+    return min(bonus, 6)
 
 
 def _strategy_lane_score(

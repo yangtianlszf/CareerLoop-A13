@@ -3,12 +3,13 @@ from __future__ import annotations
 import json
 import mimetypes
 import os
+import re
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from email.parser import BytesParser
 from email.policy import default
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, quote, urlparse
 
 from a13_starter.src.career_planner import apply_agent_answers, build_career_plan, rank_student_against_templates
 from a13_starter.src.analysis_storage import (
@@ -27,7 +28,7 @@ from a13_starter.src.jd_search import get_template_evidence, load_role_templates
 from a13_starter.src.matcher import match_student_to_job
 from a13_starter.src.models import JobProfile
 from a13_starter.src.parser_service import parse_job_profile, parse_student_profile
-from a13_starter.src.report_exports import build_export_bundle, markdown_to_html
+from a13_starter.src.report_exports import build_report_export_bundle, markdown_to_html
 from a13_starter.src.report import build_career_report_markdown
 from a13_starter.src.resume_file_parser import ResumeFileParseError, parse_resume_file
 from a13_starter.src.system_checks import run_environment_checks
@@ -143,6 +144,12 @@ def _normalize_self_assessment(raw_answers: object) -> dict[str, int]:
     return normalized
 
 
+def _safe_export_stem(value: str | None, fallback: str = "career_plan_report") -> str:
+    text = re.sub(r"[^\w\u4e00-\u9fff-]+", "_", str(value or "").strip())
+    text = text.strip("._-")
+    return text or fallback
+
+
 def _attach_evidence_citations(matches: list[dict[str, object]], career_plan: dict[str, object]) -> None:
     if not matches:
         return
@@ -182,13 +189,53 @@ class A13RequestHandler(BaseHTTPRequestHandler):
         self._send_response(status, encoded, "application/json; charset=utf-8")
 
     def _send_file(self, filename: str, payload: bytes, content_type: str) -> None:
+        ascii_fallback = re.sub(r"[^A-Za-z0-9._-]+", "_", filename).strip("._") or "download"
+        quoted_name = quote(filename)
         self.send_response(HTTPStatus.OK)
         self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(payload)))
-        self.send_header("Content-Disposition", f'attachment; filename="{filename}"')
+        self.send_header(
+            "Content-Disposition",
+            f"attachment; filename=\"{ascii_fallback}\"; filename*=UTF-8''{quoted_name}",
+        )
         self.send_header("Access-Control-Allow-Origin", "*")
         self.end_headers()
         self.wfile.write(payload)
+
+    def _send_report_export(self, *, markdown_text: str, title: str, base_name: str, export_format: str) -> None:
+        bundle = build_report_export_bundle(markdown_text, title=title)
+        if export_format == "markdown":
+            self._send_file(
+                f"{base_name}.md",
+                str(bundle["markdown"]).encode("utf-8"),
+                "text/markdown; charset=utf-8",
+            )
+            return
+        if export_format == "html":
+            self._send_file(
+                f"{base_name}.html",
+                str(bundle["html"]).encode("utf-8"),
+                "text/html; charset=utf-8",
+            )
+            return
+        if export_format == "docx":
+            self._send_file(
+                f"{base_name}.docx",
+                bytes(bundle["docx"]),
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            )
+            return
+        if export_format == "pdf":
+            self._send_file(
+                f"{base_name}.pdf",
+                bytes(bundle["pdf"]),
+                "application/pdf",
+            )
+            return
+        if export_format == "print":
+            self._send_response(HTTPStatus.OK, str(bundle["html"]).encode("utf-8"), "text/html; charset=utf-8")
+            return
+        self._send_json(HTTPStatus.BAD_REQUEST, {"error": "Unsupported export format"})
 
     def _read_json(self) -> dict[str, object]:
         length = int(self.headers.get("Content-Length", "0"))
@@ -365,37 +412,13 @@ class A13RequestHandler(BaseHTTPRequestHandler):
                 return
 
             export_format = query.get("format", ["markdown"])[0].lower()
-            bundle = build_export_bundle(analysis)
-            base_name = f"analysis_{analysis_id}"
-            if export_format == "markdown":
-                self._send_file(
-                    f"{base_name}.md",
-                    str(bundle["markdown"]).encode("utf-8"),
-                    "text/markdown; charset=utf-8",
-                )
-                return
-            if export_format == "html":
-                self._send_file(
-                    f"{base_name}.html",
-                    str(bundle["html"]).encode("utf-8"),
-                    "text/html; charset=utf-8",
-                )
-                return
-            if export_format == "docx":
-                self._send_file(
-                    f"{base_name}.docx",
-                    bytes(bundle["docx"]),
-                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                )
-                return
-            if export_format == "pdf":
-                self._send_file(
-                    f"{base_name}.pdf",
-                    bytes(bundle["pdf"]),
-                    "application/pdf",
-                )
-                return
-            self._send_json(HTTPStatus.BAD_REQUEST, {"error": "Unsupported export format"})
+            title = f"{analysis['student_profile'].get('name', '学生')}_职业规划报告"
+            self._send_report_export(
+                markdown_text=str(analysis["report_markdown"]),
+                title=title,
+                base_name=f"analysis_{analysis_id}",
+                export_format=export_format,
+            )
             return
 
         if path.startswith("/print-report/"):
@@ -521,6 +544,22 @@ class A13RequestHandler(BaseHTTPRequestHandler):
                         "job": job_parser.to_dict(),
                     },
                 },
+            )
+            return
+
+        if self.path == "/api/export-report":
+            markdown_text = str(body.get("report_markdown", "")).strip()
+            export_format = str(body.get("format", "markdown")).strip().lower()
+            title = str(body.get("title", "")).strip() or "职业规划报告"
+            base_name = _safe_export_stem(body.get("filename"), fallback="career_plan_report")
+            if not markdown_text:
+                self._send_json(HTTPStatus.BAD_REQUEST, {"error": "report_markdown is required"})
+                return
+            self._send_report_export(
+                markdown_text=markdown_text,
+                title=title,
+                base_name=base_name,
+                export_format=export_format,
             )
             return
 

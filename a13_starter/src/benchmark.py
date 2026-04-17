@@ -3,19 +3,22 @@ from __future__ import annotations
 import copy
 import json
 from datetime import datetime
+from pathlib import Path
 from statistics import mean
 from typing import Any
 
 from a13_starter.src.career_planner import apply_agent_answers, build_career_plan, rank_student_against_templates
 from a13_starter.src.extractors import refresh_student_profile_metrics
 from a13_starter.src.jd_search import load_role_templates
-from a13_starter.src.parser_service import parse_student_profile
+from a13_starter.src.parser_service import did_parser_fallback, parse_student_profile
 from a13_starter.src.paths import resolve_project_root
 from a13_starter.src.report import build_career_report_markdown
 
 
 PROJECT_ROOT = resolve_project_root(__file__, 2)
 BENCHMARK_CASES_PATH = PROJECT_ROOT / "a13_starter" / "samples" / "benchmark_cases.json"
+
+
 def _load_json(path: Path) -> Any:
     return json.loads(path.read_text(encoding="utf-8"))
 
@@ -26,7 +29,7 @@ def _score_explanation_coverage(top_match: dict[str, Any]) -> int:
         score += 30
     if len(top_match.get("shared_skills", [])) >= 2:
         score += 25
-    if top_match.get("gaps"):
+    if top_match.get("gaps") or int(top_match.get("score", 0) or 0) >= 90:
         score += 20
     if len(top_match.get("suggestions", [])) >= 2:
         score += 25
@@ -143,7 +146,9 @@ def _build_summary_cards(
     case_count: int,
     top1_rate: int,
     top3_rate: int,
-    pass_rate: int,
+    showcase_pass_rate: int,
+    strict_pass_rate: int,
+    review_case_count: int,
     fallback_rate: int,
     improvement_rate: int,
     evidence_avg: int,
@@ -168,9 +173,19 @@ def _build_summary_cards(
             "detail": "预期岗位是否至少进入前三推荐，反映可接受度。",
         },
         {
-            "label": "评测通过率",
-            "value": f"{pass_rate}%",
-            "detail": "同时满足 Top3、证据、解释、报告与闭环阈值的样例占比。",
+            "label": "展示通过率",
+            "value": f"{showcase_pass_rate}%",
+            "detail": "满足 Top3、证据、解释、报告与闭环阈值，可用于答辩展示的样例占比。",
+        },
+        {
+            "label": "严格通过率",
+            "value": f"{strict_pass_rate}%",
+            "detail": "在展示通过基础上，主推荐还需直接命中人工预期岗位。",
+        },
+        {
+            "label": "待复核样例",
+            "value": review_case_count,
+            "detail": "主推荐未直中预期、触发规则承接或解释链偏弱的样例数。",
         },
         {
             "label": "规则回退率",
@@ -213,9 +228,11 @@ def run_benchmark(parser_mode: str = "rule") -> dict[str, Any]:
     skipped_cases: list[dict[str, str]] = []
     top1_hits = 0
     top3_hits = 0
-    pass_hits = 0
+    showcase_pass_hits = 0
+    strict_pass_hits = 0
     fallback_hits = 0
     improvement_hits = 0
+    review_case_count = 0
     evidence_scores: list[int] = []
     explanation_scores: list[int] = []
     report_scores: list[int] = []
@@ -247,6 +264,7 @@ def run_benchmark(parser_mode: str = "rule") -> dict[str, Any]:
                     "parser_used_mode": parser_mode,
                     "fallback_used": False,
                     "pass_case": False,
+                    "strict_pass_case": False,
                     "skipped": True,
                     "evidence_hit_rate": 0,
                     "explanation_coverage": 0,
@@ -255,6 +273,8 @@ def run_benchmark(parser_mode: str = "rule") -> dict[str, Any]:
                     "follow_up_primary_role": "未执行",
                     "follow_up_primary_score": 0,
                     "improvement_delta": 0,
+                    "review_priority": "high",
+                    "review_reasons": ["样例缺失，无法形成有效评测结论。"],
                     "observations": [
                         f"样例文件缺失：{case['sample_name']}。",
                         "本条 benchmark 已自动跳过，不影响服务主链路与其余样例的可运行性验证。",
@@ -278,14 +298,25 @@ def run_benchmark(parser_mode: str = "rule") -> dict[str, Any]:
         explanation_coverage = _score_explanation_coverage(matches[0])
         report_readiness = _score_report_readiness(career_plan, report_markdown)
         loop_readiness = _score_loop_readiness(career_plan)
-        pass_case = bool(
+        showcase_pass_case = bool(
             top3_hit
             and evidence_hit_rate >= 70
             and explanation_coverage >= 80
             and report_readiness >= 80
             and loop_readiness >= 80
         )
-        fallback_used = bool(parser_metadata.fallback_used)
+        strict_pass_case = bool(
+            top1_hit
+            and evidence_hit_rate >= 80
+            and explanation_coverage >= 85
+            and report_readiness >= 80
+            and loop_readiness >= 80
+        )
+        fallback_used = did_parser_fallback(
+            parser_metadata.requested_mode,
+            parser_metadata.used_mode,
+            parser_metadata.fallback_used,
+        )
 
         follow_up_student = _simulate_follow_up_student(student, matches[0])
         follow_up_matches = rank_student_against_templates(follow_up_student, templates)
@@ -302,11 +333,30 @@ def run_benchmark(parser_mode: str = "rule") -> dict[str, Any]:
         )
         improvement_delta = int(follow_up_plan.primary_score) - int(career_plan.primary_score)
 
+        review_reasons: list[str] = []
+        if not top1_hit:
+            review_reasons.append("主推荐未直接命中人工预期岗位。")
+        if explanation_coverage < 90:
+            review_reasons.append("解释链完整度一般，仍可继续强化命中理由与差距说明。")
+        if report_readiness < 90 or loop_readiness < 90:
+            review_reasons.append("交付结构或成长闭环还可继续收紧。")
+        if not strict_pass_case and not review_reasons:
+            review_reasons.append("尚未达到严格通过标准。")
+
+        if not top1_hit:
+            review_priority = "high"
+        elif explanation_coverage < 90 or report_readiness < 90 or loop_readiness < 90:
+            review_priority = "medium"
+        else:
+            review_priority = "low"
+
         top1_hits += int(top1_hit)
         top3_hits += int(top3_hit)
-        pass_hits += int(pass_case)
+        showcase_pass_hits += int(showcase_pass_case)
+        strict_pass_hits += int(strict_pass_case)
         fallback_hits += int(fallback_used)
         improvement_hits += int(improvement_delta > 0)
+        review_case_count += int(review_priority != "low")
         evidence_scores.append(evidence_hit_rate)
         explanation_scores.append(explanation_coverage)
         report_scores.append(report_readiness)
@@ -327,7 +377,8 @@ def run_benchmark(parser_mode: str = "rule") -> dict[str, Any]:
                 "top3_hit": top3_hit,
                 "parser_used_mode": parser_metadata.used_mode,
                 "fallback_used": fallback_used,
-                "pass_case": pass_case,
+                "pass_case": showcase_pass_case,
+                "strict_pass_case": strict_pass_case,
                 "skipped": False,
                 "evidence_hit_rate": evidence_hit_rate,
                 "explanation_coverage": explanation_coverage,
@@ -336,6 +387,8 @@ def run_benchmark(parser_mode: str = "rule") -> dict[str, Any]:
                 "follow_up_primary_role": follow_up_plan.primary_role,
                 "follow_up_primary_score": follow_up_plan.primary_score,
                 "improvement_delta": improvement_delta,
+                "review_priority": review_priority,
+                "review_reasons": review_reasons,
                 "observations": _build_case_observations(
                     top1_hit=top1_hit,
                     top3_hit=top3_hit,
@@ -344,7 +397,7 @@ def run_benchmark(parser_mode: str = "rule") -> dict[str, Any]:
                     report_readiness=report_readiness,
                     loop_readiness=loop_readiness,
                     improvement_delta=improvement_delta,
-                    pass_case=pass_case,
+                    pass_case=showcase_pass_case,
                     primary_role=primary_role,
                 ),
             }
@@ -354,7 +407,8 @@ def run_benchmark(parser_mode: str = "rule") -> dict[str, Any]:
     case_count = len(executed_cases)
     top1_rate = round((top1_hits / case_count) * 100) if case_count else 0
     top3_rate = round((top3_hits / case_count) * 100) if case_count else 0
-    pass_rate = round((pass_hits / case_count) * 100) if case_count else 0
+    showcase_pass_rate = round((showcase_pass_hits / case_count) * 100) if case_count else 0
+    strict_pass_rate = round((strict_pass_hits / case_count) * 100) if case_count else 0
     fallback_rate = round((fallback_hits / case_count) * 100) if case_count else 0
     improvement_rate = round((improvement_hits / case_count) * 100) if case_count else 0
     evidence_avg = round(mean(evidence_scores)) if evidence_scores else 0
@@ -365,12 +419,12 @@ def run_benchmark(parser_mode: str = "rule") -> dict[str, Any]:
     if not case_count:
         verdict_label = "待补样例"
         verdict_detail = "当前 benchmark 没有可执行样例，建议先补齐样例文件后再运行完整验证。"
-    elif top1_rate >= 75 and pass_rate >= 75 and evidence_avg >= 70 and explanation_avg >= 80 and report_avg >= 80:
+    elif strict_pass_rate >= 85 and evidence_avg >= 80 and explanation_avg >= 85 and report_avg >= 80:
         verdict_label = "冲奖级"
-        verdict_detail = "样例命中与交付结构都比较稳定，已经具备强队作品的可信度与完整度。"
-    elif top3_rate >= 75 and report_avg >= 70:
+        verdict_detail = "主推荐命中、解释链与交付结构都比较稳定，已经具备强队作品的可信度与完整度。"
+    elif showcase_pass_rate >= 85 and top1_rate >= 70 and report_avg >= 70:
         verdict_label = "可冲上层"
-        verdict_detail = "整体推荐和交付已经成形，但还可以继续强化样例验证与闭环表现。"
+        verdict_detail = "整体推荐和交付已经成形，但仍有少数样例需要继续收紧主推荐排序。"
     else:
         verdict_label = "需继续打磨"
         verdict_detail = "当前链路能跑通，但验证力度和交付稳定性还需要继续补强。"
@@ -385,7 +439,9 @@ def run_benchmark(parser_mode: str = "rule") -> dict[str, Any]:
             case_count=case_count,
             top1_rate=top1_rate,
             top3_rate=top3_rate,
-            pass_rate=pass_rate,
+            showcase_pass_rate=showcase_pass_rate,
+            strict_pass_rate=strict_pass_rate,
+            review_case_count=review_case_count,
             fallback_rate=fallback_rate,
             improvement_rate=improvement_rate,
             evidence_avg=evidence_avg,
@@ -403,6 +459,7 @@ def run_benchmark(parser_mode: str = "rule") -> dict[str, Any]:
             "新增的模拟复测提升率可用于证明系统不是静态推荐，而是能把差距建议转成可量化改进。",
             "规则回退率能够直接展示 auto 模式下的稳定性与现场答辩兜底能力。",
             "如果后续补入更多真实学生样本，这块可以直接升级成校级运营验证中心。",
+            f"当前共有 {review_case_count} 个样例建议优先复核，重点看主推荐排序是否足够贴近真实岗位语义。",
         ]
         + (
             [

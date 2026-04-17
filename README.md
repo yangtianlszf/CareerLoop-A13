@@ -1,164 +1,240 @@
 # CareerLoop-A13
 
-基于官方 JD 数据、证据驱动生成与可解释匹配的大学生职业规划智能体项目。
+`CareerLoop-A13` 是面向第十七届中国大学生服务外包创新创业大赛 A13 赛题“基于 AI 的大学生职业规划智能体”开发的完整项目仓库。
 
-本仓库对应 2026 年中国大学生服务外包创新创业大赛 A13 赛题：`基于 AI 的大学生职业规划智能体`。  
-项目目标不是做一个简单的聊天机器人，而是构建一套面向高校就业场景的完整系统，帮助学生和学校完成：
+项目目标不是做一个简单的问答机器人，而是围绕大学生求职场景，构建一套可运行、可解释、可演示、可交付的职业规划系统。系统以官方 JD 数据为基础，将学生简历、岗位证据、推荐排序、行动方案、报告导出和运营复核串成一条完整服务链路。
 
-- 简历解析与学生画像生成
-- 基于官方 JD 的岗位画像与岗位模板匹配
-- 主推荐岗位、备选岗位与转岗路径规划
-- 职业规划报告生成与导出
-- 智能体追问、岗位自测、资源映射与复测闭环
-- 历史分析留存与学校运营视角数据汇总
+## 项目概述
+
+系统当前已经支持以下核心流程：
+
+- 输入或上传简历，自动解析学生画像
+- 基于官方 JD 数据构建岗位模板库并完成岗位匹配
+- 输出主推荐岗位、备选岗位、岗位差异解释和切换模拟
+- 生成行动路径、简历改写建议、面试题板和成长资源
+- 展示岗位证据视图、原始样本切片和模板基线
+- 保存历史记录，支持复核留痕和运营看板
+- 导出 Markdown、HTML、Word、PDF 报告
 
 ## 项目亮点
 
 - `官方数据驱动`
-  使用 A13 官方提供的 JD 样本数据构建岗位模板库，支持原始 JD 检索和模板证据回看。
+  直接基于赛题提供的 `A13-JD采样数据.xls` 构建岗位库，而不是只靠人工写死规则。
 
-- `证据驱动生成`
-  先检索岗位模板与官方 JD 证据，再输出建议与规划，避免脱离依据的黑箱推荐。
+- `证据驱动推荐`
+  推荐结果不仅有分数，还会展示共享技能、关键差距、代表样本和排序解释。
 
-- `RAG 式证据链`
-  将岗位模板摘要与官方 JD 自动分块、检索、重排，并把高相关证据片段直接带入结果页与报告。
+- `真实求职闭环`
+  不只告诉学生“适合什么岗”，还会继续给出行动计划、项目补强、简历优化和面试准备。
 
-- `可解释推荐`
-  不只给岗位分数，还展示共享技能、关键差距、行动建议和推荐原因。
+- `多岗位对照能力`
+  支持主岗与备选岗对照、能力雷达图、岗位切换模拟和差异化策略联动。
 
-- `多阶段工作流`
-  把解析、匹配、规划、追问、自测、复测与学校看板编排成一条可校验、可降级的任务链。
+- `可落地交付`
+  系统包含本地 Web 端、历史记录、复核入口、报告导出和部署文档，适合答辩和提交。
 
-- `成长闭环`
-  支持智能体补充问答、岗位自测、资源映射、二次分析和成长对比。
+## 数据基础
 
-- `多角色视角`
-  除学生端外，还支持辅导员端和就业中心端的运营观察视图。
+本仓库内已包含赛题官方资料：
 
-- `人机协同治理`
-  通过样例验证中心、模板证据回看和学校运营看板，把系统从“能推荐”提升为“可抽检、可复盘、可运营”。
+- `A13_官方资料/第十七届中国大学生服务外包创新创业大赛A13赛题.pdf`
+- `A13_官方资料/A13-JD采样数据.xls`
 
-- `完整交付`
-  支持历史记录、Markdown/HTML/Word/PDF 导出，适合演示、评审和归档。
+当前项目已经基于官方 JD 数据完成清洗、归一化和模板沉淀，现有生成结果包括：
 
-## 系统结构图
+- `4884` 条清洗后的岗位记录
+- `17` 个核心岗位模板
+- 内置 `7` 份典型学生样例用于答辩演示与基准验证
+
+当前重点覆盖的岗位方向包括：
+
+- Java开发工程师
+- C/C++开发工程师
+- 前端开发工程师
+- Python开发工程师
+- 数据分析师
+- 实施工程师
+- 技术支持工程师
+- 测试工程师
+- 软件测试工程师
+- 测试开发工程师
+- 产品助理
+- 运营专员
+- 项目专员
+- 项目经理
+
+## 系统流程
 
 ```mermaid
 flowchart LR
-    A[学生简历 / 上传文件] --> B[学生画像解析]
-    B --> C[岗位模板匹配]
-    C --> D[职业规划生成]
-    D --> E[主岗位 / 备选岗位 / 转岗路径]
-    D --> F[行动计划 / 资源映射 / 岗位自测]
-    F --> G[智能体追问与复测]
-    G --> H[成长对比]
-    D --> I[Markdown / HTML / Word / PDF 报告]
-    C --> J[官方 JD 检索与模板证据中心]
-    H --> K[学校运营看板]
+    A[简历文本 / 简历文件] --> B[学生画像解析]
+    B --> C[岗位模板匹配与排序]
+    C --> D[主岗 / 备选岗推荐]
+    D --> E[差距解释与证据回看]
+    E --> F[行动路径 / 简历改写 / 面试题板]
+    F --> G[岗位切换模拟与成长路径]
+    G --> H[历史记录 / 复核留痕 / 运营看板]
+    H --> I[Markdown / HTML / Word / PDF 导出]
 ```
 
-## 运行截图
+## 技术栈
 
-### 首页总览
-
-![首页总览](docs/screenshots/dashboard-overview.png)
-
-### 证据中心与模板回看
-
-![证据中心](docs/screenshots/evidence-center.png)
-
-### 学校运营看板
-
-![学校运营看板](docs/screenshots/school-dashboard.png)
+- 后端：Python
+- 前端：原生 HTML / CSS / JavaScript
+- 可视化：ECharts
+- 存储：SQLite
+- 模型接入：DashScope / OpenAI 兼容接口
+- 文件解析：`txt`、`md`、`docx`、`pdf`
+- 报告导出：Markdown、HTML、Word、PDF
 
 ## 仓库结构
 
 ```text
 .
-├─ A13_官方资料/              # 官方赛题资料与 JD 数据
-├─ a13_starter/              # 项目主体
-│  ├─ src/                   # 后端核心逻辑
-│  ├─ web/                   # 前端页面
-│  ├─ generated/             # 生成数据与缓存
-│  ├─ samples/               # 演示样例简历
-│  ├─ tools/                 # 数据处理脚本
-│  ├─ README.md              # 详细运行说明
-│  └─ DEPLOY.md              # 部署说明
-├─ docs/
-│  └─ screenshots/           # README 截图占位与后续真实截图
+├─ A13_官方资料/                  # 赛题 PDF 与官方 JD 样本
+├─ a13_starter/
+│  ├─ src/                       # 核心业务逻辑
+│  ├─ web/                       # 前端页面
+│  ├─ generated/                 # 岗位库、模板库、历史数据库等生成结果
+│  ├─ samples/                   # 内置演示样例
+│  ├─ tools/                     # 数据处理、benchmark、模板生成脚本
+│  ├─ README.md                  # 子项目详细运行说明
+│  ├─ DEPLOY.md                  # 部署说明
+│  ├─ 答辩讲解提纲.md            # 答辩讲解材料
+│  ├─ 答辩演示脚本.md            # 现场演示顺序建议
+│  └─ 提交版说明.md              # 提交包整理建议
+├─ .env.example                  # 环境变量模板
 ├─ LICENSE
 └─ README.md
 ```
 
-## 快速启动
+## 快速开始
+
+### 1. 安装依赖
 
 在仓库根目录执行：
 
 ```bash
 pip install -r a13_starter/requirements.txt
+```
+
+### 2. 配置环境变量
+
+推荐复制环境模板：
+
+```bash
+cp .env.example .env.local
+```
+
+然后按需修改 `.env.local`：
+
+```bash
+DASHSCOPE_API_KEY=你的key
+LLM_PROVIDER=dashscope
+DASHSCOPE_MODEL=qwen-plus
+A13_API_HOST=127.0.0.1
+A13_API_PORT=8000
+```
+
+项目会自动读取仓库根目录下的 `.env` 和 `.env.local`。
+
+如果暂时没有可用的模型 Key，也可以直接运行，系统会回退到规则解析模式。
+
+### 3. 启动服务
+
+```bash
 python -m a13_starter.api_server
 ```
 
-如果你的环境里 `python` 不可用，可以改用：
+如果当前环境使用的是 `python3`：
 
 ```bash
 python3 -m a13_starter.api_server
 ```
 
-启动后打开浏览器：
+### 4. 打开页面
+
+浏览器访问：
 
 ```text
 http://127.0.0.1:8000/
 ```
 
-如果你需要启用大模型解析，可以配置 DashScope：
+## 推荐演示方式
 
-### Windows PowerShell
-
-```powershell
-$env:DASHSCOPE_API_KEY="你的key"
-$env:LLM_PROVIDER="dashscope"
-$env:DASHSCOPE_MODEL="qwen3.5-flash"
-$env:A13_API_PORT="8001"
-py -m a13_starter.api_server
-```
-
-### macOS / Linux / Git Bash
-
-```bash
-export DASHSCOPE_API_KEY="你的key"
-export LLM_PROVIDER="dashscope"
-export DASHSCOPE_MODEL="qwen3.5-flash"
-export A13_API_PORT="8001"
-python3 -m a13_starter.api_server
-```
-
-## 推荐演示流程
-
-推荐先使用内置样例完成演示：
+建议优先使用内置样例完成答辩演示：
 
 - `a13_starter/samples/demo_resume_backend.txt`
 - `a13_starter/samples/demo_resume_implementation.txt`
 - `a13_starter/samples/demo_resume_frontend.txt`
+- `a13_starter/samples/demo_resume_data_analyst.txt`
+- `a13_starter/samples/demo_resume_operations.txt`
+- `a13_starter/samples/demo_resume_testdev.txt`
 
-页面中可以直接演示：
+建议演示顺序：
 
-1. 简历导入或粘贴
-2. 学生画像与岗位匹配
-3. 职业路径与行动计划
-4. 模板证据与官方 JD 检索
-5. 智能体追问与岗位自测
-6. 资源映射与成长对比
-7. 学校运营看板与历史记录
-8. 报告导出
+1. 先用后端样例展示完整链路
+2. 再切换实施或前端样例，体现推荐结果会随输入变化
+3. 展示证据基线、原始 JD 检索和岗位切换模拟
+4. 展示行动路径、简历作战包和导出报告
+5. 最后回到历史记录与复核入口，体现交付完整性
 
-## 详细说明
+## Benchmark 与验证
 
-更详细的本地运行、导出、解析模式和部署说明，请看：
+项目内置了样例基准验证能力，可用于赛前联调和答辩展示。
 
-- [a13_starter/README.md](/mnt/d/Code/server2026/a13_starter/README.md)
-- [a13_starter/DEPLOY.md](/mnt/d/Code/server2026/a13_starter/DEPLOY.md)
+运行方式：
+
+```bash
+python -m a13_starter.tools.run_benchmark --parser-mode rule
+```
+
+当前已验证结果：
+
+- 内置 `7` 份样例全部执行成功
+- `Top1 命中率 = 100%`
+- `Top3 命中率 = 100%`
+- `严格通过率 = 100%`
+
+如果希望测试大模型解析链路，也可以运行：
+
+```bash
+python -m a13_starter.tools.run_benchmark --parser-mode auto
+```
+
+## 常用输出
+
+项目运行后常见输出位于：
+
+- `a13_starter/generated/job_profiles.jsonl`
+- `a13_starter/generated/role_profile_templates.json`
+- `a13_starter/generated/dataset_summary.json`
+- `a13_starter/generated/analysis_history.db`
+- `a13_starter/generated/career_plan_report.md`
+
+## 文档导航
+
+如果你需要更细的说明，可继续阅读：
+
+- [a13_starter/README.md](a13_starter/README.md)
+- [a13_starter/DEPLOY.md](a13_starter/DEPLOY.md)
+- [a13_starter/答辩讲解提纲.md](a13_starter/答辩讲解提纲.md)
+- [a13_starter/答辩演示脚本.md](a13_starter/答辩演示脚本.md)
+- [a13_starter/提交版说明.md](a13_starter/提交版说明.md)
+- [A13_官方资料/README.md](A13_官方资料/README.md)
+- [FINAL_DELIVERY_CHECKLIST.md](FINAL_DELIVERY_CHECKLIST.md)
+
+## 当前状态
+
+目前仓库中的主流程已经可以真实运行，并完成过以下联调：
+
+- 本地服务启动与系统自检
+- 简历输入与文件上传
+- 岗位匹配与职业规划生成
+- 历史记录保存与复核留痕
+- Word / PDF 导出
+- DashScope 实时模型调用
 
 ## License
 
-本项目使用 [MIT License](LICENSE)。
+本项目采用 [MIT License](LICENSE)。

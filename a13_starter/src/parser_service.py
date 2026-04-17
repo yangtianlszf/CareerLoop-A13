@@ -23,6 +23,18 @@ class ParserMetadata:
         return asdict(self)
 
 
+def did_parser_fallback(
+    requested_mode: str,
+    used_mode: str,
+    fallback_used: bool = False,
+) -> bool:
+    requested = _normalize_mode(requested_mode)
+    used = str(used_mode or "").strip().lower()
+    if fallback_used:
+        return True
+    return requested in {"auto", "llm"} and used == "rule"
+
+
 def _normalize_mode(parser_mode: str) -> str:
     mode = (parser_mode or "auto").strip().lower()
     if mode not in {"auto", "rule", "llm"}:
@@ -82,7 +94,7 @@ def parse_student_profile(raw_text: str, parser_mode: str = "auto"):
                 "rule",
                 configured,
                 False,
-                True,
+                did_parser_fallback(mode, "rule"),
                 "LLM 模式未配置 API key，已自动回退到规则解析。",
             )
         try:
@@ -90,7 +102,14 @@ def parse_student_profile(raw_text: str, parser_mode: str = "auto"):
             return profile, ParserMetadata(mode, "llm", configured, True, False, None)
         except OpenAIResponsesError as error:
             profile = build_student_profile(raw_text)
-            return profile, ParserMetadata(mode, "rule", configured, True, True, str(error))
+            return profile, ParserMetadata(
+                mode,
+                "rule",
+                configured,
+                True,
+                did_parser_fallback(mode, "rule", fallback_used=True),
+                str(error),
+            )
 
     if configured:
         try:
@@ -98,7 +117,14 @@ def parse_student_profile(raw_text: str, parser_mode: str = "auto"):
             return profile, ParserMetadata(mode, "llm", configured, True, False, None)
         except OpenAIResponsesError as error:
             profile = build_student_profile(raw_text)
-            return profile, ParserMetadata(mode, "rule", configured, True, True, str(error))
+            return profile, ParserMetadata(
+                mode,
+                "rule",
+                configured,
+                True,
+                did_parser_fallback(mode, "rule", fallback_used=True),
+                str(error),
+            )
 
     profile = build_student_profile(raw_text)
     return profile, ParserMetadata(
@@ -106,7 +132,7 @@ def parse_student_profile(raw_text: str, parser_mode: str = "auto"):
         "rule",
         configured,
         False,
-        False,
+        did_parser_fallback(mode, "rule"),
         "LLM API key not configured. Set OPENAI_API_KEY or DASHSCOPE_API_KEY.",
     )
 
@@ -126,7 +152,7 @@ def parse_job_profile(raw_text: str, parser_mode: str = "auto"):
                 "rule",
                 configured,
                 False,
-                True,
+                did_parser_fallback(mode, "rule"),
                 "LLM 模式未配置 API key，已自动回退到规则解析。",
             )
         try:
@@ -134,7 +160,14 @@ def parse_job_profile(raw_text: str, parser_mode: str = "auto"):
             return profile, ParserMetadata(mode, "llm", configured, True, False, None)
         except OpenAIResponsesError as error:
             profile = build_job_profile(raw_text)
-            return profile, ParserMetadata(mode, "rule", configured, True, True, str(error))
+            return profile, ParserMetadata(
+                mode,
+                "rule",
+                configured,
+                True,
+                did_parser_fallback(mode, "rule", fallback_used=True),
+                str(error),
+            )
 
     if configured:
         try:
@@ -142,7 +175,14 @@ def parse_job_profile(raw_text: str, parser_mode: str = "auto"):
             return profile, ParserMetadata(mode, "llm", configured, True, False, None)
         except OpenAIResponsesError as error:
             profile = build_job_profile(raw_text)
-            return profile, ParserMetadata(mode, "rule", configured, True, True, str(error))
+            return profile, ParserMetadata(
+                mode,
+                "rule",
+                configured,
+                True,
+                did_parser_fallback(mode, "rule", fallback_used=True),
+                str(error),
+            )
 
     profile = build_job_profile(raw_text)
     return profile, ParserMetadata(
@@ -150,6 +190,6 @@ def parse_job_profile(raw_text: str, parser_mode: str = "auto"):
         "rule",
         configured,
         False,
-        False,
+        did_parser_fallback(mode, "rule"),
         "LLM API key not configured. Set OPENAI_API_KEY or DASHSCOPE_API_KEY.",
     )

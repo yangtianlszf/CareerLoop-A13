@@ -8,6 +8,16 @@ from typing import Any
 from xml.sax.saxutils import escape
 
 
+_PDF_PAGE_WIDTH = 595
+_PDF_PAGE_HEIGHT = 842
+_PDF_LEFT_MARGIN = 48
+_PDF_TOP_MARGIN = 792
+_PDF_BOTTOM_MARGIN = 56
+_PDF_LINE_HEIGHT = 16
+_PDF_FONT_SIZE = 11
+_PDF_MAX_LINE_UNITS = 58
+
+
 def markdown_to_html(markdown_text: str, title: str = "职业规划报告") -> str:
     body_parts: list[str] = []
     in_list = False
@@ -146,57 +156,18 @@ def markdown_to_docx_bytes(markdown_text: str, title: str = "职业规划报告"
 
 
 def markdown_to_simple_pdf_bytes(markdown_text: str, title: str = "career_plan_report") -> bytes:
-    lines = [title]
-    for raw_line in markdown_text.splitlines():
-        line = raw_line.strip()
-        if not line:
-            continue
-        line = re.sub(r"^#+\s*", "", line)
-        lines.extend(_wrap_text_for_pdf(line, 48))
-
-    content_lines = ["BT", "/F1 11 Tf", "40 800 Td", "14 TL"]
-    first = True
-    for line in lines:
-        safe_line = line.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
-        if first:
-            content_lines.append(f"({safe_line}) Tj")
-            first = False
-        else:
-            content_lines.append(f"T* ({safe_line}) Tj")
-    content_lines.append("ET")
-    stream = "\n".join(content_lines).encode("latin-1", errors="replace")
-
-    objects = [
-        b"1 0 obj<< /Type /Catalog /Pages 2 0 R >>endobj\n",
-        b"2 0 obj<< /Type /Pages /Kids [3 0 R] /Count 1 >>endobj\n",
-        b"3 0 obj<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>endobj\n",
-        f"4 0 obj<< /Length {len(stream)} >>stream\n".encode("latin-1") + stream + b"\nendstream\nendobj\n",
-        b"5 0 obj<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>endobj\n",
-    ]
-
-    pdf = io.BytesIO()
-    pdf.write(b"%PDF-1.4\n")
-    offsets = [0]
-    for obj in objects:
-        offsets.append(pdf.tell())
-        pdf.write(obj)
-    xref_position = pdf.tell()
-    pdf.write(f"xref\n0 {len(offsets)}\n".encode("latin-1"))
-    pdf.write(b"0000000000 65535 f \n")
-    for offset in offsets[1:]:
-        pdf.write(f"{offset:010d} 00000 n \n".encode("latin-1"))
-    pdf.write(
-        (
-            f"trailer<< /Size {len(offsets)} /Root 1 0 R >>\n"
-            f"startxref\n{xref_position}\n%%EOF"
-        ).encode("latin-1")
-    )
-    return pdf.getvalue()
+    normalized_lines = _markdown_to_pdf_lines(markdown_text, title=title)
+    pages = _paginate_pdf_lines(normalized_lines)
+    return _build_cjk_pdf_document(pages)
 
 
 def build_export_bundle(analysis: dict[str, Any]) -> dict[str, bytes | str]:
     title = f"{analysis['student_profile'].get('name', '学生')}_职业规划报告"
     markdown_text = str(analysis["report_markdown"])
+    return build_report_export_bundle(markdown_text, title=title)
+
+
+def build_report_export_bundle(markdown_text: str, title: str = "职业规划报告") -> dict[str, bytes | str]:
     return {
         "markdown": markdown_text,
         "html": markdown_to_html(markdown_text, title=title),
@@ -363,6 +334,186 @@ def _styles_xml() -> str:
 
 
 def _wrap_text_for_pdf(text: str, width: int) -> list[str]:
-    if len(text) <= width:
-        return [text]
-    return [text[i : i + width] for i in range(0, len(text), width)]
+    normalized = str(text or "").replace("\r", "")
+    if not normalized:
+        return [""]
+
+    lines: list[str] = []
+    current: list[str] = []
+    current_units = 0
+    for char in normalized:
+        units = _pdf_char_units(char)
+        if current and current_units + units > width:
+            lines.append("".join(current).rstrip())
+            current = [char]
+            current_units = units
+            continue
+        current.append(char)
+        current_units += units
+
+    if current:
+        lines.append("".join(current).rstrip())
+    return lines or [""]
+
+
+def _pdf_char_units(char: str) -> int:
+    if char == "\t":
+        return 4
+    if ord(char) < 128:
+        return 1
+    return 2
+
+
+def _markdown_to_pdf_lines(markdown_text: str, title: str) -> list[str]:
+    lines: list[str] = []
+    clean_title = str(title or "").strip()
+    if clean_title:
+        lines.extend(_wrap_text_for_pdf(clean_title, _PDF_MAX_LINE_UNITS))
+        lines.append("")
+
+    for raw_line in str(markdown_text or "").splitlines():
+        line = raw_line.strip()
+        if not line:
+            if lines and lines[-1] != "":
+                lines.append("")
+            continue
+
+        if line.startswith("# "):
+            heading = line[2:].strip()
+            if heading:
+                if lines and lines[-1] != "":
+                    lines.append("")
+                lines.extend(_wrap_text_for_pdf(heading, _PDF_MAX_LINE_UNITS))
+                lines.append("")
+            continue
+
+        if line.startswith("## "):
+            heading = line[3:].strip()
+            if heading:
+                if lines and lines[-1] != "":
+                    lines.append("")
+                lines.extend(_wrap_text_for_pdf(f"[{heading}]", _PDF_MAX_LINE_UNITS))
+            continue
+
+        if line.startswith("### "):
+            heading = line[4:].strip()
+            if heading:
+                lines.extend(_wrap_text_for_pdf(f"• {heading}", _PDF_MAX_LINE_UNITS))
+            continue
+
+        if line.startswith("- "):
+            content = line[2:].strip()
+            wrapped = _wrap_text_for_pdf(f"• {content}", _PDF_MAX_LINE_UNITS)
+            lines.extend(wrapped)
+            continue
+
+        lines.extend(_wrap_text_for_pdf(line, _PDF_MAX_LINE_UNITS))
+
+    while lines and lines[-1] == "":
+        lines.pop()
+    return lines or ["职业规划报告"]
+
+
+def _paginate_pdf_lines(lines: list[str]) -> list[list[str]]:
+    max_lines_per_page = max(1, (_PDF_TOP_MARGIN - _PDF_BOTTOM_MARGIN) // _PDF_LINE_HEIGHT)
+    pages: list[list[str]] = []
+    current_page: list[str] = []
+    for line in lines:
+        current_page.append(line)
+        if len(current_page) >= max_lines_per_page:
+            pages.append(current_page)
+            current_page = []
+    if current_page:
+        pages.append(current_page)
+    return pages or [["职业规划报告"]]
+
+
+def _pdf_hex_text(text: str) -> str:
+    safe_text = text if text else " "
+    return "FEFF" + safe_text.encode("utf-16-be").hex().upper()
+
+
+def _page_stream_bytes(lines: list[str]) -> bytes:
+    commands = [
+        "BT",
+        f"/F1 {_PDF_FONT_SIZE} Tf",
+        f"1 0 0 1 {_PDF_LEFT_MARGIN} {_PDF_TOP_MARGIN} Tm",
+        f"{_PDF_LINE_HEIGHT} TL",
+    ]
+    first_line = True
+    for line in lines:
+        encoded = _pdf_hex_text(line)
+        if first_line:
+            commands.append(f"<{encoded}> Tj")
+            first_line = False
+        else:
+            commands.append(f"T* <{encoded}> Tj")
+    commands.append("ET")
+    return "\n".join(commands).encode("ascii")
+
+
+def _build_cjk_pdf_document(pages: list[list[str]]) -> bytes:
+    objects: dict[int, bytes] = {
+        1: b"1 0 obj<< /Type /Catalog /Pages 2 0 R >>endobj\n",
+    }
+
+    page_ids: list[int] = []
+    content_ids: list[int] = []
+    object_id = 3
+    for page_lines in pages:
+        page_id = object_id
+        content_id = object_id + 1
+        page_ids.append(page_id)
+        content_ids.append(content_id)
+        object_id += 2
+
+        stream = _page_stream_bytes(page_lines)
+        objects[content_id] = (
+            f"{content_id} 0 obj<< /Length {len(stream)} >>stream\n".encode("ascii")
+            + stream
+            + b"\nendstream\nendobj\n"
+        )
+
+    font_id = object_id
+    cid_font_id = object_id + 1
+
+    page_refs = " ".join(f"{page_id} 0 R" for page_id in page_ids)
+    objects[2] = f"2 0 obj<< /Type /Pages /Kids [{page_refs}] /Count {len(page_ids)} >>endobj\n".encode("ascii")
+
+    for page_id, content_id in zip(page_ids, content_ids, strict=True):
+        objects[page_id] = (
+            f"{page_id} 0 obj<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {_PDF_PAGE_WIDTH} {_PDF_PAGE_HEIGHT}] "
+            f"/Contents {content_id} 0 R /Resources << /Font << /F1 {font_id} 0 R >> >> >>endobj\n"
+        ).encode("ascii")
+
+    objects[font_id] = (
+        f"{font_id} 0 obj<< /Type /Font /Subtype /Type0 /BaseFont /STSong-Light "
+        f"/Encoding /UniGB-UCS2-H /DescendantFonts [{cid_font_id} 0 R] >>endobj\n"
+    ).encode("ascii")
+    objects[cid_font_id] = (
+        f"{cid_font_id} 0 obj<< /Type /Font /Subtype /CIDFontType0 /BaseFont /STSong-Light "
+        "/CIDSystemInfo << /Registry (Adobe) /Ordering (GB1) /Supplement 4 >> "
+        "/DW 1000 >>endobj\n"
+    ).encode("ascii")
+
+    pdf = io.BytesIO()
+    pdf.write(b"%PDF-1.4\n%\xE2\xE3\xCF\xD3\n")
+    offsets = [0]
+    max_id = max(objects)
+    for current_id in range(1, max_id + 1):
+        payload = objects[current_id]
+        offsets.append(pdf.tell())
+        pdf.write(payload)
+
+    xref_position = pdf.tell()
+    pdf.write(f"xref\n0 {len(offsets)}\n".encode("ascii"))
+    pdf.write(b"0000000000 65535 f \n")
+    for offset in offsets[1:]:
+        pdf.write(f"{offset:010d} 00000 n \n".encode("ascii"))
+    pdf.write(
+        (
+            f"trailer<< /Size {len(offsets)} /Root 1 0 R >>\n"
+            f"startxref\n{xref_position}\n%%EOF"
+        ).encode("ascii")
+    )
+    return pdf.getvalue()

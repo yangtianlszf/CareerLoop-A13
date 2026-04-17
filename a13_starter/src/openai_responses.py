@@ -54,9 +54,12 @@ class OpenAIResponsesClient:
                 schema_name=schema_name,
                 schema=schema,
             ),
-            "reasoning": {"effort": reasoning_effort},
             "store": False,
         }
+        if self.provider == "dashscope":
+            payload["result_format"] = "message"
+        else:
+            payload["reasoning"] = {"effort": reasoning_effort}
         if self.provider == "openai":
             payload["text"] = {
                 "format": {
@@ -135,6 +138,10 @@ class OpenAIResponsesClient:
         )
 
     def _extract_output_text(self, body: dict[str, Any]) -> str:
+        error = body.get("error") if isinstance(body, dict) else None
+        if isinstance(error, dict) and error.get("message"):
+            raise OpenAIResponsesError(str(error["message"]))
+
         if isinstance(body.get("output_text"), str) and body["output_text"].strip():
             return body["output_text"].strip()
 
@@ -186,6 +193,8 @@ class OpenAIResponsesClient:
             ],
             "store": False,
         }
+        if self.provider == "dashscope":
+            payload["result_format"] = "message"
         request = urllib.request.Request(
             f"{self.base_url}/responses",
             data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),

@@ -25,11 +25,11 @@
   },
   {
     "id": "baseline-student",
-    "label": "基础学生样例",
+    "label": "混合方向样例",
     "sample_name": "student_resume.txt",
-    "focus": "验证系统在信息不充分、方向相对模糊时是否仍能给出可接受推荐。",
-    "expected_primary_roles": ["实施工程师", "Java开发工程师"],
-    "expected_top3_roles": ["实施工程师", "技术支持工程师", "Java开发工程师"]
+    "focus": "验证系统能否在 Python 后端与数据分析混合画像中，优先把更贴近真实项目证据的方向排到主推荐位。",
+    "expected_primary_roles": ["数据分析师"],
+    "expected_top3_roles": ["数据分析师", "Python开发工程师", "实施工程师"]
   },
   {
     "id": "data-analyst-student",

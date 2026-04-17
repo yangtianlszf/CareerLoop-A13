@@ -1184,6 +1184,7 @@ const state = {
   currentRoleSwitch: null,
   currentTemplateRole: null,
   templateEvidenceRequestToken: 0,
+  emptyStateProgressTimer: null,
   latestResult: null,
   schoolDashboard: null,
   benchmark: null,
@@ -1195,6 +1196,10 @@ const dom = {
   resumeInput: getEl("resume-input"), analyzeBtn: getEl("analyze-btn"), uploadFileBtn: getEl("upload-file-btn"),
   resumeFileInput: getEl("resume-file-input"), parserModeSelect: getEl("parser-mode-select"), statusPanel: getEl("status-panel"),
   statusText: getEl("status-text"), sampleGallery: getEl("sample-gallery"), emptyState: getEl("empty-state"),
+  emptyStatePanel: getEl("empty-state-panel"), emptyStateTitle: getEl("empty-state-title"),
+  emptyStateDescription: getEl("empty-state-description"), emptyRuntimeChip: getEl("empty-runtime-chip"),
+  emptyRuntimeTitle: getEl("empty-runtime-title"), emptyRuntimeText: getEl("empty-runtime-text"),
+  emptyProgressFill: getEl("empty-progress-fill"),
   resultsContent: getEl("results-content"), primaryRole: getEl("primary-role"), primaryScoreBadge: getEl("primary-score-badge"),
   primaryRoleSummary: getEl("primary-role-summary"), primaryRoleNote: getEl("primary-role-note"),
   primaryStrengthCount: getEl("primary-strength-count"), primaryRiskCount: getEl("primary-risk-count"),
@@ -1225,10 +1230,42 @@ const dom = {
   reviewRecords: getEl("review-records"), reportPreview: getEl("report-preview"), printPdfBtn: getEl("print-pdf-btn"),
   // 🌟 P3: 报告内联编辑
   editReportBtn: getEl("edit-report-btn"), saveReportBtn: getEl("save-report-btn"),
-  downloadEditedBtn: getEl("download-edited-btn"), reportEditorArea: getEl("report-editor-area"), reportEditor: getEl("report-editor"),
+  downloadEditedBtn: getEl("download-edited-btn"), downloadHtmlBtn: getEl("download-html-btn"), downloadDocxBtn: getEl("download-docx-btn"),
+  reportEditorArea: getEl("report-editor-area"), reportEditor: getEl("report-editor"),
   // 🌟 P5: AI 评审意见
   aiCommentaryCard: getEl("ai-commentary-card"), aiCommentaryText: getEl("ai-commentary-text"),
 };
+
+const EMPTY_STATE_IDLE_COPY = {
+  title: "上传简历，先看主岗",
+  description: "主岗 / 行动 / 证据联动输出",
+  chip: "待分析",
+  runtimeTitle: "等待分析",
+  runtimeText: "输入后开始",
+  progress: 0,
+  activeStep: -1,
+};
+
+const EMPTY_STATE_READY_COPY = {
+  title: "简历内容已就绪",
+  description: "确认后，可直接开始生成",
+  chip: "就绪",
+  runtimeTitle: "可以开始",
+  runtimeText: "点击生成",
+  progress: 0,
+  activeStep: -1,
+};
+
+const ANALYSIS_PROGRESS_STAGES = [
+  { runtimeTitle: "解析画像", runtimeText: "提取经历与技能", progress: 24, activeStep: 0 },
+  { runtimeTitle: "岗位匹配", runtimeText: "计算主岗排序", progress: 52, activeStep: 1 },
+  { runtimeTitle: "生成方案", runtimeText: "联动行动与简历", progress: 78, activeStep: 2 },
+  { runtimeTitle: "整理证据", runtimeText: "准备结果与导出", progress: 94, activeStep: 3 },
+];
+
+function getEmptyProgressSteps() {
+  return Array.from(document.querySelectorAll(".empty-progress-step"));
+}
 
 // ==========================================
 // 2. 工具集与格式化
@@ -1318,6 +1355,12 @@ function buildMarkdownObjectList(items, formatter, emptyLabel = "无") {
   return lines.length ? lines.map((item) => `- ${item}`).join("\n") : `- ${emptyLabel}`;
 }
 
+function didParserFallback(parser) {
+  const requestedMode = String(parser?.requested_mode || "").trim().toLowerCase();
+  const usedMode = String(parser?.used_mode || "").trim().toLowerCase();
+  return Boolean(parser?.fallback_used || ((requestedMode === "auto" || requestedMode === "llm") && usedMode === "rule"));
+}
+
 function isReportEditing() {
   return Boolean(dom.reportEditorArea && dom.reportEditorArea.style.display !== "none");
 }
@@ -1333,6 +1376,95 @@ function renderCurrentReportPreview(markdownText) {
   if (!dom.reportPreview) return;
   dom.reportPreview.innerHTML = renderMarkdownPreview(markdownText);
   dom.reportPreview.style.display = "";
+}
+
+function parseDownloadFilename(dispositionHeader, fallbackName) {
+  const header = String(dispositionHeader || "");
+  if (!header) return fallbackName;
+  const utf8Match = header.match(/filename\*=UTF-8''([^;]+)/i);
+  if (utf8Match?.[1]) {
+    try {
+      return decodeURIComponent(utf8Match[1]);
+    } catch (error) {
+      return utf8Match[1];
+    }
+  }
+  const quotedMatch = header.match(/filename="([^"]+)"/i);
+  if (quotedMatch?.[1]) return quotedMatch[1];
+  const plainMatch = header.match(/filename=([^;]+)/i);
+  if (plainMatch?.[1]) return plainMatch[1].trim();
+  return fallbackName;
+}
+
+function buildCurrentReportExportMeta() {
+  const { student, plan, activeRoleTitle } = getActiveReportContext(state.latestResult || {});
+  const studentName = formatScalar(student.name, "学生");
+  const roleTitle = formatScalar(activeRoleTitle || plan.primary_role, "职业规划");
+  const safeStudent = studentName.replace(/[^\w\u4e00-\u9fff-]+/g, "_").replace(/^_+|_+$/g, "") || "student";
+  const safeRole = roleTitle.replace(/[^\w\u4e00-\u9fff-]+/g, "_").replace(/^_+|_+$/g, "") || "career_plan";
+  return {
+    title: `${studentName} · ${roleTitle} 职业规划报告`,
+    filename: `${safeStudent}_${safeRole}_report`,
+  };
+}
+
+async function exportCurrentReport(format) {
+  const markdownText = getCurrentRenderableReport().trim();
+  if (!markdownText) {
+    setStatus("当前没有可导出的报告内容，请先生成分析结果", "error");
+    return;
+  }
+
+  const exportLabels = {
+    markdown: "Markdown",
+    html: "HTML",
+    docx: "Word",
+    pdf: "PDF",
+  };
+  const { title, filename } = buildCurrentReportExportMeta();
+  setStatus(`正在导出 ${exportLabels[format] || "报告"}...`, "loading");
+
+  try {
+    const response = await fetch("/api/export-report", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        report_markdown: markdownText,
+        format,
+        title,
+        filename,
+      }),
+    });
+
+    if (!response.ok) {
+      let message = `导出 ${exportLabels[format] || "报告"} 失败`;
+      try {
+        const errorPayload = await response.json();
+        message = errorPayload.error || message;
+      } catch (error) {
+        // ignore non-json error payload
+      }
+      throw new Error(message);
+    }
+
+    const blob = await response.blob();
+    const extension = format === "markdown" ? "md" : format;
+    const downloadName = parseDownloadFilename(
+      response.headers.get("Content-Disposition"),
+      `${filename}.${extension}`
+    );
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = downloadName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    setStatus(`${exportLabels[format] || "报告"} 已导出。`, "success");
+  } catch (error) {
+    setStatus(`导出失败：${error.message}`, "error");
+  }
 }
 
 function getCurrentActiveRoleTitle() {
@@ -1365,12 +1497,129 @@ function setElementHidden(element, hidden = true) {
   element.classList.toggle("hidden", hidden);
 }
 
+function renderEmptyProgressSteps(activeStep = -1) {
+  getEmptyProgressSteps().forEach((step, index) => {
+    step.classList.toggle("is-active", index === activeStep);
+    step.classList.toggle("is-complete", activeStep > index);
+  });
+}
+
+function stopEmptyStateProgress(reset = false) {
+  if (state.emptyStateProgressTimer) {
+    window.clearInterval(state.emptyStateProgressTimer);
+    state.emptyStateProgressTimer = null;
+  }
+  if (reset && dom.emptyProgressFill) dom.emptyProgressFill.style.width = "0%";
+  if (reset) renderEmptyProgressSteps(-1);
+}
+
+function setEmptyStateMode(mode = "idle", options = {}) {
+  if (!dom.emptyStatePanel) return;
+  const payload = {
+    ...(mode === "ready" ? EMPTY_STATE_READY_COPY : EMPTY_STATE_IDLE_COPY),
+    ...options,
+  };
+  if (dom.emptyStateTitle) dom.emptyStateTitle.textContent = payload.title || EMPTY_STATE_IDLE_COPY.title;
+  if (dom.emptyStateDescription) dom.emptyStateDescription.textContent = payload.description || EMPTY_STATE_IDLE_COPY.description;
+  if (dom.emptyRuntimeChip) dom.emptyRuntimeChip.textContent = payload.chip || EMPTY_STATE_IDLE_COPY.chip;
+  if (dom.emptyRuntimeTitle) dom.emptyRuntimeTitle.textContent = payload.runtimeTitle || EMPTY_STATE_IDLE_COPY.runtimeTitle;
+  if (dom.emptyRuntimeText) dom.emptyRuntimeText.textContent = payload.runtimeText || EMPTY_STATE_IDLE_COPY.runtimeText;
+  if (dom.emptyProgressFill) dom.emptyProgressFill.style.width = `${Math.max(0, Math.min(100, Number(payload.progress) || 0))}%`;
+  renderEmptyProgressSteps(Number.isFinite(payload.activeStep) ? payload.activeStep : -1);
+  dom.emptyStatePanel.classList.remove("is-idle", "is-ready", "is-processing", "is-error");
+  dom.emptyStatePanel.classList.add(
+    mode === "processing" ? "is-processing" :
+    mode === "error" ? "is-error" :
+    mode === "ready" ? "is-ready" :
+    "is-idle"
+  );
+}
+
+function syncEmptyStateFromStatus(text, type = "idle") {
+  if (!dom.emptyState || dom.emptyState.classList.contains("hidden")) return;
+  if (type !== "loading") stopEmptyStateProgress();
+
+  if (type === "success") {
+    setEmptyStateMode("ready", {
+      title: "简历内容已就绪",
+      description: "确认后，可直接开始生成",
+      chip: "就绪",
+      runtimeTitle: "可以开始",
+      runtimeText: text || "点击生成后展示阶段进度",
+    });
+    return;
+  }
+
+  if (type === "error") {
+    setEmptyStateMode("error", {
+      title: "当前未生成结果",
+      description: "请调整内容后再试",
+      chip: "异常",
+      runtimeTitle: "生成未完成",
+      runtimeText: text || "系统运行出现异常，请稍后重试",
+      progress: 18,
+      activeStep: -1,
+    });
+    return;
+  }
+
+  if (type === "loading") {
+    setEmptyStateMode("ready", {
+      title: "系统正在准备分析",
+      description: "主岗、行动、证据即将联动生成",
+      chip: "准备中",
+      runtimeTitle: "准备分析",
+      runtimeText: text || "即将进入阶段进度展示",
+      progress: 10,
+      activeStep: -1,
+    });
+    return;
+  }
+
+  setEmptyStateMode("idle", EMPTY_STATE_IDLE_COPY);
+}
+
+function startEmptyStateProgress() {
+  if (!dom.emptyState || dom.emptyState.classList.contains("hidden")) return;
+  stopEmptyStateProgress();
+
+  let stageIndex = 0;
+  const applyStage = () => {
+    const stage = ANALYSIS_PROGRESS_STAGES[Math.min(stageIndex, ANALYSIS_PROGRESS_STAGES.length - 1)];
+    setEmptyStateMode("processing", {
+      title: "正在生成职业规划",
+      description: "主岗、行动、证据同步整理中",
+      chip: "分析中",
+      ...stage,
+    });
+  };
+
+  applyStage();
+  state.emptyStateProgressTimer = window.setInterval(() => {
+    if (stageIndex < ANALYSIS_PROGRESS_STAGES.length - 1) {
+      stageIndex += 1;
+      applyStage();
+      return;
+    }
+    const finalStage = ANALYSIS_PROGRESS_STAGES[ANALYSIS_PROGRESS_STAGES.length - 1];
+    const currentProgress = Number.parseInt(dom.emptyProgressFill?.style.width || "94", 10) || finalStage.progress;
+    setEmptyStateMode("processing", {
+      title: "正在生成职业规划",
+      description: "主岗、行动、证据同步整理中",
+      chip: "分析中",
+      ...finalStage,
+      progress: Math.min(97, currentProgress + 1),
+    });
+  }, 1600);
+}
+
 function setStatus(text, type = "idle") {
   if (!dom.statusText || !dom.statusPanel) return;
   dom.statusText.textContent = text; dom.statusPanel.className = "status-panel"; 
   if (type === "loading") dom.statusPanel.classList.add("is-loading");
   if (type === "success") dom.statusPanel.classList.add("is-success");
   if (type === "error") dom.statusPanel.classList.add("is-error");
+  syncEmptyStateFromStatus(text, type);
 }
 function setBusy(isBusy) {
   [dom.analyzeBtn, dom.uploadFileBtn, dom.resumeFileInput, dom.parserModeSelect, dom.runBenchmarkBtn, dom.submitReviewBtn].forEach(el => { if(el) el.disabled = isBusy; });
@@ -3053,11 +3302,12 @@ function renderBenchmark(data) {
         <h4 class="benchmark-case-title">${escapeHtml(item.primary_role || "未生成")} · ${escapeHtml(item.primary_score ?? 0)} 分</h4>
         <div class="chip-row">
           <span class="tag ${item.top1_hit ? "tag-success" : "tag-danger"}">Top1 ${item.top1_hit ? "命中" : "未命中"}</span>
-          <span class="tag ${item.pass_case ? "tag-success" : "tag-danger"}">通过 ${item.pass_case ? "是" : "否"}</span>
+          <span class="tag ${item.pass_case ? "tag-success" : "tag-danger"}">展示 ${item.pass_case ? "通过" : "未过"}</span>
+          <span class="tag ${item.strict_pass_case ? "tag-success" : "tag-danger"}">严格 ${item.strict_pass_case ? "通过" : "复核"}</span>
           <span class="tag">证据 ${escapeHtml(item.evidence_hit_rate ?? 0)}</span>
           <span class="tag">回退 ${item.fallback_used ? "是" : "否"}</span>
         </div>
-        <ul class="feature-list list-compact">${(item.observations || []).slice(0, 3).map((line) => `<li title="${escapeHtml(line)}">${escapeHtml(compactText(line, 62))}</li>`).join("")}</ul>
+        <ul class="feature-list list-compact">${((item.review_reasons || []).length ? item.review_reasons : item.observations || []).slice(0, 3).map((line) => `<li title="${escapeHtml(line)}">${escapeHtml(compactText(line, 62))}</li>`).join("")}</ul>
       </div>`,
     "暂无样例评测结果。"
   );
@@ -3067,6 +3317,7 @@ function renderBenchmark(data) {
 // 4. 核心主流水线 (The Master Pipeline)
 // ==========================================
 function renderResults(data) {
+  stopEmptyStateProgress();
   if (dom.emptyState) dom.emptyState.classList.add("hidden");
   if (dom.resultsContent) dom.resultsContent.classList.remove("hidden");
   state.latestResult = data; state.currentAnalysisId = data.analysis_id || data.id || null;
@@ -3118,7 +3369,7 @@ function renderResults(data) {
   if (dom.reportPreview) dom.reportPreview.style.display = "";
   setElementHidden(dom.editReportBtn, false);
   setElementHidden(dom.saveReportBtn, true);
-  setElementHidden(dom.downloadEditedBtn, true);
+  setElementHidden(dom.downloadEditedBtn, false);
 
   // 切回总览并滚动到顶
   document.querySelector('.tab-btn[data-target="tab-overview"]')?.click();
@@ -3233,7 +3484,11 @@ async function loadAnalysis(analysisId) {
       parser: {
         requested_mode: data.parser_requested_mode || "unknown",
         used_mode: data.parser_used_mode || "unknown",
-        fallback_used: false,
+        fallback_used: didParserFallback({
+          requested_mode: data.parser_requested_mode || "unknown",
+          used_mode: data.parser_used_mode || "unknown",
+          fallback_used: false,
+        }),
         message: `复原于 ${data.created_at}`,
       },
     });
@@ -3310,6 +3565,7 @@ async function analyzeResume() {
   const resumeText = dom.resumeInput?.value.trim();
   if (!resumeText) return setStatus("请先输入或上传简历内容。", "error");
   setBusy(true); setStatus("正在生成职业规划，请稍候...", "loading");
+  startEmptyStateProgress();
 
   try {
     const response = await fetch("/api/career-plan", {
@@ -3400,6 +3656,16 @@ if (dom.analyzeBtn) dom.analyzeBtn.addEventListener("click", analyzeResume);
 if (dom.jdSearchBtn) dom.jdSearchBtn.addEventListener("click", searchJd);
 if (dom.runBenchmarkBtn) dom.runBenchmarkBtn.addEventListener("click", () => refreshBenchmark(true));
 if (dom.submitReviewBtn) dom.submitReviewBtn.addEventListener("click", submitReview);
+if (dom.resumeInput) {
+  dom.resumeInput.addEventListener("input", () => {
+    if (!dom.emptyState || dom.emptyState.classList.contains("hidden")) return;
+    if (dom.resumeInput.value.trim()) {
+      setEmptyStateMode("ready", EMPTY_STATE_READY_COPY);
+      return;
+    }
+    setEmptyStateMode("idle", EMPTY_STATE_IDLE_COPY);
+  });
+}
 
 // 🌟 修复 2：按钮触发点击文件库，文件变化触发上传
 if (dom.uploadFileBtn) dom.uploadFileBtn.addEventListener("click", () => dom.resumeFileInput?.click());
@@ -3446,18 +3712,17 @@ if (dom.saveReportBtn) {
 }
 
 if (dom.downloadEditedBtn) {
-  dom.downloadEditedBtn.addEventListener("click", () => {
-    const content = dom.reportEditor?.value || state.currentReport;
-    if (!content) return setStatus("没有可下载的报告内容", "error");
-    const blob = new Blob([content], { type: "text/markdown;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url; link.download = "career_plan_edited.md";
-    link.click(); URL.revokeObjectURL(url);
-    setStatus("编辑版报告已下载。", "success");
-  });
+  dom.downloadEditedBtn.addEventListener("click", () => exportCurrentReport("markdown"));
+}
+
+if (dom.downloadHtmlBtn) {
+  dom.downloadHtmlBtn.addEventListener("click", () => exportCurrentReport("html"));
+}
+
+if (dom.downloadDocxBtn) {
+  dom.downloadDocxBtn.addEventListener("click", () => exportCurrentReport("docx"));
 }
 
 if (dom.printPdfBtn) dom.printPdfBtn.addEventListener("click", () => {
-  printCurrentReport();
+  exportCurrentReport("pdf");
 });
