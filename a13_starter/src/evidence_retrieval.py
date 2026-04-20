@@ -24,6 +24,10 @@ def _dedupe_keep_order(items: list[str]) -> list[str]:
     return result
 
 
+def _lowered_set(items: list[str]) -> set[str]:
+    return {str(item).strip().lower() for item in items if str(item).strip()}
+
+
 def _split_sentences(text: str, max_len: int = 110) -> list[str]:
     normalized = re.sub(r"[ \t]+", " ", str(text or "").replace("\r", "\n")).strip()
     if not normalized:
@@ -227,21 +231,44 @@ def build_grounded_evidence_bundle(
     unique_terms = _dedupe_keep_order(
         [term for item in evidence_items for term in item.get("matched_terms", [])]
     )
-    target_terms = _dedupe_keep_order(
+    requirement_terms = _dedupe_keep_order(
+        [normalize_skill_alias(str(item)) for item in primary_match.get("core_skills", [])[:6]]
+    )
+    if not requirement_terms:
+        requirement_terms = _dedupe_keep_order(
+            [
+                *[normalize_skill_alias(str(item)) for item in primary_match.get("shared_skills", [])[:6]],
+                *[normalize_skill_alias(str(item)) for item in primary_match.get("missing_skills", [])[:6]],
+            ]
+        )
+
+    student_hit_terms = _dedupe_keep_order(
         [
-            role_title,
-            source_title,
-            *[normalize_skill_alias(str(item)) for item in primary_match.get("core_skills", [])[:5]],
-            *[normalize_skill_alias(str(item)) for item in primary_match.get("shared_skills", [])[:4]],
+            normalize_skill_alias(str(item))
+            for item in primary_match.get("shared_skills", [])
+            if normalize_skill_alias(str(item))
         ]
     )
-    hit_terms = [term for term in target_terms if term in unique_terms]
-    evidence_hit_rate = int(len(hit_terms) / max(1, len(target_terms)) * 100)
+    student_gap_terms = _dedupe_keep_order(
+        [
+            normalize_skill_alias(str(item))
+            for item in primary_match.get("missing_skills", [])
+            if normalize_skill_alias(str(item))
+        ]
+    )
+
+    unique_term_set = _lowered_set(unique_terms)
+    hit_terms = [term for term in requirement_terms if term.lower() in unique_term_set]
+    evidence_hit_rate = int(len(hit_terms) / max(1, len(requirement_terms)) * 100)
+    student_match_rate = int(len(student_hit_terms) / max(1, len(requirement_terms)) * 100)
     source_count = len({item.get("job_code") or item.get("source_title") for item in evidence_items})
     retrieval_mode = "template+jd" if template and matching_rows else "global-jd"
+    matched_copy = "、".join(student_hit_terms[:4]) or "暂无已明确命中的核心要求"
+    gap_copy = "、".join(student_gap_terms[:3]) or "当前没有明显待补项"
     summary = (
         f"围绕 {role_title} 从 {source_count} 个证据源检索出 {len(evidence_items)} 条高相关片段，"
-        f"优先命中 {'、'.join(unique_terms[:6]) or role_title} 等关键词。"
+        f"官方样本稳定支持 {'、'.join(hit_terms[:5]) or role_title} 等岗位要求；"
+        f"你当前已具备 {matched_copy}，仍需补强 {gap_copy}。"
     )
 
     return {
@@ -250,8 +277,12 @@ def build_grounded_evidence_bundle(
         "query_terms": query_terms,
         "summary": summary,
         "source_title": source_title,
-        "target_terms": target_terms,
+        "target_terms": requirement_terms,
+        "requirement_terms": requirement_terms,
         "hit_terms": hit_terms,
+        "student_hit_terms": student_hit_terms,
+        "student_gap_terms": student_gap_terms,
+        "student_match_rate": student_match_rate,
         "evidence_hit_rate": evidence_hit_rate,
         "items": evidence_items,
     }

@@ -13,6 +13,7 @@ from a13_starter.src.jd_search import load_role_templates
 from a13_starter.src.parser_service import did_parser_fallback, parse_student_profile
 from a13_starter.src.paths import resolve_project_root
 from a13_starter.src.report import build_career_report_markdown
+from a13_starter.src.skill_taxonomy import normalize_skill_alias
 
 
 PROJECT_ROOT = resolve_project_root(__file__, 2)
@@ -66,6 +67,59 @@ def _score_evidence_hit_rate(career_plan: Any) -> int:
     return int(career_plan.evidence_bundle.get("evidence_hit_rate", 0))
 
 
+def _normalize_terms(items: list[Any]) -> list[str]:
+    normalized: list[str] = []
+    for item in items or []:
+        cleaned = normalize_skill_alias(str(item))
+        if cleaned:
+            normalized.append(cleaned)
+    return normalized
+
+
+def _evaluate_match_bundle_consistency(role_title: str, match: dict[str, Any], bundle: dict[str, Any]) -> list[str]:
+    issues: list[str] = []
+    requirement_terms = _normalize_terms(bundle.get("requirement_terms", bundle.get("target_terms", [])))
+    student_hit_terms = _normalize_terms(bundle.get("student_hit_terms", []))
+    student_gap_terms = _normalize_terms(bundle.get("student_gap_terms", []))
+    shared_skills = _normalize_terms(match.get("shared_skills", []))
+    missing_skills = _normalize_terms(match.get("missing_skills", []))
+
+    if normalize_skill_alias(role_title) in requirement_terms or role_title in bundle.get("requirement_terms", []):
+        issues.append(f"{role_title}：岗位标题不应混入岗位核心要求。")
+    if student_hit_terms != shared_skills:
+        issues.append(f"{role_title}：证据包中的“当前已具备”与 shared_skills 不一致。")
+    if student_gap_terms != missing_skills:
+        issues.append(f"{role_title}：证据包中的“当前待补强”与 missing_skills 不一致。")
+    if set(student_hit_terms) & set(student_gap_terms):
+        issues.append(f"{role_title}：同一技能同时出现在“已具备”和“待补强”中。")
+    if requirement_terms:
+        outside_terms = sorted((set(student_hit_terms) | set(student_gap_terms)) - set(requirement_terms))
+        if outside_terms:
+            issues.append(f"{role_title}：存在未纳入岗位核心要求的展示词：{'、'.join(outside_terms)}。")
+    return issues
+
+
+def _score_logic_consistency(matches: list[dict[str, Any]], career_plan: Any) -> tuple[int, list[str]]:
+    issues: list[str] = []
+    role_match_map = {str(item.get("role_title", "")): item for item in matches}
+
+    primary_role = str(career_plan.primary_role or "")
+    primary_match = role_match_map.get(primary_role)
+    if primary_match:
+        issues.extend(_evaluate_match_bundle_consistency(primary_role, primary_match, career_plan.evidence_bundle or {}))
+
+    for simulation in career_plan.role_switch_simulations or []:
+        role_title = str(simulation.get("role_title", ""))
+        role_match = role_match_map.get(role_title)
+        if not role_match:
+            issues.append(f"{role_title or '未知岗位'}：岗位模拟缺少对应 match 结果。")
+            continue
+        issues.extend(_evaluate_match_bundle_consistency(role_title, role_match, simulation.get("evidence_bundle", {}) or {}))
+
+    score = max(0, 100 - len(issues) * 20)
+    return score, issues
+
+
 def _simulate_follow_up_student(student: Any, top_match: dict[str, Any]) -> Any:
     improved_student = copy.deepcopy(student)
     gap_skills = list(top_match.get("missing_skills", [])[:2])
@@ -97,6 +151,7 @@ def _build_case_observations(
     evidence_hit_rate: int,
     report_readiness: int,
     loop_readiness: int,
+    consistency_score: int,
     improvement_delta: int,
     pass_case: bool,
     primary_role: str,
@@ -129,6 +184,11 @@ def _build_case_observations(
     else:
         observations.append("闭环感还可以更强，建议继续完善自测与复测联动。")
 
+    if consistency_score >= 100:
+        observations.append("岗位要求、已具备能力和待补强项的口径保持一致，没有发现展示层逻辑冲突。")
+    else:
+        observations.append("发现展示口径一致性风险，建议优先复核证据包与页面字段映射。")
+
     if improvement_delta > 0:
         observations.append(f"模拟复测后主岗位分提升 {improvement_delta} 分，说明差距建议能真正转化为可量化改进。")
     else:
@@ -155,6 +215,7 @@ def _build_summary_cards(
     explanation_avg: int,
     report_avg: int,
     loop_avg: int,
+    consistency_avg: int,
 ) -> list[dict[str, Any]]:
     return [
         {
@@ -217,6 +278,11 @@ def _build_summary_cards(
             "value": loop_avg,
             "detail": "衡量追问、自测、训练冲刺与复测目标的闭环程度。",
         },
+        {
+            "label": "逻辑一致性均分",
+            "value": consistency_avg,
+            "detail": "校验岗位要求、已具备能力和待补强项在前后端与多岗位模拟里是否保持同一口径。",
+        },
     ]
 
 
@@ -237,6 +303,7 @@ def run_benchmark(parser_mode: str = "rule") -> dict[str, Any]:
     explanation_scores: list[int] = []
     report_scores: list[int] = []
     loop_scores: list[int] = []
+    consistency_scores: list[int] = []
 
     for case in cases:
         sample_path = PROJECT_ROOT / "a13_starter" / "samples" / str(case["sample_name"])
@@ -298,12 +365,14 @@ def run_benchmark(parser_mode: str = "rule") -> dict[str, Any]:
         explanation_coverage = _score_explanation_coverage(matches[0])
         report_readiness = _score_report_readiness(career_plan, report_markdown)
         loop_readiness = _score_loop_readiness(career_plan)
+        consistency_score, consistency_issues = _score_logic_consistency(matches, career_plan)
         showcase_pass_case = bool(
             top3_hit
             and evidence_hit_rate >= 70
             and explanation_coverage >= 80
             and report_readiness >= 80
             and loop_readiness >= 80
+            and consistency_score >= 100
         )
         strict_pass_case = bool(
             top1_hit
@@ -311,6 +380,7 @@ def run_benchmark(parser_mode: str = "rule") -> dict[str, Any]:
             and explanation_coverage >= 85
             and report_readiness >= 80
             and loop_readiness >= 80
+            and consistency_score >= 100
         )
         fallback_used = did_parser_fallback(
             parser_metadata.requested_mode,
@@ -340,10 +410,14 @@ def run_benchmark(parser_mode: str = "rule") -> dict[str, Any]:
             review_reasons.append("解释链完整度一般，仍可继续强化命中理由与差距说明。")
         if report_readiness < 90 or loop_readiness < 90:
             review_reasons.append("交付结构或成长闭环还可继续收紧。")
+        if consistency_issues:
+            review_reasons.append("岗位要求、已具备能力和待补强项之间存在逻辑口径冲突。")
         if not strict_pass_case and not review_reasons:
             review_reasons.append("尚未达到严格通过标准。")
 
         if not top1_hit:
+            review_priority = "high"
+        elif consistency_issues:
             review_priority = "high"
         elif explanation_coverage < 90 or report_readiness < 90 or loop_readiness < 90:
             review_priority = "medium"
@@ -361,6 +435,7 @@ def run_benchmark(parser_mode: str = "rule") -> dict[str, Any]:
         explanation_scores.append(explanation_coverage)
         report_scores.append(report_readiness)
         loop_scores.append(loop_readiness)
+        consistency_scores.append(consistency_score)
 
         case_results.append(
             {
@@ -384,6 +459,8 @@ def run_benchmark(parser_mode: str = "rule") -> dict[str, Any]:
                 "explanation_coverage": explanation_coverage,
                 "report_readiness": report_readiness,
                 "loop_readiness": loop_readiness,
+                "consistency_score": consistency_score,
+                "consistency_issues": consistency_issues,
                 "follow_up_primary_role": follow_up_plan.primary_role,
                 "follow_up_primary_score": follow_up_plan.primary_score,
                 "improvement_delta": improvement_delta,
@@ -396,6 +473,7 @@ def run_benchmark(parser_mode: str = "rule") -> dict[str, Any]:
                     evidence_hit_rate=evidence_hit_rate,
                     report_readiness=report_readiness,
                     loop_readiness=loop_readiness,
+                    consistency_score=consistency_score,
                     improvement_delta=improvement_delta,
                     pass_case=showcase_pass_case,
                     primary_role=primary_role,
@@ -415,14 +493,15 @@ def run_benchmark(parser_mode: str = "rule") -> dict[str, Any]:
     explanation_avg = round(mean(explanation_scores)) if explanation_scores else 0
     report_avg = round(mean(report_scores)) if report_scores else 0
     loop_avg = round(mean(loop_scores)) if loop_scores else 0
+    consistency_avg = round(mean(consistency_scores)) if consistency_scores else 0
 
     if not case_count:
         verdict_label = "待补样例"
         verdict_detail = "当前 benchmark 没有可执行样例，建议先补齐样例文件后再运行完整验证。"
-    elif strict_pass_rate >= 85 and evidence_avg >= 80 and explanation_avg >= 85 and report_avg >= 80:
+    elif strict_pass_rate >= 85 and evidence_avg >= 80 and explanation_avg >= 85 and report_avg >= 80 and consistency_avg >= 100:
         verdict_label = "冲奖级"
         verdict_detail = "主推荐命中、解释链与交付结构都比较稳定，已经具备强队作品的可信度与完整度。"
-    elif showcase_pass_rate >= 85 and top1_rate >= 70 and report_avg >= 70:
+    elif showcase_pass_rate >= 85 and top1_rate >= 70 and report_avg >= 70 and consistency_avg >= 95:
         verdict_label = "可冲上层"
         verdict_detail = "整体推荐和交付已经成形，但仍有少数样例需要继续收紧主推荐排序。"
     else:
@@ -448,6 +527,7 @@ def run_benchmark(parser_mode: str = "rule") -> dict[str, Any]:
             explanation_avg=explanation_avg,
             report_avg=report_avg,
             loop_avg=loop_avg,
+            consistency_avg=consistency_avg,
         ),
         "verdict": {
             "label": verdict_label,

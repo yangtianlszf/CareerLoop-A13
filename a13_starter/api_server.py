@@ -38,6 +38,11 @@ from a13_starter.src.paths import resolve_project_root
 PROJECT_ROOT = resolve_project_root(__file__, 1)
 TEMPLATES_PATH = PROJECT_ROOT / "a13_starter" / "generated" / "role_profile_templates.json"
 WEB_DIR = PROJECT_ROOT / "a13_starter" / "web"
+
+
+class ReusableThreadingHTTPServer(ThreadingHTTPServer):
+    allow_reuse_address = True
+    daemon_threads = True
 SAMPLE_RESUME_PATH = PROJECT_ROOT / "a13_starter" / "samples" / "student_resume.txt"
 SAMPLES_DIR = PROJECT_ROOT / "a13_starter" / "samples"
 MAX_UPLOAD_BYTES = 5 * 1024 * 1024
@@ -695,13 +700,21 @@ def run(host: str = "127.0.0.1", port: int = 8000) -> None:
             raise RuntimeError(f"A13_API_PORT 不是合法端口：{env_port}") from error
 
     try:
-        server = ThreadingHTTPServer((host, port), A13RequestHandler)
+        server = ReusableThreadingHTTPServer((host, port), A13RequestHandler)
     except PermissionError as error:
         raise RuntimeError(
             f"端口 {port} 无法绑定。请换一个端口后重试，例如设置 A13_API_PORT=8001。"
         ) from error
+    except OSError as error:
+        raise RuntimeError(
+            f"端口 {port} 当前无法绑定。可能是已有进程占用，或上一次服务刚退出仍在回收。"
+            f" 请先确认没有旧进程，再重试；如果仍失败，可临时改用 A13_API_PORT=8001。"
+        ) from error
     print(f"A13 starter API listening on http://{host}:{port}")
-    server.serve_forever()
+    try:
+        server.serve_forever()
+    finally:
+        server.server_close()
 
 
 if __name__ == "__main__":

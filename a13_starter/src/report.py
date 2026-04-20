@@ -171,7 +171,7 @@ def build_career_report_markdown(
             f"{item.get('citation_id', '')} {item.get('source_type', '')}"
             f"｜{item.get('job_title', '')}"
             f"｜{item.get('company_name', '')}"
-            f"｜命中词：{'、'.join(item.get('matched_terms', []))}"
+            f"｜片段命中词：{'、'.join(item.get('matched_terms', []))}"
             f"｜片段：{item.get('snippet', '')}"
         ),
     )
@@ -231,6 +231,11 @@ def build_career_report_markdown(
         ),
     )
     comparison = career_plan.growth_comparison or {}
+    evidence_bundle = career_plan.evidence_bundle or {}
+    requirement_terms = evidence_bundle.get("requirement_terms", evidence_bundle.get("target_terms", []))
+    student_hit_terms = evidence_bundle.get("student_hit_terms", [])
+    student_gap_terms = evidence_bundle.get("student_gap_terms", [])
+    evidence_hit_terms = evidence_bundle.get("hit_terms", [])
 
     return f"""# 大学生职业规划报告
 
@@ -270,10 +275,13 @@ def build_career_report_markdown(
 {top_matches[0].get('explanation', '暂无解释') if top_matches else '暂无解释'}
 
 ### 证据驱动检索链
-- 检索模式：{career_plan.evidence_bundle.get('retrieval_mode', '未生成')}
-- 检索关键词：{'、'.join(career_plan.evidence_bundle.get('query_terms', [])) or '未生成'}
-- 证据命中率：{career_plan.evidence_bundle.get('evidence_hit_rate', 0)}%（命中 {'、'.join(career_plan.evidence_bundle.get('hit_terms', [])) or '无'}）
-- 检索摘要：{career_plan.evidence_bundle.get('summary', '暂无')}
+- 检索模式：{evidence_bundle.get('retrieval_mode', '未生成')}
+- 检索关键词：{'、'.join(evidence_bundle.get('query_terms', [])) or '未生成'}
+- 岗位核心要求：{'、'.join(requirement_terms) or '未生成'}
+- 当前已具备：{'、'.join(student_hit_terms) or '暂无'}
+- 当前待补强：{'、'.join(student_gap_terms) or '暂无'}
+- 岗位证据命中率：{evidence_bundle.get('evidence_hit_rate', 0)}%（岗位样本命中 {'、'.join(evidence_hit_terms) or '无'}）
+- 检索摘要：{evidence_bundle.get('summary', '暂无')}
 {evidence_lines}
 
 ## 4. 主推荐岗位

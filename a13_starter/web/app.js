@@ -1328,6 +1328,129 @@ function compactText(value, maxLength = 96) {
   return `${clipped.slice(0, cutIndex).trim()}...`;
 }
 
+function renderExpandableBlock(text, options = {}) {
+  const {
+    className = "",
+    tag = "p",
+    lines = 3,
+    threshold = 96,
+    prefixHtml = "",
+    contentHtml = "",
+    expandLabel = "展开全文",
+    collapseLabel = "收起全文",
+  } = options;
+  const content = normalizeDisplayText(text || "");
+  const shouldMeasure = Boolean(content);
+  const classes = [className, "expandable-text", shouldMeasure ? "is-collapsed" : ""].filter(Boolean).join(" ");
+  const styleAttr = ` style="--expand-lines:${lines};"`;
+  const renderedContent = contentHtml || escapeHtml(content);
+  return `
+    <div class="expandable-text-shell${shouldMeasure ? " has-toggle" : ""}" data-expanded="false">
+      <${tag} class="${classes}"${styleAttr} title="${escapeHtml(content)}">${prefixHtml}${renderedContent}</${tag}>
+      ${shouldMeasure ? `<button type="button" class="expandable-text-toggle" data-expandable-toggle="true" aria-expanded="false" data-expand-label="${escapeHtml(expandLabel)}" data-collapse-label="${escapeHtml(collapseLabel)}" hidden>${escapeHtml(expandLabel)}</button>` : ""}
+    </div>`;
+}
+
+function renderTemplateJobDetailMarkup(detail) {
+  return renderExpandableBlock(detail || "暂无详情", {
+    className: "template-job-copy",
+    lines: 5,
+    threshold: 120,
+    expandLabel: "展开摘录",
+    collapseLabel: "收起摘录",
+  });
+}
+
+let expandableRefreshFrame = null;
+
+function refreshExpandableBlocks(root = document) {
+  const scope = root && typeof root.querySelectorAll === "function" ? root : document;
+  scope.querySelectorAll(".expandable-text-shell").forEach((shell) => {
+    const content = shell.querySelector(".expandable-text");
+    const button = shell.querySelector("[data-expandable-toggle]");
+    if (!content || !button) return;
+    const wasExpanded = shell.dataset.expanded === "true";
+    content.classList.add("is-collapsed");
+    const isTruncated = (content.scrollHeight - content.clientHeight > 1) || (content.scrollWidth - content.clientWidth > 1);
+    if (!isTruncated) {
+      button.hidden = true;
+      shell.classList.remove("has-toggle");
+      shell.dataset.expanded = "false";
+      button.setAttribute("aria-expanded", "false");
+      button.textContent = button.getAttribute("data-expand-label") || "展开全文";
+      content.classList.remove("is-collapsed");
+      return;
+    }
+    button.hidden = false;
+    shell.classList.add("has-toggle");
+    if (wasExpanded) {
+      shell.dataset.expanded = "true";
+      button.setAttribute("aria-expanded", "true");
+      button.textContent = button.getAttribute("data-collapse-label") || "收起全文";
+      content.classList.remove("is-collapsed");
+      return;
+    }
+    shell.dataset.expanded = "false";
+    button.setAttribute("aria-expanded", "false");
+    button.textContent = button.getAttribute("data-expand-label") || "展开全文";
+    content.classList.add("is-collapsed");
+  });
+}
+
+function queueExpandableRefresh(root = document) {
+  if (expandableRefreshFrame) window.cancelAnimationFrame(expandableRefreshFrame);
+  expandableRefreshFrame = window.requestAnimationFrame(() => {
+    expandableRefreshFrame = null;
+    refreshExpandableBlocks(root);
+  });
+}
+
+function formatReadableList(items, limit = 5, emptyLabel = "暂无") {
+  const list = (items || [])
+    .map((item) => normalizeDisplayText(item))
+    .filter(Boolean);
+  if (!list.length) return emptyLabel;
+  return list.slice(0, limit).join("、");
+}
+
+function splitChartLabel(value, lineLength = 4, maxLines = 2) {
+  const text = normalizeDisplayText(value);
+  if (!text) return ["--"];
+  const lines = [];
+  let cursor = 0;
+  while (cursor < text.length && lines.length < maxLines) {
+    let end = Math.min(text.length, cursor + lineLength);
+    if (text.length - cursor > lineLength) {
+      const segment = text.slice(cursor, end);
+      const breakIndex = Math.max(
+        segment.lastIndexOf("/"),
+        segment.lastIndexOf("·"),
+        segment.lastIndexOf("-"),
+        segment.lastIndexOf(" "),
+        segment.lastIndexOf("、")
+      );
+      if (breakIndex >= 2) end = cursor + breakIndex + 1;
+    }
+    const line = text.slice(cursor, end).trim();
+    if (line) lines.push(line);
+    cursor = end;
+    while (/\s/.test(text[cursor] || "")) cursor += 1;
+  }
+  if (cursor < text.length && lines.length) {
+    lines[lines.length - 1] = compactText(`${lines[lines.length - 1]}${text.slice(cursor)}`, lineLength + 3);
+  }
+  return lines.filter(Boolean);
+}
+
+function formatRadarAxisLabel(value) {
+  return splitChartLabel(value, 4, 2).join("\n");
+}
+
+function buildSvgMultilineLabel(value, x, lineHeight = 13) {
+  const lines = splitChartLabel(value, 7, 2);
+  return lines.map((line, index) => `<tspan x="${x}" dy="${index === 0 ? 0 : lineHeight}">${escapeHtml(line)}</tspan>`).join("");
+}
+
 function formatScalar(value, emptyLabel = "未填写") {
   if (Array.isArray(value)) {
     const items = value.map((item) => String(item ?? "").trim()).filter(Boolean);
@@ -1487,7 +1610,7 @@ function syncRoleLinkedPanels(roleTitle = null, { showLoading = true } = {}) {
   if (!targetRole) return;
   if (dom.jdSearchInput) dom.jdSearchInput.value = targetRole;
   if (showLoading && dom.templateEvidence) {
-    renderEmptyState(dom.templateEvidence, `正在加载 ${targetRole} 的标准基线样本...`);
+    renderEmptyState(dom.templateEvidence, `正在整理 ${targetRole} 的岗位参考...`);
   }
   loadTemplateEvidence(targetRole).catch(() => {});
 }
@@ -1633,6 +1756,7 @@ function initTabs() {
       tab.classList.add("active");
       const targetPane = getEl(tab.dataset.target); if (targetPane) targetPane.classList.add("active");
       if (tab.dataset.target === "tab-overview" && window.radarChartInstance) window.radarChartInstance.resize();
+      queueExpandableRefresh(targetPane || document);
     });
   });
 }
@@ -1701,7 +1825,7 @@ function renderMetricCards(container, items, emptyLabel = "暂无数据") {
       <div class="metric-tile">
         <div class="metric-tile-label">${escapeHtml(item.label || item.name || "指标")}</div>
         <div class="metric-tile-score">${escapeHtml(item.value ?? item.count ?? 0)}</div>
-        ${item.detail ? `<p class="metric-tile-copy" title="${escapeHtml(item.detail)}">${escapeHtml(compactText(item.detail, 40))}</p>` : ""}
+        ${item.detail ? renderExpandableBlock(item.detail, { className: "metric-tile-copy", lines: 2, threshold: 40 }) : ""}
       </div>`;
   });
 }
@@ -1786,7 +1910,11 @@ function renderCareerPlan(plan, matches) {
     dom.primaryRoleSummary.textContent = primarySummary || "主岗位解读将在生成后同步显示";
   }
   if (dom.primaryRoleNote) {
-    dom.primaryRoleNote.textContent = primaryAction ? `优先动作：${primaryAction}` : "优先动作将在生成后同步显示";
+    const noteCopy = primaryAction || "生成后会在这里同步最优先的一步";
+    dom.primaryRoleNote.innerHTML = `
+      <span class="primary-role-note-kicker">优先动作</span>
+      <p class="primary-role-note-copy">${escapeHtml(noteCopy)}</p>`;
+    dom.primaryRoleNote.title = noteCopy;
   }
   if (dom.primaryStrengthCount) dom.primaryStrengthCount.textContent = String((plan.strengths || []).length || 0);
   if (dom.primaryRiskCount) dom.primaryRiskCount.textContent = String((plan.risks || []).length || 0);
@@ -2063,16 +2191,16 @@ function buildPrintableReportHtml(markdownText) {
     <title>${escapeHtml(title)}</title>
     <style>
       :root {
-        --ink: #1f2937;
-        --muted: #6b7280;
-        --line: #d1d5db;
-        --accent: #0f766e;
-        --paper: #ffffff;
+        --ink: #17181b;
+        --muted: #737982;
+        --line: #d7d0c6;
+        --accent: #31465d;
+        --paper: #fffdfa;
       }
       * { box-sizing: border-box; }
       body {
         margin: 0;
-        background: #f3f4f6;
+        background: #f3efe9;
         color: var(--ink);
         font: 15px/1.72 "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
       }
@@ -2199,13 +2327,23 @@ function buildRoleSwitchButton(item, compact = false) {
 function renderBackupRoleSwitches(plan) {
   if (!dom.backupRoles) return;
   const backups = getRoleSwitchSimulations(plan).slice(1);
+  const backupTitles = normalizeTextList(plan?.backup_roles || []);
   dom.backupRoles.innerHTML = "";
-  dom.backupRoles.className = "text-body";
+  dom.backupRoles.className = "backup-role-row";
   if (!backups.length) {
-    dom.backupRoles.textContent = (plan.backup_roles || []).join("、") || "无";
+    if (!backupTitles.length) {
+      dom.backupRoles.innerHTML = '<span class="backup-role-chip is-muted">暂无备选方向</span>';
+      return;
+    }
+    backupTitles.forEach((roleTitle) => {
+      const chip = document.createElement("span");
+      chip.className = "backup-role-chip";
+      chip.textContent = roleTitle;
+      dom.backupRoles.appendChild(chip);
+    });
     return;
   }
-  dom.backupRoles.className = "role-switch-pill-row";
+  dom.backupRoles.className = "role-switch-pill-row backup-role-row";
   backups.forEach((item) => {
     dom.backupRoles.appendChild(buildRoleSwitchButton(item, true));
   });
@@ -2253,9 +2391,9 @@ function renderRoleSwitchSimulator(plan) {
           <strong class="summary-title">当前模拟：${escapeHtml(active.lane || "候选")} ${escapeHtml(active.role_title || "岗位")}</strong>
           <span class="tag inline-tag">匹配分 ${escapeHtml(active.fit_score ?? 0)}</span>
         </div>
-        <p class="summary-copy" title="${escapeHtml(active.summary || "")}">${escapeHtml(compactText(active.summary || "", 96))}</p>
-        <p class="summary-meta" title="${escapeHtml(active.selection_reason || active.positioning || "")}"><strong>保留原因：</strong>${escapeHtml(compactText(active.selection_reason || active.positioning || "", 76))}</p>
-        <p class="summary-risk" title="${escapeHtml(active.risk_note || "当前切换仅用于模拟方案，不会改变主推荐岗位。")}"><strong>切换提醒：</strong>${escapeHtml(compactText(active.risk_note || "当前切换仅用于模拟方案，不会改变主推荐岗位。", 68))}</p>
+        ${renderExpandableBlock(active.summary || "", { className: "summary-copy", lines: 2, threshold: 96 })}
+        ${renderExpandableBlock(active.selection_reason || active.positioning || "", { className: "summary-meta", lines: 2, threshold: 76, prefixHtml: "<strong>保留原因：</strong>" })}
+        ${renderExpandableBlock(active.risk_note || "当前切换仅用于模拟方案，不会改变主推荐岗位。", { className: "summary-risk", lines: 2, threshold: 68, prefixHtml: "<strong>切换提醒：</strong>", expandLabel: "展开说明", collapseLabel: "收起说明" })}
       </div>`;
   }
 
@@ -2281,6 +2419,7 @@ function setActiveRoleSwitch(roleTitle) {
   } else {
     setStatus(`已切换为 ${roleTitle} 视角，报告预览已同步刷新。`, "success");
   }
+  queueExpandableRefresh(document);
 }
 
 function renderCompetencyDimensions(items) {
@@ -2298,7 +2437,7 @@ function renderCompetencyDimensions(items) {
           <strong class="summary-title">${escapeHtml(item.name || "维度")}</strong>
           <strong class="metric-tile-score">${escapeHtml(item.score ?? 0)}</strong>
         </div>
-        <p class="metric-tile-copy">${escapeHtml(item.note || item.detail || "")}</p>
+        ${renderExpandableBlock(item.note || item.detail || "", { className: "metric-tile-copy", lines: 2, threshold: 52 })}
       </div>`;
   });
 }
@@ -2314,7 +2453,7 @@ function renderRoleComparisonSummary(items) {
     <div class="note-stack">
       ${items.map((line) => `
         <div class="note-item" title="${escapeHtml(line)}">
-          ${escapeHtml(compactText(line, 68))}
+          ${escapeHtml(normalizeDisplayText(line))}
         </div>`).join("")}
     </div>`;
 }
@@ -2323,35 +2462,49 @@ function renderCompetencyRadar(radarData, items) {
   const chartDom = dom.competencyRadar;
   if (!chartDom) return;
   if (window.radarChartInstance) window.radarChartInstance.dispose();
-  const palette = ["#0f766e", "#c2410c", "#2563eb"];
+  const palette = ["#31465d", "#8a6a45", "#7d8898"];
+  const radarSplitArea = [
+    "rgba(49, 70, 93, 0.015)",
+    "rgba(49, 70, 93, 0.03)",
+    "rgba(49, 70, 93, 0.045)",
+    "rgba(49, 70, 93, 0.06)",
+  ].reverse();
   let option;
   if (radarData?.axes?.length && radarData?.roles?.length) {
     option = {
       color: palette,
       tooltip: {
         trigger: "item",
-        backgroundColor: "rgba(255, 255, 255, 0.96)",
-        borderColor: "#e7e5e4",
+        backgroundColor: "rgba(255, 252, 247, 0.96)",
+        borderColor: "#d8d1c7",
         padding: [12, 16],
-        textStyle: { color: "#292524" },
+        textStyle: { color: "#2f343c" },
       },
       legend: {
         bottom: 0,
         icon: "circle",
         itemWidth: 10,
         itemHeight: 10,
-        textStyle: { color: "#57534e", fontSize: 12 },
+        itemGap: 16,
+        formatter: (name) => compactText(name, 10),
+        textStyle: { color: "#6d7269", fontSize: 11, fontFamily: "\"HarmonyOS Sans SC\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif" },
       },
       radar: {
         indicator: (radarData.axes || []).map((item) => ({ name: item.name, max: item.max || 100 })),
-        radius: "62%",
-        center: ["50%", "45%"],
+        radius: "58%",
+        center: ["50%", "43%"],
         splitNumber: 4,
         shape: "polygon",
-        axisName: { color: "#44403c", fontFamily: "Georgia, serif", fontSize: 12 },
-        splitArea: { areaStyle: { color: ["rgba(15, 118, 110, 0.02)", "rgba(15, 118, 110, 0.04)", "rgba(15, 118, 110, 0.06)", "rgba(15, 118, 110, 0.08)"].reverse() } },
-        axisLine: { lineStyle: { color: "rgba(15, 118, 110, 0.2)" } },
-        splitLine: { lineStyle: { color: "rgba(15, 118, 110, 0.25)" } },
+        axisName: {
+          color: "#4d535b",
+          fontFamily: "\"HarmonyOS Sans SC\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif",
+          fontSize: 11,
+          lineHeight: 14,
+          formatter: (value) => formatRadarAxisLabel(value),
+        },
+        splitArea: { areaStyle: { color: radarSplitArea } },
+        axisLine: { lineStyle: { color: "rgba(136, 149, 164, 0.32)" } },
+        splitLine: { lineStyle: { color: "rgba(136, 149, 164, 0.28)" } },
       },
       series: [{
         type: "radar",
@@ -2360,24 +2513,30 @@ function renderCompetencyRadar(radarData, items) {
           name: `${role.lane || "候选"} ${role.role_title || "岗位"}`,
           symbol: "circle",
           symbolSize: index === 0 ? 7 : 5,
-          itemStyle: { color: palette[index % palette.length], borderColor: "#fff", borderWidth: 2 },
-          areaStyle: { color: index === 0 ? "rgba(15, 118, 110, 0.16)" : "rgba(194, 65, 12, 0.08)" },
-          lineStyle: { width: index === 0 ? 3 : 2, type: index === 0 ? "solid" : "dashed" },
+          itemStyle: { color: palette[index % palette.length], borderColor: "#fcfaf6", borderWidth: 2 },
+          areaStyle: { color: index === 0 ? "rgba(49, 70, 93, 0.14)" : index === 1 ? "rgba(138, 106, 69, 0.08)" : "rgba(125, 136, 152, 0.06)" },
+          lineStyle: { width: index === 0 ? 3 : 2, type: index === 0 ? "solid" : "dashed", color: palette[index % palette.length] },
         })),
       }],
     };
   } else if (items && items.length) {
     option = {
-      tooltip: { trigger: "item", backgroundColor: "rgba(255, 255, 255, 0.95)", borderColor: "#e7e5e4", padding: [12, 16], textStyle: { color: "#292524" } },
+      tooltip: { trigger: "item", backgroundColor: "rgba(255, 252, 247, 0.96)", borderColor: "#d8d1c7", padding: [12, 16], textStyle: { color: "#2f343c" } },
       radar: {
-        indicator: items.map((item) => ({ name: item.name, max: 100 })), radius: "65%", center: ["50%", "50%"], splitNumber: 4, shape: "polygon",
-        axisName: { color: "#44403c", fontFamily: "Georgia, serif", fontSize: 13 },
-        splitArea: { areaStyle: { color: ["rgba(15, 118, 110, 0.02)", "rgba(15, 118, 110, 0.04)", "rgba(15, 118, 110, 0.06)", "rgba(15, 118, 110, 0.08)"].reverse() } },
-        axisLine: { lineStyle: { color: "rgba(15, 118, 110, 0.2)" } }, splitLine: { lineStyle: { color: "rgba(15, 118, 110, 0.3)" } },
+        indicator: items.map((item) => ({ name: item.name, max: 100 })), radius: "61%", center: ["50%", "48%"], splitNumber: 4, shape: "polygon",
+        axisName: {
+          color: "#4d535b",
+          fontFamily: "\"HarmonyOS Sans SC\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif",
+          fontSize: 11,
+          lineHeight: 14,
+          formatter: (value) => formatRadarAxisLabel(value),
+        },
+        splitArea: { areaStyle: { color: radarSplitArea } },
+        axisLine: { lineStyle: { color: "rgba(136, 149, 164, 0.32)" } }, splitLine: { lineStyle: { color: "rgba(136, 149, 164, 0.3)" } },
       },
       series: [{
         type: "radar",
-        data: [{ value: items.map((item) => item.score), name: "胜任力量化评估", symbol: "circle", symbolSize: 6, itemStyle: { color: "#0f766e", borderColor: "#fff", borderWidth: 2 }, areaStyle: { color: "rgba(15, 118, 110, 0.15)" }, lineStyle: { width: 2, color: "#0f766e" } }],
+        data: [{ value: items.map((item) => item.score), name: "胜任力量化评估", symbol: "circle", symbolSize: 6, itemStyle: { color: "#31465d", borderColor: "#fcfaf6", borderWidth: 2 }, areaStyle: { color: "rgba(49, 70, 93, 0.14)" }, lineStyle: { width: 2, color: "#31465d" } }],
       }],
     };
   } else {
@@ -2402,7 +2561,7 @@ function renderEvaluationMetrics(items) {
           <span class="metric-tile-label">${escapeHtml(item.name || "指标")}</span>
           <strong class="metric-tile-score">${item.score ?? 0}</strong>
         </div>
-        <p class="metric-tile-copy" title="${escapeHtml(item.detail || "")}">${escapeHtml(compactText(item.detail || "", 48))}</p>
+        ${renderExpandableBlock(item.detail || "", { className: "metric-tile-copy", lines: 2, threshold: 48 })}
       </div>`;
   });
 }
@@ -2443,10 +2602,10 @@ function renderRecommendationComparisons(items) {
           <strong class="insight-card-title">${escapeHtml(item.role_title || "候选岗位")}</strong>
           <span class="tag inline-tag">原始第 ${escapeHtml(item.raw_rank ?? "-")} 位 · ${escapeHtml(item.lane || "候选")}</span>
         </div>
-        <p class="insight-card-copy" title="${escapeHtml(item.why_not_first || "")}"><strong>为什么没排第一：</strong>${escapeHtml(compactText(item.why_not_first || "", 70))}</p>
-        <p class="summary-copy" title="${escapeHtml(item.primary_advantage || "")}"><strong>主岗优势：</strong>${escapeHtml(compactText(item.primary_advantage || "", 64))}</p>
-        <p class="insight-card-meta" title="${escapeHtml(item.candidate_value || "")}"><strong>保留价值：</strong>${escapeHtml(compactText(item.candidate_value || "", 58))}</p>
-        <p class="insight-card-risk" title="${escapeHtml(item.upgrade_path || "")}"><strong>如果想让它升到第一：</strong>${escapeHtml(compactText(item.upgrade_path || "", 58))}</p>
+        <p class="insight-card-copy" title="${escapeHtml(item.why_not_first || "")}"><strong>为什么没排第一：</strong>${escapeHtml(item.why_not_first || "暂无说明")}</p>
+        <p class="summary-copy" title="${escapeHtml(item.primary_advantage || "")}"><strong>主岗优势：</strong>${escapeHtml(item.primary_advantage || "暂无说明")}</p>
+        <p class="insight-card-meta" title="${escapeHtml(item.candidate_value || "")}"><strong>保留价值：</strong>${escapeHtml(item.candidate_value || "暂无说明")}</p>
+        <p class="insight-card-risk" title="${escapeHtml(item.upgrade_path || "")}"><strong>如果想让它升到第一：</strong>${escapeHtml(item.upgrade_path || "暂无说明")}</p>
       </div>`;
   });
 }
@@ -2460,30 +2619,31 @@ function renderApplicationStrategy(items) {
   }
   items.forEach((item) => {
     const isActive = item.role_title === state.currentRoleSwitch;
+    const keywordsText = (item.keywords || []).join("、") || "暂无";
     dom.applicationStrategy.innerHTML += `
       <div class="insight-card${isActive ? " is-active" : ""}">
         <div class="insight-card-head">
           <strong class="insight-card-title">${escapeHtml(item.role_title || "目标岗位")}</strong>
           <span class="tag inline-tag">${escapeHtml(item.lane || "投递层")} · ${escapeHtml(item.fit_score ?? 0)} 分</span>
         </div>
-        <p class="summary-copy" title="${escapeHtml(item.positioning || "")}"><strong>定位：</strong>${escapeHtml(compactText(item.positioning || "", 54))}</p>
-        <p class="insight-card-meta" title="${escapeHtml(item.selection_reason || "")}"><strong>入选原因：</strong>${escapeHtml(compactText(item.selection_reason || "", 52))}</p>
-        <p class="insight-card-copy" title="${escapeHtml(item.rationale || "")}">${escapeHtml(compactText(item.rationale || "", 76))}</p>
+        ${renderExpandableBlock(item.positioning || "", { className: "summary-copy", lines: 2, threshold: 54, prefixHtml: "<strong>定位：</strong>" })}
+        ${renderExpandableBlock(item.selection_reason || "", { className: "insight-card-meta", lines: 2, threshold: 52, prefixHtml: "<strong>入选原因：</strong>" })}
+        ${renderExpandableBlock(item.rationale || "", { className: "insight-card-copy", lines: 3, threshold: 76 })}
         <div class="chip-row">
           <span class="tag">城市：${escapeHtml(item.city_focus || "待补充")}</span>
           <span class="tag">行业：${escapeHtml(item.industry_focus || "待补充")}</span>
           <span class="tag">薪资：${escapeHtml(item.salary_hint || "待补充")}</span>
         </div>
-        <p class="insight-card-meta">检索关键词：${escapeHtml(compactText((item.keywords || []).join("、") || "暂无", 42))}</p>
-        <p class="summary-copy" title="${escapeHtml(item.action || "")}"><strong>执行动作：</strong>${escapeHtml(compactText(item.action || "", 58))}</p>
-        <p class="insight-card-risk" title="${escapeHtml(item.risk_note || "")}"><strong>注意：</strong>${escapeHtml(compactText(item.risk_note || "", 50))}</p>
+        ${renderExpandableBlock(keywordsText, { className: "insight-card-meta", lines: 2, threshold: 42, prefixHtml: "<strong>检索关键词：</strong>", expandLabel: "展开关键词", collapseLabel: "收起关键词" })}
+        ${renderExpandableBlock(item.action || "", { className: "summary-copy", lines: 2, threshold: 58, prefixHtml: "<strong>执行动作：</strong>" })}
+        ${renderExpandableBlock(item.risk_note || "", { className: "insight-card-risk", lines: 2, threshold: 50, prefixHtml: "<strong>注意：</strong>", expandLabel: "展开说明", collapseLabel: "收起说明" })}
         <div class="action-row">
           <span class="helper-copy">${isActive ? "你现在看到的行动方案、简历改写和面试题板，已经按这个岗位同步" : "点击后会把下面的行动方案、简历改写和面试题板切换到这个岗位"}</span>
           ${isActive
             ? `<span class="view-state-pill" aria-current="true">当前视角</span>`
             : `<button type="button" class="btn btn-outline btn-compact" data-application-role="${escapeHtml(item.role_title || "")}">切换模拟</button>`}
         </div>
-        <ul class="feature-list list-compact">${(item.deliverables || []).slice(0, 3).map((line) => `<li title="${escapeHtml(line)}">${escapeHtml(compactText(line, 48))}</li>`).join("")}</ul>
+        <ul class="feature-list list-compact">${(item.deliverables || []).slice(0, 3).map((line) => `<li title="${escapeHtml(line)}">${escapeHtml(normalizeDisplayText(line))}</li>`).join("")}</ul>
       </div>`;
   });
   dom.applicationStrategy.querySelectorAll("[data-application-role]").forEach((button) => {
@@ -2510,9 +2670,9 @@ function renderResumeSurgery(items) {
           <strong class="insight-card-title">${escapeHtml(item.section || "改写项")}</strong>
           <span class="tag inline-tag">简历补强</span>
         </div>
-        <p class="summary-copy" title="${escapeHtml(item.issue || "")}"><strong>问题：</strong>${escapeHtml(compactText(item.issue || "", 54))}</p>
-        <p class="insight-card-copy" title="${escapeHtml(item.action || "")}"><strong>动作：</strong>${escapeHtml(compactText(item.action || "", 58))}</p>
-        <p class="insight-card-meta" title="${escapeHtml(item.deliverable || "")}"><strong>交付物：</strong>${escapeHtml(compactText(item.deliverable || "", 50))}</p>
+        ${renderExpandableBlock(item.issue || "", { className: "summary-copy", lines: 2, threshold: 54, prefixHtml: "<strong>问题：</strong>" })}
+        ${renderExpandableBlock(item.action || "", { className: "insight-card-copy", lines: 3, threshold: 58, prefixHtml: "<strong>动作：</strong>" })}
+        ${renderExpandableBlock(item.deliverable || "", { className: "insight-card-meta", lines: 2, threshold: 50, prefixHtml: "<strong>交付物：</strong>" })}
       </div>`;
   });
 }
@@ -2531,9 +2691,9 @@ function renderInterviewFocus(items) {
           <strong class="insight-card-title">${escapeHtml(item.theme || "冲刺题")}</strong>
           <span class="tag inline-tag">面试冲刺</span>
         </div>
-        <p class="insight-card-copy" title="${escapeHtml(item.question || "")}">${escapeHtml(compactText(item.question || "", 72))}</p>
-        <p class="summary-copy" title="${escapeHtml(item.signal || "")}"><strong>考察信号：</strong>${escapeHtml(compactText(item.signal || "", 48))}</p>
-        <p class="insight-card-meta" title="${escapeHtml(item.prep || "")}"><strong>准备动作：</strong>${escapeHtml(compactText(item.prep || "", 48))}</p>
+        ${renderExpandableBlock(item.question || "", { className: "insight-card-copy", lines: 3, threshold: 72 })}
+        ${renderExpandableBlock(item.signal || "", { className: "summary-copy", lines: 2, threshold: 48, prefixHtml: "<strong>考察信号：</strong>" })}
+        ${renderExpandableBlock(item.prep || "", { className: "insight-card-meta", lines: 2, threshold: 48, prefixHtml: "<strong>准备动作：</strong>" })}
       </div>`;
   });
 }
@@ -2549,12 +2709,12 @@ function renderGapBenefitAnalysis(items) {
           <span class="tag tag-accent inline-tag">+${item.expected_gain ?? 0} 分</span>
         </div>
         <h4 class="stack-card-title">${escapeHtml(item.gap || "差距项")}</h4>
-        <p class="stack-card-meta" title="${escapeHtml(item.detail || "")}">${escapeHtml(compactText(item.detail || "", 68))}</p>
+        ${renderExpandableBlock(item.detail || "", { className: "stack-card-meta", lines: 2, threshold: 68 })}
         <div class="stack-card-foot">
           <p class="stack-card-note">预计：${item.current_score ?? 0} → ${item.projected_score ?? 0} 分</p>
           <ul class="feature-list list-compact stack-card-list">
-            <li title="${escapeHtml(item.action || "暂无动作")}">动作：${escapeHtml(compactText(item.action || "暂无动作", 48))}</li>
-            <li title="${escapeHtml(item.expected_evidence || "暂无证据建议")}">证据：${escapeHtml(compactText(item.expected_evidence || "暂无证据建议", 48))}</li>
+            <li title="${escapeHtml(item.action || "暂无动作")}">动作：${escapeHtml(normalizeDisplayText(item.action || "暂无动作"))}</li>
+            <li title="${escapeHtml(item.expected_evidence || "暂无证据建议")}">证据：${escapeHtml(normalizeDisplayText(item.expected_evidence || "暂无证据建议"))}</li>
           </ul>
           <div class="chip-row">${(item.citations || []).slice(0, 4).map((citation) => `<span class="tag">${escapeHtml(citation)}</span>`).join("")}</div>
         </div>
@@ -2575,8 +2735,8 @@ function renderPlanSelfChecks(items) {
           <span class="stack-card-title">${escapeHtml(item.name || "自检项")}</span>
           <strong class="metric-tile-score">${item.score ?? 0}</strong>
         </div>
-        <p class="summary-copy" title="${escapeHtml(item.detail || "")}"><strong>${escapeHtml(item.status || "待检查")}</strong> · ${escapeHtml(compactText(item.detail || "", 64))}</p>
-        <p class="stack-card-meta" title="${escapeHtml(item.action || "")}">建议：${escapeHtml(compactText(item.action || "暂无建议", 56))}</p>
+        ${renderExpandableBlock(item.detail || "", { className: "summary-copy", lines: 2, threshold: 64, prefixHtml: `<strong>${escapeHtml(item.status || "待检查")}</strong> · ` })}
+        ${renderExpandableBlock(item.action || "暂无建议", { className: "stack-card-meta", lines: 2, threshold: 56, prefixHtml: "建议：" })}
       </div>`;
   });
 }
@@ -2591,10 +2751,10 @@ function renderLearningLoop(items) {
           <strong class="stack-card-title">${escapeHtml(item.title || "专项补强")}</strong>
           <span class="tag tag-ghost inline-tag">${escapeHtml(item.type || "任务")}</span>
         </div>
-        <p class="stack-card-copy" title="${escapeHtml(item.reason || "")}">${escapeHtml(compactText(item.reason || "", 76))}</p>
+        ${renderExpandableBlock(item.reason || "", { className: "stack-card-copy", lines: 3, threshold: 76 })}
         <div class="stack-card-foot">
           <span class="stack-card-note">交付闭环</span>
-          <p class="stack-card-meta" title="${escapeHtml(item.deliverable || "")}">${escapeHtml(compactText(item.deliverable || "", 58))}</p>
+          ${renderExpandableBlock(item.deliverable || "", { className: "stack-card-meta", lines: 2, threshold: 58 })}
         </div>
       </div>`;
   });
@@ -2612,7 +2772,7 @@ function renderAgentQuestions(questions, existingAnswers = {}) {
     dom.agentQuestionList.innerHTML += `
       <div class="field-panel">
         <label class="field-panel-label">${escapeHtml(question.question || "补充问题")}</label>
-        <p class="field-panel-hint" title="${escapeHtml(question.rationale || "补充此信息以提升规划精度。")}">${escapeHtml(compactText(question.rationale || "补充此信息以提升规划精度。", 44))}</p>
+        ${renderExpandableBlock(question.rationale || "补充此信息以提升规划精度。", { className: "field-panel-hint", lines: 2, threshold: 44, expandLabel: "展开说明", collapseLabel: "收起说明" })}
         <input type="text" class="input-field" data-agent-id="${escapeHtml(question.id || "")}" placeholder="${escapeHtml(question.placeholder || "请输入补充信息")}" value="${escapeHtml(preset)}" />
       </div>`;
   });
@@ -2632,7 +2792,7 @@ function renderSelfAssessmentForm(selfAssessment) {
     dom.selfAssessmentForm.innerHTML += `
       <div class="field-panel">
         <label class="field-panel-label">${escapeHtml(item.prompt || "题目")}</label>
-        <p class="field-panel-hint" title="${escapeHtml(item.focus || "岗位基础能力")}">考察点：${escapeHtml(compactText(item.focus || "岗位基础能力", 42))}</p>
+        ${renderExpandableBlock(item.focus || "岗位基础能力", { className: "field-panel-hint", lines: 2, threshold: 42, prefixHtml: "考察点：", expandLabel: "展开说明", collapseLabel: "收起说明" })}
         <div class="choice-row">
           <label class="choice-option"><input type="radio" name="${fieldName}" data-self-assessment-id="${escapeHtml(item.id || "")}" value="0" ${currentValue === 0 ? "checked" : ""}> <span>待补强</span></label>
           <label class="choice-option"><input type="radio" name="${fieldName}" data-self-assessment-id="${escapeHtml(item.id || "")}" value="1" ${currentValue === 1 ? "checked" : ""}> <span>已入门</span></label>
@@ -2656,7 +2816,7 @@ function renderSelfAssessmentSummary(data) {
         <strong class="summary-title">${escapeHtml(data.title || "岗位自测")}</strong>
         <span class="tag inline-tag">${escapeHtml(data.score ?? 0)} 分</span>
       </div>
-      <p class="summary-copy" title="${escapeHtml(data.summary || "暂无结论")}">${escapeHtml(compactText(data.summary || "暂无结论", 88))}</p>
+      ${renderExpandableBlock(data.summary || "暂无结论", { className: "summary-copy", lines: 2, threshold: 88 })}
       <div class="chip-row">
         ${summaryItems.map((item) => `<span class="tag">${escapeHtml(item.focus || item.prompt || "考察点")}：${escapeHtml(item.level || "待补强")}</span>`).join("")}
       </div>
@@ -2740,8 +2900,8 @@ function renderResourceMap(items) {
       <div class="resource-card${isHigh ? " is-priority" : ""}">
         <div class="action-row"><span class="mini-label">${escapeHtml(item.category || "资源")}</span><span class="tag inline-tag">优先级: ${escapeHtml(item.priority || "中")}</span></div>
         <h5 class="insight-card-title">${escapeHtml(item.title)}</h5>
-        <p class="insight-card-copy" title="${escapeHtml(item.description || "")}">${escapeHtml(compactText(item.description || "", 74))}</p>
-        <div class="resource-card-output" title="${escapeHtml(item.deliverable || "")}"><strong class="summary-title">阶段产出：</strong> ${escapeHtml(compactText(item.deliverable || "", 52))}</div>
+        ${renderExpandableBlock(item.description || "", { className: "insight-card-copy", lines: 3, threshold: 74 })}
+        ${renderExpandableBlock(item.deliverable || "", { className: "resource-card-output", tag: "div", lines: 2, threshold: 52, prefixHtml: '<strong class="summary-title">阶段产出：</strong> ' })}
       </div>`;
   });
 }
@@ -2760,45 +2920,187 @@ function renderSimilarCases(items) {
           <span class="tag">相似度 ${item.similarity_score ?? 0}</span>
           ${reasons.map((reason) => `<span class="tag">${escapeHtml(reason)}</span>`).join("")}
         </div>
-        <ul class="feature-list list-compact"><li title="${escapeHtml(item.takeaway || "暂无启发")}">${escapeHtml(compactText(item.takeaway || "暂无启发", 58))}</li></ul>
+        <ul class="feature-list list-compact"><li title="${escapeHtml(item.takeaway || "暂无启发")}">${escapeHtml(normalizeDisplayText(item.takeaway || "暂无启发"))}</li></ul>
       </div>`;
   });
 }
 
 function renderGroundedEvidence(bundle) {
   const roleTitle = String(bundle?.role_title || "").trim();
-  const summaryText = compactText(bundle?.summary || "生成分析后展示证据链摘要。", 96);
-  if (dom.evidenceSummary) {
-    dom.evidenceSummary.textContent = roleTitle
-      ? `当前证据视角：${roleTitle}｜${summaryText}`
-      : summaryText;
-  }
-  if (dom.matchedTerms) fillTagList(dom.matchedTerms, bundle?.query_terms || [], "等待生成检索词");
-  if (!dom.evidenceSnippets) return; dom.evidenceSnippets.innerHTML = "";
   const items = bundle?.items || [];
-  if (!items.length) { dom.evidenceSnippets.innerHTML = `<div class="empty-inline compact">本次解析未命中有效切片。</div>`; return; }
-  
-  dom.evidenceSnippets.innerHTML += `
-    <div class="summary-shell">
-      <div class="summary-head">
-        <div>
-          <span class="mini-label">${escapeHtml(roleTitle || "Evidence Hit Rate")}</span>
-          <h4 class="insight-card-title">${bundle?.evidence_hit_rate ?? 0}% · ${escapeHtml(bundle?.retrieval_mode || "未生成")}</h4>
+  const activeContext = getActiveReportContext(state.latestResult || {});
+  const activeMatch = activeContext?.activeMatch || null;
+  const fallbackRequirementTerms = [
+    ...(activeMatch?.core_skills || []),
+  ].map((item) => normalizeDisplayText(item)).filter(Boolean);
+  const fallbackStudentHitTerms = [
+    ...(activeMatch?.shared_skills || []),
+  ].map((item) => normalizeDisplayText(item)).filter(Boolean);
+  const fallbackStudentGapTerms = [
+    ...(activeMatch?.missing_skills || []),
+  ].map((item) => normalizeDisplayText(item)).filter(Boolean);
+
+  const hitTerms = (bundle?.hit_terms || []).map((item) => normalizeDisplayText(item)).filter(Boolean);
+  const targetTerms = (
+    bundle?.requirement_terms
+    || (fallbackRequirementTerms.length ? fallbackRequirementTerms : bundle?.target_terms || [])
+  ).map((item) => normalizeDisplayText(item)).filter(Boolean);
+  const studentHitTerms = (
+    bundle?.student_hit_terms?.length ? bundle.student_hit_terms : fallbackStudentHitTerms
+  ).map((item) => normalizeDisplayText(item)).filter(Boolean);
+  const studentGapTerms = (
+    bundle?.student_gap_terms?.length ? bundle.student_gap_terms : fallbackStudentGapTerms
+  ).map((item) => normalizeDisplayText(item)).filter(Boolean);
+  const focusTerms = (bundle?.query_terms || []).map((item) => normalizeDisplayText(item)).filter(Boolean);
+  const displayedTerms = (studentHitTerms.length ? studentHitTerms : targetTerms.length ? targetTerms : focusTerms).slice(0, 10);
+  const hitCount = studentHitTerms.length;
+  const targetCount = targetTerms.length || focusTerms.length;
+  const matchedTermSet = new Set(studentHitTerms.map((item) => item.toLowerCase()));
+  const gapTerms = (studentGapTerms.length ? studentGapTerms : targetTerms.filter((item) => !matchedTermSet.has(item.toLowerCase()))).slice(0, 5);
+  const signalHeading = studentHitTerms.length ? "已识别关键信号" : "岗位关键信号";
+  if (dom.evidenceSummary) {
+    const roleHeadline = roleTitle || "待生成岗位";
+    const reasonCopy = targetCount
+      ? hitCount > 0
+        ? "现有技能已经覆盖岗位基线中的核心部分，适合先作为主攻方向。"
+        : "当前画像与该岗位方向接近，但还需要先补核心要求。"
+      : "当前推荐主要依据官方岗位样本中的关键要求来判断。";
+    const metrics = targetCount
+      ? [
+          { label: "核心要求", value: `${targetCount} 项` },
+          { label: "已对上", value: `${hitCount} 项` },
+          { label: "待补强", value: `${gapTerms.length} 项` },
+        ]
+      : items.length
+        ? [{ label: "岗位片段", value: `${items.length} 条` }]
+        : [];
+    const tailCopy = hitTerms.length
+      ? `官方样本已校验到：${formatReadableList(hitTerms, 6, "")}`
+      : targetTerms.length
+        ? `岗位更看重：${formatReadableList(targetTerms, 6, "")}`
+        : bundle?.summary
+          ? normalizeDisplayText(bundle.summary)
+          : "";
+    dom.evidenceSummary.innerHTML = `
+      <div class="evidence-summary-shell">
+        <div class="evidence-summary-main">
+          <div class="evidence-summary-top">
+            <div class="evidence-summary-headline">
+              <span class="evidence-summary-badge">优先推荐</span>
+              <strong class="evidence-summary-role">${escapeHtml(roleHeadline)}</strong>
+            </div>
+            <p class="evidence-summary-reason">${escapeHtml(reasonCopy)}</p>
+          </div>
+          ${tailCopy ? `<span class="evidence-summary-tail">${escapeHtml(tailCopy)}</span>` : ""}
         </div>
-        <div class="score-badge">${(bundle?.hit_terms || []).length}/${(bundle?.target_terms || []).length || 1}</div>
+        ${metrics.length ? `<div class="evidence-summary-metrics">${metrics.map((item) => `
+          <span class="evidence-summary-stat">
+            <span class="evidence-summary-stat-label">${escapeHtml(item.label)}</span>
+            <strong class="evidence-summary-stat-value">${escapeHtml(item.value)}</strong>
+          </span>`).join("")}</div>` : ""}
+      </div>`;
+  }
+  if (dom.matchedTerms) {
+    dom.matchedTerms.innerHTML = `
+      <div class="evidence-signal-strip">
+        <span class="evidence-signal-label">${escapeHtml(signalHeading)}</span>
+        <div class="chip-row evidence-signal-tags">
+          ${displayedTerms.length
+            ? displayedTerms.map((term) => `<span class="tag">${escapeHtml(term)}</span>`).join("")
+            : '<span class="tag tag-ghost">等待生成重点关键词</span>'}
+        </div>
+      </div>`;
+  }
+  if (!dom.evidenceSnippets) return; dom.evidenceSnippets.innerHTML = "";
+  if (!items.length) { dom.evidenceSnippets.innerHTML = `<div class="empty-inline compact">当前还没有提炼出可展示的岗位要求参考。</div>`; return; }
+
+  const coverageTitle = targetCount
+    ? `你已具备 ${hitCount}/${targetCount} 项核心要求`
+    : `提炼出 ${items.length} 条岗位要求参考`;
+  const matchNote = targetCount
+    ? gapTerms.length
+      ? `再补 ${formatReadableList(gapTerms, 2, "关键能力")}，这个方向会更稳。`
+      : "当前已经达到主推岗位的基础证据线，可以直接进入投递准备。"
+    : "当前推荐主要来自官方岗位样本中的共性要求。";
+  const targetText = targetTerms.length
+    ? formatReadableList(targetTerms, 6, "暂无")
+    : focusTerms.length
+      ? formatReadableList(focusTerms, 6, "暂无")
+      : "重点要求仍在整理中";
+  const gapText = gapTerms.length
+    ? formatReadableList(gapTerms, 5, "暂无")
+    : "当前没有明显短板";
+
+  dom.evidenceSnippets.innerHTML += `
+    <div class="summary-shell evidence-match-shell">
+      <div class="summary-head evidence-match-head">
+        <div class="evidence-match-copy">
+          <span class="mini-label">匹配概览</span>
+          <h4 class="insight-card-title">${escapeHtml(coverageTitle)}</h4>
+          <p class="evidence-match-note">${escapeHtml(matchNote)}</p>
+        </div>
+        <div class="score-badge" title="岗位证据命中率">证据 ${bundle?.evidence_hit_rate ?? 0}%</div>
       </div>
-      <p class="summary-copy">命中术语：${escapeHtml(compactText((bundle?.hit_terms || []).join("、") || "无", 48))}</p>
-      <p class="summary-meta">目标术语：${escapeHtml(compactText((bundle?.target_terms || []).join("、") || "无", 48))}</p>
+      <div class="evidence-brief-grid">
+        <div class="evidence-brief-row">
+          <span class="evidence-brief-label">岗位看重</span>
+          <span class="evidence-brief-value">${escapeHtml(targetText)}</span>
+        </div>
+        <div class="evidence-brief-row">
+          <span class="evidence-brief-label">${gapTerms.length ? "当前补位" : "当前状态"}</span>
+          <span class="evidence-brief-value">${escapeHtml(gapText)}</span>
+        </div>
+      </div>
+      <div class="evidence-match-groups">
+        <div class="evidence-match-group">
+          <span class="mini-label">你已对上</span>
+          <div class="chip-row evidence-chip-row">
+            ${studentHitTerms.slice(0, 6).map((term) => `<span class="tag tag-success">${escapeHtml(term)}</span>`).join("") || '<span class="tag tag-ghost">等待识别</span>'}
+          </div>
+        </div>
+        <div class="evidence-match-group">
+          <span class="mini-label">可继续补强</span>
+          <div class="chip-row evidence-chip-row">
+            ${gapTerms.map((term) => `<span class="tag tag-accent">${escapeHtml(term)}</span>`).join("") || '<span class="tag tag-ghost">当前没有明显短板项</span>'}
+          </div>
+        </div>
+      </div>
     </div>`;
 
-  items.forEach((item) => {
+  items.forEach((item, index) => {
+    const title = item.job_title || item.source_title || roleTitle || "岗位要求参考";
+    const sourceMeta = [item.company_name || "官方岗位样本", item.city || ""].filter(Boolean).join("｜");
+    const matchedTerms = (item.matched_terms || []).map((term) => normalizeDisplayText(term)).filter(Boolean);
     dom.evidenceSnippets.innerHTML += `
       <div class="evidence-card is-accent">
-        <div class="evidence-head"><strong class="evidence-title">${escapeHtml(item.job_title || item.source_title || "证据片段")} <span class="citation-inline">${escapeHtml(item.citation_id || "[E]")}</span></strong><span class="tag inline-tag">相关度 ${item.score ?? 0}</span></div>
-        <p class="evidence-meta">${escapeHtml(item.company_name || "岗位模板")}｜${escapeHtml(item.city || "未知")}｜命中词：${highlightTerms(compactText((item.matched_terms || []).join("、") || "无", 44), item.matched_terms || [])}</p>
-        <p class="evidence-copy" title="${escapeHtml(item.snippet || "暂无片段")}">${highlightTerms(compactText(item.snippet || "暂无片段", 150), item.matched_terms || [])}</p>
+        <div class="evidence-head">
+          <div class="evidence-head-copy">
+            <span class="mini-label">官方岗位片段 ${String(index + 1).padStart(2, "0")}</span>
+            <strong class="evidence-title">${escapeHtml(title)}</strong>
+          </div>
+          <span class="tag inline-tag">相关度 ${item.score ?? 0}</span>
+        </div>
+        <p class="evidence-meta">${escapeHtml(sourceMeta || "官方岗位样本")}</p>
+        <div class="evidence-inline-section">
+          <span class="evidence-inline-label">命中关键词</span>
+          <div class="chip-row evidence-hit-chip-row">
+            ${matchedTerms.map((term) => `<span class="tag">${escapeHtml(term)}</span>`).join("") || '<span class="tag tag-ghost">待提炼关键词</span>'}
+          </div>
+        </div>
+        <div class="evidence-inline-section">
+          <span class="evidence-inline-label">岗位说明摘录</span>
+          ${renderExpandableBlock(item.snippet || "暂无片段", {
+            className: "evidence-copy evidence-quote-copy",
+            lines: 4,
+            threshold: 120,
+            contentHtml: highlightTerms(normalizeDisplayText(item.snippet || "暂无片段"), item.matched_terms || []),
+            expandLabel: "展开摘录",
+            collapseLabel: "收起摘录",
+          })}
+        </div>
       </div>`;
   });
+  queueExpandableRefresh(dom.evidenceSnippets.closest("#tab-evidence") || dom.evidenceSnippets);
 }
 
 function describeTemplateEvidence(data) {
@@ -2809,64 +3111,93 @@ function describeTemplateEvidence(data) {
 
   if (exactCount > 0 && extendedCount === 0) {
     return {
-      headline: "原始同名样本",
-      detail: "当前统计与下方示例都来自官方原始同名岗位样本，可直接对照岗位要求",
+      headline: "官方同岗参考",
+      detail: "画像和示例都直接来自官方同名岗位，可直接对照这个方向的真实要求",
     };
   }
   if (exactCount > 0 && extendedCount > 0) {
     return {
-      headline: "同名样本 + 扩展统计",
-      detail: `当前统计同时参考 ${exactCount} 条原始同名样本和 ${extendedCount} 条扩展样本，下方示例优先展示原始同名岗位`,
+      headline: "同岗示例 + 趋势补充",
+      detail: "同岗岗位优先展示，其余样本只补充技能、城市和薪资趋势",
     };
   }
   if (clusterCount > 0 && fallbackCount === 0) {
     return {
-      headline: "推断聚类统计",
-      detail: "官方样本中缺少足够的原始同名岗位，技能与行业统计来自同一岗位族的归一化聚类样本",
+      headline: "同类岗位趋势参考",
+      detail: "当前主要用于看同类岗位的共性要求，更适合理解方向而不是逐条对照",
     };
   }
   if (clusterCount > 0 && fallbackCount > 0) {
     return {
-      headline: "聚类 + 补充统计",
-      detail: "当前岗位缺少稳定同名样本，统计主要来自归一化聚类与关键词补充样本，更适合看共性趋势",
+      headline: "趋势参考 + 补充线索",
+      detail: "当前岗位缺少稳定同名样本，这里更适合看趋势与补充线索",
     };
   }
   if (fallbackCount > 0) {
     return {
-      headline: "关键词补充统计",
-      detail: "官方样本里缺少稳定同名岗位，系统使用关键词和岗位族补充样本做趋势统计",
+      headline: "补充参考",
+      detail: "当前主要通过关键词和岗位族补充参考，用来帮助你先建立岗位认知",
     };
   }
   return {
-    headline: "岗位基线统计",
-    detail: "当前岗位暂未命中可展示的官方样本",
+    headline: "岗位参考待补齐",
+    detail: "当前岗位暂未命中可展示的官方样本，可先切换岗位方向继续查看",
   };
 }
 
 function getRepresentativeJobsLabel(source, data = null) {
-  if (source === "exact_title") return "原始同名岗位样本";
-  if (source === "normalized_cluster") return "推断聚类样本";
-  if (source === "fallback_inferred") return "关键词补充样本";
-  if (Number(data?.exact_title_job_count ?? 0) === 0 && Number(data?.dataset_job_count ?? 0) > 0) return "未展示同名样本";
-  return "岗位样本";
+  if (source === "exact_title") return "标题一致岗位示例";
+  if (source === "normalized_cluster") return "同类岗位示例";
+  if (source === "fallback_inferred") return "补充参考示例";
+  if (Number(data?.exact_title_job_count ?? 0) === 0 && Number(data?.dataset_job_count ?? 0) > 0) return "暂缺同岗示例";
+  return "岗位示例";
 }
 
 function getTemplateEvidenceModeLabel(mode) {
-  if (mode === "exact_title") return "同名统计";
-  if (mode === "normalized_cluster") return "聚类统计";
-  if (mode === "fallback_inferred") return "补充统计";
-  if (mode === "mixed" || mode === "cluster_plus_fallback") return "混合统计";
-  return "岗位统计";
+  if (mode === "exact_title") return "直接同岗参考";
+  if (mode === "normalized_cluster") return "同类岗位趋势";
+  if (mode === "fallback_inferred") return "补充趋势参考";
+  if (mode === "mixed" || mode === "cluster_plus_fallback") return "综合岗位参考";
+  return "岗位参考";
+}
+
+function getSampleScopeDisplay(item) {
+  const count = Number(item?.count ?? 0) || 0;
+  if (item?.key === "exact_title") {
+    return {
+      label: "标题一致岗位",
+      countLabel: count > 0 ? `参考 ${count}` : "暂无",
+      detail: count > 0
+        ? "可直接对照职责、技能和岗位要求"
+        : "当前暂无可直接展示的同岗示例",
+    };
+  }
+  if (item?.key === "normalized_cluster") {
+    return {
+      label: "同类岗位趋势",
+      countLabel: count > 0 ? `参考 ${count}` : "暂无",
+      detail: count > 0
+        ? "用于补充岗位族里的共性趋势"
+        : "当前暂无可展示的趋势补充",
+    };
+  }
+  return {
+    label: "补充参考线索",
+    countLabel: count > 0 ? `参考 ${count}` : "暂无",
+    detail: count > 0
+      ? "仅作补充理解，不直接等同同岗示例"
+      : "当前暂无额外补充线索",
+  };
 }
 
 function renderTemplateEvidence(data) {
   if (!dom.templateEvidence) return;
   dom.templateEvidence.innerHTML = "";
   if (!data) {
-    renderEmptyState(dom.templateEvidence, "请先生成分析结果，再查看主岗位基线样本。");
+    renderEmptyState(dom.templateEvidence, "请先生成分析结果，再查看目标岗位画像。");
     return;
   }
-  const activeLabel = state.currentTemplateRole === data.role_title ? "当前模拟岗位基线" : "岗位模板";
+  const activeLabel = state.currentTemplateRole === data.role_title ? "当前查看岗位" : "岗位参考";
   const representativeJobs = data.representative_jobs || [];
   const scopeInfo = describeTemplateEvidence(data);
   const exactCount = Number(data.exact_title_job_count ?? 0) || 0;
@@ -2875,69 +3206,73 @@ function renderTemplateEvidence(data) {
   const extendedCount = clusterCount + fallbackCount;
   const sampleScopes = data.sample_scopes || [];
   const headlineMeta = [
-    data.source_title ? `源岗位：${data.source_title}` : "",
-    `样本 ${data.dataset_job_count ?? 0}`,
-    exactCount > 0 ? `同名 ${exactCount}` : "无同名",
-    extendedCount > 0 ? `扩展 ${extendedCount}` : "",
+    data.source_title && data.source_title !== data.role_title ? `映射自 ${data.source_title}` : "",
+    exactCount > 0 ? `同岗 ${exactCount} 条` : "",
+    extendedCount > 0 ? `趋势补充 ${extendedCount} 条` : "",
   ].filter(Boolean);
   const overviewMetrics = [
     {
-      label: "样本覆盖",
-      value: String(data.dataset_job_count ?? 0),
-      detail: exactCount > 0 ? `原始同名 ${exactCount}｜扩展 ${extendedCount}` : extendedCount > 0 ? `扩展样本 ${extendedCount}` : "等待样本补齐",
+      label: "参考岗位",
+      value: `${data.dataset_job_count ?? 0} 条`,
+      detail: exactCount > 0
+        ? `同岗 ${exactCount} 条，可直接对照`
+        : extendedCount > 0
+          ? `当前以趋势参考为主`
+          : "当前还没有可用样本",
     },
     {
-      label: "主要城市",
+      label: "常见城市",
       value: compactText((data.typical_cities || []).slice(0, 2).join(" / ") || "未标注", 18),
-      detail: (data.typical_cities || []).slice(0, 4).join("、") || "等待城市样本",
+      detail: `扩展城市：${formatReadableList((data.typical_cities || []).slice(0, 4), 4, "等待城市样本")}`,
     },
     {
       label: "常见薪资",
       value: compactText((data.sample_salary_ranges || [])[0] || "未标注", 18),
-      detail: (data.typical_industries || []).slice(0, 3).join("、") || "等待行业样本",
+      detail: `常见行业：${formatReadableList((data.typical_industries || []).slice(0, 3), 3, "等待行业样本")}`,
     },
   ];
-  const scopeChips = (data.sample_scopes || [])
-    .filter((item) => Number(item?.count ?? 0) > 0)
-    .map(
-      (item) => `<span class="tag" title="${escapeHtml(item.description || "")}">${escapeHtml(item.label || "样本")} ${escapeHtml(item.count ?? 0)}</span>`,
-    )
-    .join("");
   const topSkills = (data.dataset_evidence?.top_skills || [])
-    .slice(0, 6)
+    .slice(0, 5)
+    .map((item) => `<span class="tag">${escapeHtml(item[0])} · ${escapeHtml(item[1])}</span>`)
+    .join("");
+  const topSoftSkills = (data.dataset_evidence?.top_soft_skills || [])
+    .slice(0, 4)
     .map((item) => `<span class="tag">${escapeHtml(item[0])} · ${escapeHtml(item[1])}</span>`)
     .join("");
   const cityChips = (data.dataset_evidence?.top_cities || [])
-    .slice(0, 4)
+    .slice(0, 3)
     .map((item) => `<span class="tag">${escapeHtml(item[0])} · ${escapeHtml(item[1])}</span>`)
     .join("");
   const industryChips = (data.dataset_evidence?.top_industries || [])
-    .slice(0, 4)
+    .slice(0, 3)
     .map((item) => `<span class="tag">${escapeHtml(item[0])} · ${escapeHtml(item[1])}</span>`)
     .join("");
   const locationTrendChips = `${industryChips}${cityChips}`;
   const representativeLabel = getRepresentativeJobsLabel(data.representative_jobs_source, data);
   const emptyRepresentativeMessage = Number(data.exact_title_job_count ?? 0) === 0 && Number(data.dataset_job_count ?? 0) > 0
-    ? "当前岗位的统计已生成，但官方样本中缺少标题高度一致的原始同名岗位卡片，因此这里不展示同名示例"
-    : "当前未筛到适合展示的代表岗位样本";
+    ? "当前岗位画像已经生成，但官方样本里缺少标题高度一致的同岗示例"
+    : "当前还没有筛到适合展示的官方岗位示例";
   dom.templateEvidence.innerHTML = `
     <div class="template-evidence-panel">
       <section class="template-evidence-hero">
         <div class="template-evidence-hero-top">
           <div class="template-evidence-hero-copyblock">
-            <span class="mini-label">Baseline Evidence</span>
+            <span class="mini-label">岗位画像</span>
             <h5 class="template-evidence-title">${escapeHtml(data.role_title || "岗位模板")}</h5>
-            <p class="template-evidence-subtitle" title="${escapeHtml(scopeInfo.detail)}">${escapeHtml(compactText(scopeInfo.detail, 88))}</p>
+            <div class="template-hero-headline-row">
+              <span class="tag inline-tag">${escapeHtml(scopeInfo.headline)}</span>
+            </div>
+            <p class="template-evidence-subtitle" title="${escapeHtml(scopeInfo.detail)}">${escapeHtml(scopeInfo.detail)}</p>
           </div>
           <span class="tag inline-tag">${escapeHtml(activeLabel)}</span>
         </div>
-        <p class="template-evidence-meta">${escapeHtml(headlineMeta.join("｜") || "等待岗位基线摘要")}</p>
+        <p class="template-evidence-meta">${escapeHtml(headlineMeta.join(" · ") || "基于官方岗位样本生成岗位画像")}</p>
         <div class="template-metric-grid">
           ${overviewMetrics.map((item) => `
             <div class="template-metric-card">
               <span class="template-metric-label">${escapeHtml(item.label)}</span>
               <strong class="template-metric-value" title="${escapeHtml(item.value)}">${escapeHtml(item.value)}</strong>
-              <p class="template-metric-detail" title="${escapeHtml(item.detail)}">${escapeHtml(compactText(item.detail, 26))}</p>
+              ${renderExpandableBlock(item.detail, { className: "template-metric-detail", lines: 2, threshold: 42, expandLabel: "展开说明", collapseLabel: "收起说明" })}
             </div>
           `).join("")}
         </div>
@@ -2945,12 +3280,13 @@ function renderTemplateEvidence(data) {
 
       <section class="template-evidence-section">
         <div class="template-section-head">
-          <span class="mini-label">统计口径</span>
+          <span class="mini-label">参考说明</span>
           <span class="tag inline-tag">${escapeHtml(getTemplateEvidenceModeLabel(data.evidence_mode))}</span>
         </div>
         <div class="template-scope-grid">
           ${sampleScopes.map((item) => {
             const count = Number(item?.count ?? 0);
+            const scopeDisplay = getSampleScopeDisplay(item);
             const cardClass = [
               "template-scope-card",
               count > 0 ? "has-data" : "is-empty",
@@ -2959,10 +3295,10 @@ function renderTemplateEvidence(data) {
             return `
               <article class="${cardClass}">
                 <div class="template-scope-top">
-                  <span class="template-scope-label">${escapeHtml(item.label || "样本")}</span>
-                  <span class="template-scope-count">${escapeHtml(count)}</span>
+                  <span class="template-scope-label">${escapeHtml(scopeDisplay.label)}</span>
+                  <span class="template-scope-count">${escapeHtml(scopeDisplay.countLabel)}</span>
                 </div>
-                <p class="template-scope-copy" title="${escapeHtml(item.description || "")}">${escapeHtml(compactText(item.description || "", 54))}</p>
+                <p class="template-scope-copy" title="${escapeHtml(scopeDisplay.detail)}">${escapeHtml(scopeDisplay.detail)}</p>
               </article>
             `;
           }).join("")}
@@ -2971,16 +3307,19 @@ function renderTemplateEvidence(data) {
 
       <section class="template-evidence-section">
         <div class="template-section-head">
-          <span class="mini-label">岗位趋势</span>
-          ${scopeChips ? `<div class="chip-row">${scopeChips}</div>` : ""}
+          <span class="mini-label">岗位通常看什么</span>
         </div>
         <div class="template-trend-grid">
           <article class="template-trend-card">
-            <span class="mini-label">高频技能</span>
+            <span class="mini-label">常见技能</span>
             <div class="chip-row">${topSkills || '<span class="tag tag-ghost">等待技能样本</span>'}</div>
           </article>
           <article class="template-trend-card">
-            <span class="mini-label">行业 / 城市</span>
+            <span class="mini-label">常见软技能</span>
+            <div class="chip-row">${topSoftSkills || '<span class="tag tag-ghost">等待软技能样本</span>'}</div>
+          </article>
+          <article class="template-trend-card">
+            <span class="mini-label">行业与城市</span>
             <div class="chip-row">${locationTrendChips ? locationTrendChips : '<span class="tag tag-ghost">等待行业与城市样本</span>'}</div>
           </article>
         </div>
@@ -2988,38 +3327,50 @@ function renderTemplateEvidence(data) {
 
       <section class="template-evidence-section">
         <div class="template-section-head">
-          <span class="mini-label">代表岗位</span>
+          <span class="mini-label">官方岗位示例</span>
           <span class="tag inline-tag">${escapeHtml(representativeLabel)}</span>
         </div>
         ${representativeJobs.length ? `<div class="template-job-grid">${representativeJobs.map((item, index) => `
           <article class="template-job-card">
             <div class="template-job-top">
               <div>
-                <span class="template-job-index">样本 ${String(index + 1).padStart(2, "0")}</span>
-                <strong class="template-job-company">${escapeHtml(item.company_name || "未知企业")}</strong>
+                <span class="template-job-index">示例 ${String(index + 1).padStart(2, "0")}</span>
+                <strong class="template-job-company">${escapeHtml(item.company_name || "官方样本企业")}</strong>
               </div>
               <span class="tag inline-tag">${escapeHtml(representativeLabel)}</span>
             </div>
-            <p class="template-job-meta">${escapeHtml(item.job_title || "岗位未标注")}｜${escapeHtml(item.city || "城市未标注")}｜${escapeHtml(item.salary_range || "薪资未标注")}</p>
-            <div class="chip-row">
-              ${(item.required_skills || []).slice(0, 4).map((skill) => `<span class="tag">${escapeHtml(skill)}</span>`).join("") || '<span class="tag tag-ghost">技能标签待解析</span>'}
+            <h6 class="template-job-title">${escapeHtml(item.job_title || "岗位未标注")}</h6>
+            <div class="template-job-facts">
+              <span class="template-job-fact">${escapeHtml(item.city || "城市未标注")}</span>
+              <span class="template-job-fact">${escapeHtml(item.salary_range || "薪资未标注")}</span>
+              ${item.industry ? `<span class="template-job-fact">${escapeHtml(item.industry)}</span>` : ""}
             </div>
-            <p class="template-job-copy" title="${escapeHtml(item.job_detail || "暂无详情")}">${escapeHtml(compactText(item.job_detail || "暂无详情", 118))}</p>
+            <div class="template-job-section">
+              <span class="template-job-section-label">常见技能</span>
+              <div class="chip-row">
+                ${(item.required_skills || []).slice(0, 5).map((skill) => `<span class="tag">${escapeHtml(skill)}</span>`).join("") || '<span class="tag tag-ghost">技能标签待解析</span>'}
+              </div>
+            </div>
+            <div class="template-job-section">
+              <span class="template-job-section-label">岗位说明摘录</span>
+              ${renderTemplateJobDetailMarkup(item.job_detail || "暂无详情")}
+            </div>
           </article>`).join("")}</div>` : `
           <div class="template-empty-card">
-            <span class="mini-label">Representative Jobs</span>
+            <span class="mini-label">官方岗位示例</span>
             <p class="template-empty-copy">${escapeHtml(emptyRepresentativeMessage)}</p>
           </div>`}
       </section>
     </div>
   `;
+  queueExpandableRefresh(dom.templateEvidence.closest("#tab-evidence") || dom.templateEvidence);
 }
 
 function renderJdSearchResults(items) {
   if (!dom.jdSearchResults) return;
   dom.jdSearchResults.innerHTML = "";
   if (!items || items.length === 0) {
-    renderEmptyState(dom.jdSearchResults, "本地库未检索到相关 JD。");
+    renderEmptyState(dom.jdSearchResults, "暂未找到相关岗位，可换个关键词再试试。");
     return;
   }
   items.forEach((item) => {
@@ -3033,9 +3384,10 @@ function renderJdSearchResults(items) {
           <span class="tag inline-tag">匹配度 ${escapeHtml(item.score ?? 0)}</span>
         </div>
         <p class="evidence-meta">${escapeHtml(item.company_name || "未知企业")}｜${escapeHtml(item.city || "未知城市")}｜${escapeHtml(item.salary_range || "薪资未知")}${escapeHtml(sourceHint)}</p>
-        <p class="evidence-copy" title="${escapeHtml(item.job_detail || "暂无岗位详情")}">${escapeHtml(compactText(item.job_detail || "暂无岗位详情", 110))}</p>
+        ${renderExpandableBlock(item.job_detail || "暂无岗位详情", { className: "evidence-copy", lines: 4, threshold: 110, expandLabel: "展开全文", collapseLabel: "收起全文" })}
       </div>`;
   });
+  queueExpandableRefresh(dom.jdSearchResults);
 }
 
 function renderStakeholderViews(items) {
@@ -3050,7 +3402,7 @@ function renderStakeholderViews(items) {
       <div class="insight-card">
         <span class="mini-label">${escapeHtml(item.role || "角色")}</span>
         <h4 class="insight-card-title">${escapeHtml(item.headline || "摘要")}</h4>
-        <ul class="feature-list list-compact">${(item.items || []).slice(0, 3).map((line) => `<li title="${escapeHtml(line)}">${escapeHtml(compactText(line, 58))}</li>`).join("")}</ul>
+        <ul class="feature-list list-compact">${(item.items || []).slice(0, 3).map((line) => `<li title="${escapeHtml(line)}">${escapeHtml(normalizeDisplayText(line))}</li>`).join("")}</ul>
       </div>`;
   });
 }
@@ -3070,7 +3422,7 @@ function renderTechnicalModules(items, keywords = []) {
           <strong class="stack-card-title">${escapeHtml(item.name || item.title || "模块")}</strong>
           ${item.tag ? `<span class="tag tag-ghost inline-tag">${escapeHtml(item.tag)}</span>` : ""}
         </div>
-        <p class="stack-card-copy" title="${escapeHtml(item.detail || "")}">${escapeHtml(compactText(item.detail || "", 90))}</p>
+        ${renderExpandableBlock(item.detail || "", { className: "stack-card-copy", lines: 3, threshold: 90 })}
       </div>`;
   });
 }
@@ -3089,7 +3441,7 @@ function renderInnovationHighlights(items) {
           <strong class="insight-card-title">${escapeHtml(item.title || "亮点")}</strong>
           ${item.tag ? `<span class="tag tag-success inline-tag">${escapeHtml(item.tag)}</span>` : ""}
         </div>
-        <p class="insight-card-copy" title="${escapeHtml(item.detail || "")}">${escapeHtml(compactText(item.detail || "", 94))}</p>
+        ${renderExpandableBlock(item.detail || "", { className: "insight-card-copy", lines: 3, threshold: 94 })}
       </div>`;
   });
 }
@@ -3101,7 +3453,7 @@ function renderCareerGraph(student, plan, matches) {
   const path = (plan?.primary_growth_path || []).slice(0, 4);
   const height = 340;
   const nodeWidth = 150;
-  const nodeHeight = 56;
+  const nodeHeight = 62;
   const centerY = 148;
   const upperY = 86;
   const lowerY = 228;
@@ -3139,16 +3491,16 @@ function renderCareerGraph(student, plan, matches) {
     connect("primary", "backup-0", "muted", "diagonal");
     if (nodeMap.has("backup-1")) connect("backup-0", "backup-1", "muted");
   }
-  const colorMap = { accent: "#d97706", teal: "#0f766e", muted: "#78716c" };
+  const colorMap = { accent: "#8a6a45", teal: "#31465d", muted: "#7d8898" };
   const width = Math.max(940, ...nodes.map((node) => node.x + nodeWidth)) + 56;
   dom.careerGraph.innerHTML = `
-    <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMinYMin meet" style="width:100%; height:auto; background:var(--surface-alt); border-radius:16px; border:1px solid var(--border);">
+    <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMinYMin meet" style="width:100%; height:auto; background:#f6f1ea; border-radius:20px; border:1px solid #d8d1c7;">
       ${lines.map((line) => `<line x1="${line.x1}" y1="${line.y1}" x2="${line.x2}" y2="${line.y2}" stroke="${colorMap[line.tone]}" stroke-width="3" stroke-linecap="round" opacity="0.6"></line>`).join("")}
       ${nodes.map((node) => `
         <g transform="translate(${node.x}, ${node.y})">
-          <rect rx="28" ry="28" width="${nodeWidth}" height="${nodeHeight}" fill="#ffffff" stroke="${colorMap[node.tone]}" stroke-width="2"></rect>
-          <text x="${nodeWidth / 2}" y="22" fill="#78716c" font-size="11" text-anchor="middle">${escapeHtml(node.meta)}</text>
-          <text x="${nodeWidth / 2}" y="40" fill="#292524" font-size="14" font-weight="700" text-anchor="middle">${escapeHtml(node.label)}</text>
+          <rect rx="28" ry="28" width="${nodeWidth}" height="${nodeHeight}" fill="#fffdfa" stroke="${colorMap[node.tone]}" stroke-width="1.7"></rect>
+          <text x="${nodeWidth / 2}" y="22" fill="#80776d" font-size="10.5" text-anchor="middle" font-family="HarmonyOS Sans SC, PingFang SC, Microsoft YaHei, sans-serif">${escapeHtml(node.meta)}</text>
+          <text x="${nodeWidth / 2}" y="38" fill="#191a1d" font-size="12.8" font-weight="700" text-anchor="middle" font-family="HarmonyOS Sans SC, PingFang SC, Microsoft YaHei, sans-serif">${buildSvgMultilineLabel(node.label, nodeWidth / 2)}</text>
         </g>`).join("")}
     </svg>`;
 }
@@ -3187,7 +3539,7 @@ function renderSystemChecks(payload) {
         <span class="status-dot ${toneClass}"></span>
         <div>
           <strong class="status-title">${escapeHtml(check.name || "检查项")}</strong>
-          <span class="status-detail" title="${escapeHtml(check.detail || "")}">${escapeHtml(compactText(check.detail || "", 80))}</span>
+          ${renderExpandableBlock(check.detail || "", { className: "status-detail", tag: "div", lines: 2, threshold: 80, expandLabel: "展开详情", collapseLabel: "收起详情" })}
         </div>
       </li>`;
   });
@@ -3203,7 +3555,7 @@ function renderReviewRecords(items) {
           <strong class="stack-card-title">${escapeHtml(item.reviewer_name || "老师")} · ${escapeHtml(item.decision || "待定")}</strong>
         </div>
         <p class="history-card-meta">${escapeHtml(item.reviewer_role || "辅导员")}｜${escapeHtml(item.created_at || "")}</p>
-        <p class="review-note" title="${escapeHtml(item.notes || "未填写复核备注")}">${escapeHtml(compactText(item.notes || "未填写复核备注", 110))}</p>
+        ${renderExpandableBlock(item.notes || "未填写复核备注", { className: "review-note", lines: 3, threshold: 110, expandLabel: "展开备注", collapseLabel: "收起备注" })}
       </div>`,
     "当前分析还没有老师复核记录。"
   );
@@ -3251,7 +3603,7 @@ function renderSchoolDashboard(data) {
           <strong class="stack-card-title">${escapeHtml(item.title || "推岗建议")}</strong>
           <span class="tag inline-tag">${escapeHtml(item.type || "建议")} · ${escapeHtml(item.count ?? 0)}</span>
         </div>
-        <p class="stack-card-meta" title="${escapeHtml(item.detail || "")}">${escapeHtml(compactText(item.detail || "", 92))}</p>
+        ${renderExpandableBlock(item.detail || "", { className: "stack-card-meta", lines: 2, threshold: 92 })}
       </div>`,
     "暂无推岗建议。"
   );
@@ -3263,7 +3615,7 @@ function renderSchoolDashboard(data) {
       <div class="review-card is-muted">
         <strong class="stack-card-title">${escapeHtml(item.name || "学生")} · ${escapeHtml(item.primary_role || "未生成")}</strong>
         <p class="history-card-meta">${escapeHtml(item.major || "专业未填写")}｜${escapeHtml(item.city || "城市未填写")}｜主岗分 ${escapeHtml(item.primary_score ?? 0)}</p>
-        <p class="stack-card-meta" title="${escapeHtml((item.reasons || []).join("、") || "无")}">原因：${escapeHtml(compactText((item.reasons || []).join("、") || "无", 78))}</p>
+        ${renderExpandableBlock((item.reasons || []).join("、") || "无", { className: "stack-card-meta", lines: 2, threshold: 78, prefixHtml: "原因：" })}
       </div>`,
     "暂无待抽检记录。"
   );
@@ -3289,8 +3641,8 @@ function renderBenchmark(data) {
           <span class="benchmark-status-copy">$ [SUCCESS] 评测跑通</span>
           <strong>${escapeHtml(data.verdict?.label || "待评估")}</strong>
         </div>
-        <p class="stack-card-copy benchmark-detail" title="${escapeHtml(data.verdict?.detail || "")}">> ${escapeHtml(compactText(data.verdict?.detail || "", 132))}</p>
-        <ul class="feature-list list-compact">${(data.judge_notes || []).slice(0, 4).map((item) => `<li title="${escapeHtml(item)}">${escapeHtml(compactText(item, 62))}</li>`).join("")}</ul>
+        ${renderExpandableBlock(data.verdict?.detail || "", { className: "stack-card-copy benchmark-detail", lines: 3, threshold: 132, prefixHtml: "&gt; ", expandLabel: "展开结论", collapseLabel: "收起结论" })}
+        <ul class="feature-list list-compact">${(data.judge_notes || []).slice(0, 4).map((item) => `<li title="${escapeHtml(item)}">${escapeHtml(normalizeDisplayText(item))}</li>`).join("")}</ul>
       </div>`;
   }
   renderRecordList(
@@ -3307,7 +3659,7 @@ function renderBenchmark(data) {
           <span class="tag">证据 ${escapeHtml(item.evidence_hit_rate ?? 0)}</span>
           <span class="tag">回退 ${item.fallback_used ? "是" : "否"}</span>
         </div>
-        <ul class="feature-list list-compact">${((item.review_reasons || []).length ? item.review_reasons : item.observations || []).slice(0, 3).map((line) => `<li title="${escapeHtml(line)}">${escapeHtml(compactText(line, 62))}</li>`).join("")}</ul>
+        <ul class="feature-list list-compact">${((item.review_reasons || []).length ? item.review_reasons : item.observations || []).slice(0, 3).map((line) => `<li title="${escapeHtml(line)}">${escapeHtml(normalizeDisplayText(line))}</li>`).join("")}</ul>
       </div>`,
     "暂无样例评测结果。"
   );
@@ -3347,6 +3699,7 @@ function renderResults(data) {
   renderTechnicalModules(data.career_plan?.technical_modules || [], data.career_plan?.technical_keywords || []);
   renderInnovationHighlights(data.career_plan?.innovation_highlights || []);
   renderCareerGraph(data.student_profile || {}, data.career_plan || {}, data.matches || []);
+  queueExpandableRefresh(document);
   if (dom.currentReviewAnalysis) {
     dom.currentReviewAnalysis.textContent = state.currentAnalysisId
       ? `当前复核锁定：#${state.currentAnalysisId} · ${(data.student_profile?.name || "学生")} · ${(data.career_plan?.primary_role || "未生成")}`
@@ -3533,7 +3886,7 @@ async function loadTemplateEvidence(roleTitle) {
   } catch (error) {
     if (requestToken !== state.templateEvidenceRequestToken) return;
     state.currentTemplateRole = roleTitle;
-    renderEmptyState(dom.templateEvidence, "基线样本加载失败。");
+    renderEmptyState(dom.templateEvidence, "岗位参考加载失败，请稍后再试。");
   }
 }
 
@@ -3643,7 +3996,10 @@ window.addEventListener("load", () => {
   if (dom.resumeInput) dom.resumeInput.value = "";
   setStatus("等待输入", "idle");
   renderBenchmark(state.benchmark);
-  window.addEventListener('resize', () => { if (window.radarChartInstance) window.radarChartInstance.resize(); });
+  window.addEventListener("resize", () => {
+    if (window.radarChartInstance) window.radarChartInstance.resize();
+    queueExpandableRefresh(document);
+  });
   Promise.allSettled([
     initSamples(),
     refreshHistory(),
@@ -3680,6 +4036,22 @@ if (dom.selfAssessmentForm) {
     refreshLiveSelfAssessmentSummary();
   });
 }
+
+document.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-expandable-toggle]");
+  if (!button) return;
+  const shell = button.closest(".expandable-text-shell");
+  const content = shell?.querySelector(".expandable-text");
+  if (!shell || !content) return;
+  const expanded = button.getAttribute("aria-expanded") === "true";
+  const nextExpanded = !expanded;
+  button.setAttribute("aria-expanded", String(nextExpanded));
+  button.textContent = nextExpanded
+    ? (button.getAttribute("data-collapse-label") || "收起全文")
+    : (button.getAttribute("data-expand-label") || "展开全文");
+  shell.dataset.expanded = String(nextExpanded);
+  content.classList.toggle("is-collapsed", !nextExpanded);
+});
 
 // ==========================================
 // 🌟 P3: 报告内联编辑功能

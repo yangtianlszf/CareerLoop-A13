@@ -27,12 +27,14 @@
         <div class="card form-card">
           <div class="workspace-hero compact">
             <h2 class="workspace-title">简历输入台</h2>
-            <p class="workspace-summary">上传、样例、生成一屏完成</p>
+            <p class="workspace-summary">粘贴简历，开始分析</p>
           </div>
 
           <div class="form-editor-panel">
             <div class="card-header form-panel-header">
-              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+              <span class="icon-shell">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+              </span>
               <h3>内容输入</h3>
             </div>
             <textarea id="resume-input" placeholder="输入或粘贴简历文本、自我介绍及项目经历..."></textarea>
@@ -66,7 +68,9 @@
             <button id="analyze-btn" class="btn btn-solid full-width btn-large action-primary">生成职业规划</button>
 
             <button id="print-pdf-btn" class="btn btn-outline full-width action-secondary">
-              <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+              <span class="btn-icon-shell">
+                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+              </span>
               导出报告 PDF
             </button>
 
@@ -130,7 +134,7 @@
             <button class="tab-btn active" data-target="tab-overview">诊断总览</button>
             <button class="tab-btn" data-target="tab-plan">行动路径</button>
             <button class="tab-btn" data-target="tab-agent">能力校准</button>
-            <button class="tab-btn" data-target="tab-evidence">证据基线</button>
+            <button class="tab-btn" data-target="tab-evidence">岗位参考</button>
             <button class="tab-btn" data-target="tab-dashboard">图谱与报告</button>
           </nav>
 
@@ -166,15 +170,18 @@
                       <strong id="primary-evidence-rate" class="primary-role-metric-value">0%</strong>
                     </div>
                   </div>
-                  <div id="primary-role-note" class="primary-role-note">优先动作将在生成后同步显示</div>
+                  <div id="primary-role-note" class="primary-role-note">
+                    <span class="primary-role-note-kicker">优先动作</span>
+                    <p class="primary-role-note-copy">生成后会在这里同步最优先的一步</p>
+                  </div>
                 </div>
                 <div class="backup-info">
-                  <span class="mini-label">备选岗位</span> 
+                  <span class="mini-label">备选视角</span>
                   <span id="backup-roles" class="text-body">--</span>
                 </div>
               </div>
               
-              <div class="card">
+              <div class="card overview-radar-card">
                 <div class="card-header"><h4>多候选岗位能力雷达</h4></div>
                 <div id="radar-chart" class="chart-panel"></div>
                 <div id="role-comparison-summary" class="panel-note"></div>
@@ -390,51 +397,59 @@
           </div>
 
           <div id="tab-evidence" class="tab-pane">
-            <div class="card info-card mb-4">
-              <div class="card-header"><h4>检索状态摘要</h4></div>
-              <p id="evidence-summary" class="font-bold"></p>
+            <div class="card info-card evidence-intro-card mb-4">
+              <div class="card-header"><h4>岗位匹配依据</h4></div>
+              <div id="evidence-summary" class="evidence-summary-block"></div>
               <div id="matched-terms" class="chip-group mt-2"></div>
             </div>
 
-            <div class="grid-2">
-              <div class="card"><div class="card-header"><h4>样本切片</h4></div><div id="evidence-snippets" class="snippet-list"></div></div>
-              <div class="card"><div class="card-header"><h4>岗位基线证据</h4></div><div id="template-evidence" class="snippet-list"></div></div>
+            <div class="evidence-main-layout">
+              <div class="card evidence-column-card evidence-primary-card">
+                <div class="card-header"><h4>官方岗位参考</h4></div>
+                <div id="evidence-snippets" class="snippet-list"></div>
+              </div>
+              <div class="card evidence-column-card evidence-secondary-card">
+                <div class="card-header"><h4>岗位基线</h4></div>
+                <div id="template-evidence" class="snippet-list"></div>
+              </div>
             </div>
 
-            <details class="fold-section mt-4">
-              <summary class="fold-summary">
-                <div class="fold-title-group">
-                  <span class="mini-label">Cases</span>
-                  <strong>相似案例参考</strong>
+            <div class="evidence-footer-stack mt-4">
+              <details class="fold-section">
+                <summary class="fold-summary">
+                  <div class="fold-title-group">
+                    <span class="mini-label">Reference</span>
+                    <strong>同类案例</strong>
+                  </div>
+                  <span class="fold-hint">展开查看</span>
+                </summary>
+                <div class="fold-body">
+                  <p class="fold-panel-copy">看看相近背景的同学通常会如何选岗、补强和冲刺。</p>
+                  <div id="similar-cases" class="stakeholder-grid"></div>
                 </div>
-                <span class="fold-hint">展开查看</span>
-              </summary>
-              <div class="fold-body">
-                <p class="fold-panel-copy">基于历史画像匹配相似样本。</p>
-                <div id="similar-cases" class="stakeholder-grid"></div>
-              </div>
-            </details>
+              </details>
 
-            <details class="fold-section mt-4">
-              <summary class="fold-summary">
-                <div class="fold-title-group">
-                  <span class="mini-label">JD Search</span>
-                  <strong>本地岗位库核查</strong>
+              <details class="fold-section">
+                <summary class="fold-summary">
+                  <div class="fold-title-group">
+                    <span class="mini-label">Explore</span>
+                    <strong>岗位库检索</strong>
+                  </div>
+                  <span class="fold-hint">展开查看</span>
+                </summary>
+                <div class="fold-body">
+                  <div class="search-bar">
+                    <input type="text" id="jd-search-input" placeholder="搜索岗位方向，如 Java开发、测试开发、数据分析" class="input-field search-grow" />
+                    <button id="jd-search-btn" class="btn btn-outline">搜索岗位</button>
+                  </div>
+                  <div id="jd-search-results" class="search-results mt-3"></div>
                 </div>
-                <span class="fold-hint">展开查看</span>
-              </summary>
-              <div class="fold-body">
-                <div class="search-bar">
-                  <input type="text" id="jd-search-input" placeholder="输入关键字 (例：Java、硬件测试...)" class="input-field search-grow" />
-                  <button id="jd-search-btn" class="btn btn-outline">执行检索</button>
-                </div>
-                <div id="jd-search-results" class="search-results mt-3"></div>
-              </div>
-            </details>
+              </details>
+            </div>
           </div>
 
           <div id="tab-dashboard" class="tab-pane">
-            <div class="card">
+            <div class="card report-workspace-card">
               <div class="card-header split-header">
                 <h4>职业规划报告</h4>
                 <div class="inline-actions">
@@ -451,7 +466,7 @@
               <div id="report-preview" class="report-preview"></div>
             </div>
 
-            <div class="card mt-4 dashboard-primary-card">
+            <div class="card mt-4 dashboard-primary-card report-graph-card">
               <div class="card-header"><h4>图谱与成长亮点</h4></div>
               <div id="career-graph" class="career-graph-panel"></div>
               <div id="innovation-highlights"></div>

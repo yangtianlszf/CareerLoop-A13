@@ -642,6 +642,15 @@ def _generate_dynamic_role_guidance(role_title: str, missing_skills: list[str]) 
         return {}
 
 
+def _should_enable_llm_planning(parser_metadata: dict[str, Any] | None) -> bool:
+    """仅在解析阶段已经稳定走通 LLM 时，才继续启用规划阶段的附加 LLM 能力。"""
+    if not parser_metadata:
+        return True
+    if parser_metadata.get("fallback_used"):
+        return False
+    return parser_metadata.get("used_mode") == "llm"
+
+
 def _project_suggestions_for_role(role_title: str) -> list[str]:
     # 保留原有的规则映射，作为大模型调用失败时的安全兜底 (Fallback)
     role_map = {
@@ -769,7 +778,11 @@ def _build_next_review_targets(
         score_target = f"下次复测时，将 {primary_match['role_title']} 匹配分从 {current_score} 分提升到 {min(current_score + 8, 92)} 分以上。"
     targets = [score_target]
     if gap_keywords:
-        targets.append("至少补齐 2 项核心短板：" + "、".join(gap_keywords[:2]))
+        visible_gaps = [str(item).strip() for item in gap_keywords[:2] if str(item).strip()]
+        if len(visible_gaps) >= 2:
+            targets.append("至少补齐 2 项核心短板：" + "、".join(visible_gaps))
+        elif visible_gaps:
+            targets.append("优先补齐核心短板：" + visible_gaps[0])
     if student.missing_sections:
         targets.append("补全简历缺失项：" + "、".join(student.missing_sections[:2]))
     targets.append("新增 1 个可讲清业务背景、技术方案和结果指标的项目案例。")
@@ -907,7 +920,7 @@ def _build_evaluation_metrics(
         {
             "name": "证据命中率",
             "score": evidence_hit_rate,
-            "detail": f"检索证据覆盖了 {len(evidence_bundle.get('hit_terms', []))}/{max(1, len(evidence_bundle.get('target_terms', [])))} 个目标术语。",
+            "detail": f"检索证据覆盖了 {len(evidence_bundle.get('hit_terms', []))}/{max(1, len(evidence_bundle.get('requirement_terms', evidence_bundle.get('target_terms', []))))} 个岗位基线术语。",
         },
         {
             "name": "解释完整度",
@@ -2163,16 +2176,23 @@ def build_career_plan(
     if not top_gap_keywords:
         top_gap_keywords = ["项目表达", "岗位举证"]
     role_title = primary["role_title"]
-    
-    # 🌟 核心接入点：触发大模型动态生成专属项目与考核计划
-    dynamic_guidance = _generate_dynamic_role_guidance(role_title, top_gap_keywords)
+    enable_llm_planning = _should_enable_llm_planning(parser_metadata)
 
-    # 🌟 P5：生成 AI 匹配评审意见（有 LLM key 时调用，失败则静默跳过）
-    ai_match_commentary = _generate_ai_match_commentary(
-        role_title=role_title,
-        score=int(primary["score"]),
-        strengths=list(primary.get("strengths", [])),
-        missing_skills=list(primary.get("missing_skills", [])),
+    # 只有解析阶段已经稳定走通 LLM，才继续启用附加的生成式规划能力。
+    dynamic_guidance = (
+        _generate_dynamic_role_guidance(role_title, top_gap_keywords)
+        if enable_llm_planning
+        else {}
+    )
+    ai_match_commentary = (
+        _generate_ai_match_commentary(
+            role_title=role_title,
+            score=int(primary["score"]),
+            strengths=list(primary.get("strengths", [])),
+            missing_skills=list(primary.get("missing_skills", [])),
+        )
+        if enable_llm_planning
+        else ""
     )
 
     focus_role = student.agent_answers.get("target_role") or role_title
