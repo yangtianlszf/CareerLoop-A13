@@ -4,6 +4,7 @@
 
 ## 主要文件类型
 
+- `local_knowledge_base.json`：推荐对外提交的 JSON 格式本地知识库主文件
 - `job_profiles.jsonl`：清洗后的岗位记录
 - `role_profile_templates.json`：岗位模板库
 - `dataset_summary.json`：数据统计摘要

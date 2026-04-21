@@ -3068,14 +3068,18 @@ function renderGroundedEvidence(bundle) {
     </div>`;
 
   items.forEach((item, index) => {
+    const isTemplateItem = item.source_type === "template";
     const title = item.job_title || item.source_title || roleTitle || "岗位要求参考";
     const sourceMeta = [item.company_name || "官方岗位样本", item.city || ""].filter(Boolean).join("｜");
     const matchedTerms = (item.matched_terms || []).map((term) => normalizeDisplayText(term)).filter(Boolean);
+    const evidenceLabel = isTemplateItem
+      ? "岗位模板摘录"
+      : `官方岗位片段 ${String(index + 1).padStart(2, "0")}`;
     dom.evidenceSnippets.innerHTML += `
       <div class="evidence-card is-accent">
         <div class="evidence-head">
           <div class="evidence-head-copy">
-            <span class="mini-label">官方岗位片段 ${String(index + 1).padStart(2, "0")}</span>
+            <span class="mini-label">${escapeHtml(evidenceLabel)}</span>
             <strong class="evidence-title">${escapeHtml(title)}</strong>
           </div>
           <span class="tag inline-tag">相关度 ${item.score ?? 0}</span>

@@ -196,18 +196,24 @@ def build_grounded_evidence_bundle(
     if not matching_rows:
         matching_rows = all_rows
 
-    candidates: list[dict[str, Any]] = []
-    if template:
-        candidates.append(_template_chunk(template))
-    candidates.extend(_jd_chunks(matching_rows))
-
-    scored: list[tuple[int, dict[str, Any], list[str]]] = []
-    for chunk in candidates:
+    jd_candidates = _jd_chunks(matching_rows)
+    jd_scored: list[tuple[int, dict[str, Any], list[str]]] = []
+    for chunk in jd_candidates:
         score, matched_terms = _score_chunk(chunk, query_terms, primary_match, template)
         if score <= 0:
             continue
-        scored.append((score, chunk, matched_terms))
-    scored.sort(key=lambda item: item[0], reverse=True)
+        jd_scored.append((score, chunk, matched_terms))
+    jd_scored.sort(key=lambda item: item[0], reverse=True)
+
+    template_scored: list[tuple[int, dict[str, Any], list[str]]] = []
+    if template:
+        template_chunk = _template_chunk(template)
+        score, matched_terms = _score_chunk(template_chunk, query_terms, primary_match, template)
+        if score > 0:
+            template_scored.append((score, template_chunk, matched_terms))
+
+    # 证据卡片优先展示真实官方 JD 片段；只有没有可用 JD 证据时，才回退到岗位模板摘要。
+    scored = jd_scored if jd_scored else template_scored
 
     evidence_items: list[dict[str, Any]] = []
     for index, (score, chunk, matched_terms) in enumerate(scored[: max(1, limit)], start=1):
